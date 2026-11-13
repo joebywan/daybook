@@ -182,23 +182,23 @@ object WhosWhoGraph : PuzzleType {
         val empty = tutorialBoard()
         val ann = 0
         val ben = 1
-        val cara = 2
         val house = { k: Int -> 2 + k }
         val cat = 6
         val dog = 7
         val fish = 8
         val clue = { k: Int -> WhosWhoTeacher.CLUE_BASE + k }
-        val solved = empty.withLine(ann, house(2)).withLine(ann, dog).withLine(ben, house(1)).withLine(ben, fish)
-            .withLine(cara, house(3)).withLine(cara, cat).copy(moves = 0)
+        // Ann's two lines alone: a solved board would turn to the people's table and show no lines at all.
+        val annLines = empty.withLine(ann, house(2)).withLine(ann, dog).copy(moves = 0)
         val annTwo = empty.withLine(ann, house(2))
         val struck = annTwo.strike(0)
         val benFish = struck.withLine(ben, fish)
         val benPets = benFish.withLine(ben, cat)
         val notThree = benPets.withMark(ben, house(3), WhosWhoGraphLogic.ANTI)
-        val slip = notThree.withMark(cara, cat, WhosWhoGraphLogic.ANTI)
+        // Not the cat for Cara: its line on the way would solve the board, which turns it to the table mid-move.
+        val slip = notThree.withMark(ann, dog, WhosWhoGraphLogic.ANTI)
         listOf(
             TutorialFrame(
-                state = solved,
+                state = annLines,
                 caption = "Every person and every item is a pill, one column each. A line joins what goes together: " +
                     "Ann lives in house 2 and has the dog.",
                 highlight = BoardHighlight(strong = setOf(ann, house(2), dog)),
@@ -241,18 +241,18 @@ object WhosWhoGraph : PuzzleType {
             ),
             TutorialFrame(
                 state = notThree,
-                caption = "See what a wrong mark does: rule out the cat for Cara. Tap Cara, then the cat twice.",
-                highlight = BoardHighlight(strong = setOf(cara, cat)),
-                steps = lineThenAnti(notThree, cara, cat),
-                retry = "Tap the glowing Cara, then the cat twice.",
-                done = "Clue 3 turns red: the cat's owner lives in house 3, and only Cara can.",
+                caption = "See what a wrong mark does: rule out the dog for Ann. Tap Ann, then the dog twice.",
+                highlight = BoardHighlight(strong = setOf(ann, dog)),
+                steps = lineThenAnti(notThree, ann, dog),
+                retry = "Tap the glowing Ann, then the dog twice.",
+                done = "Clue 3 turns red: that leaves Cara the dog, but the cat's owner lives in house 3, which is hers.",
             ),
             TutorialFrame(
                 state = slip,
-                caption = "So Cara has the cat. Tap Cara, then the cat, to clear the dashed line.",
-                highlight = BoardHighlight(strong = setOf(cara, cat), soft = setOf(clue(2))),
+                caption = "So Ann has the dog. Tap Ann, then the dog, to clear the dashed line.",
+                highlight = BoardHighlight(strong = setOf(ann, dog), soft = setOf(clue(2))),
                 accepts = only(notThree),
-                retry = "Tap the glowing Cara, then the cat.",
+                retry = "Tap the glowing Ann, then the dog.",
                 done = "Cleared. Every board has one answer, so every clue can be kept.",
             ),
             TutorialFrame(

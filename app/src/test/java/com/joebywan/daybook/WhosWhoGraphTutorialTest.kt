@@ -49,7 +49,8 @@ class WhosWhoGraphTutorialTest {
     fun `each frame takes its move, made by taps, refuses a near miss, and hands its board to the next`() {
         assertEquals(8, frames.size)
         assertNull(frames[0].judge)
-        assertTrue(board(0).solved)
+        assertFalse(board(0).solved)
+        assertTrue(WhosWhoGraphLogic.close(board(0)).let { it.at(ann, 4) == 1 && it.at(ann, dog) == 1 })
         assertTrue(frames.last().freePlay)
         frames.forEach { assertTrue("caption too long (${it.caption.length}): ${it.caption}", it.caption.length <= 170) }
 
@@ -78,16 +79,20 @@ class WhosWhoGraphTutorialTest {
         assertEquals(TutorialStep.REJECT, judge(4, board(4).cycle(ben, 3)))
         assertFalse(judge(4, board(4)) == TutorialStep.DONE)
         assertEquals(marks(board(5)), marks(line.cycle(ben, house3)))
-        // 5: Cara, then the cat twice.
-        val slipLine = board(5).cycle(cara, cat)
+        // 5: Ann, then the dog twice. The line on the way must not solve the board: a solve turns it to the table, where
+        // taps do nothing.
+        val slipLine = board(5).cycle(ann, dog)
+        assertFalse(slipLine.solved)
         assertEquals(TutorialStep.PROGRESS, judge(5, slipLine))
-        assertEquals(TutorialStep.DONE, judge(5, slipLine.cycle(cara, cat)))
-        assertEquals(TutorialStep.REJECT, judge(5, board(5).cycle(cara, fish)))
-        assertEquals(marks(board(6)), marks(slipLine.cycle(cara, cat)))
-        // 6: Cara, then the cat, clears it.
-        assertEquals(TutorialStep.DONE, judge(6, board(6).cycle(cara, cat)))
-        assertEquals(TutorialStep.REJECT, judge(6, board(6).cycle(cara, dog)))
-        assertEquals(marks(board(7)), marks(board(6).cycle(cara, cat)))
+        assertEquals(TutorialStep.DONE, judge(5, slipLine.cycle(ann, dog)))
+        assertEquals(TutorialStep.REJECT, judge(5, board(5).cycle(ann, fish)))
+        assertEquals(marks(board(6)), marks(slipLine.cycle(ann, dog)))
+        // 6: Ann, then the dog, clears it.
+        assertEquals(TutorialStep.DONE, judge(6, board(6).cycle(ann, dog)))
+        assertEquals(TutorialStep.REJECT, judge(6, board(6).cycle(ann, cat)))
+        assertEquals(marks(board(7)), marks(board(6).cycle(ann, dog)))
+        // No frame's board, nor any state on a move's way, is solved before free play.
+        assertFalse(frames.dropLast(1).any { (it.state as WhosWhoGraphState).solved })
     }
 
     private fun marks(s: WhosWhoGraphState) = s.links.trimEnd(WhosWhoGraphLogic.OPEN) to s.board.struck.trimEnd('0')
@@ -102,7 +107,8 @@ class WhosWhoGraphTutorialTest {
         val c5 = WhosWhoGraphLogic.close(board(5))
         assertEquals(1, c5.at(ben, 3))
         assertFalse(WhosWhoGraphLogic.isLine(board(5).mark(ben, 3)))
-        // Frame 5's slip breaks clue 3, and only clue 3; and the hint calls it a mistake.
+        // Frame 5's slip leaves Cara the dog, breaks clue 3 and only clue 3, and the hint calls it a mistake.
+        assertEquals(1, WhosWhoGraphLogic.close(board(6)).at(cara, dog))
         val slip = WhosWhoGraphLogic.table(board(6))
         val grid = WhosWhoLogic.gridOf(slip.n, slip.columns, slip.marks)
         val puzzle = WhosWhoLogic.puzzleOf(slip)
