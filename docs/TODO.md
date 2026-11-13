@@ -3,7 +3,7 @@
 
 ## Arcade: what is left
 
-Every board but Who's Who's graph is converted (`docs/COLOUR.md`, top); its pills and lines are still on the layer colours. Left over from the conversions:
+Every board is converted (`docs/COLOUR.md`, top). Left over from the conversions:
 - Links' pale pair colours are weak on the white Arcade tiles; Links, Trail and Hexwords draw their letters and digits with a `TextStyle` naming no family (check they are Fredoka). *S.*
 - Lamps: the dark lit wash reads brownish, and plain walls blend into the frame in Arcade light (they read as holes at the edge). Selected, peeked and error states of the regions/pieces boards were not render-checked. *S.*
 - Thermometers' mercury shows seams between squares on the Arcade gradient. *S.*
