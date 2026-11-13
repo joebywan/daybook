@@ -68,6 +68,18 @@ data class WhosWhoGraphState(
         else -> withLine(selected, tapped)
     }
 
+    /**
+     * A tap on item [item] (-1: the board's empty space) with [selected] chosen (-1: none), from a finger or the keyboard:
+     * the board it leaves (this same instance when the tap only changes the choice) and the item chosen after. Nothing
+     * chosen or one of the same category: the tapped item is chosen (tapped again, let go). Otherwise the pair is
+     * [cycle]d and the choice kept, so one item's lines are drawn tap after tap.
+     */
+    fun tap(selected: Int, item: Int): Pair<WhosWhoGraphState, Int> = when {
+        item < 0 -> this to -1
+        selected < 0 || selected / n == item / n -> this to if (item == selected) -1 else item
+        else -> cycle(selected, item) to selected
+    }
+
     /** Clue [clue] struck through, or back: a note. One move. */
     fun strike(clue: Int): WhosWhoGraphState = copy(board = board.strike(clue), moves = moves + 1)
 

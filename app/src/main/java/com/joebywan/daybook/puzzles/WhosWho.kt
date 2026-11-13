@@ -43,6 +43,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +51,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -71,6 +74,7 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalReducedMotion
@@ -106,6 +110,10 @@ object WhosWho : PuzzleType {
     override val displayName = "Who's Who"
     override val tagline = "Match everyone to everything from the clues"
     override val accent = 0xFF846CAD
+
+    override val keyboardHelp = listOf(
+        "Arrow keys move between the pills; Enter or Space taps the outlined one. Escape lets go of the chosen pill.",
+    )
 
     override val rules = listOf(
         "Each person has one item from every category, and no two people share one. The clues fix who has what.",
@@ -379,6 +387,22 @@ object WhosWho : PuzzleType {
 
     // ---- drawing --------------------------------------------------------------------------------
 
+    /** The chosen [item] and the board it was chosen on; restored after a rotation with only that board's [hash]. */
+    private class Held(val board: WhosWhoGraphState?, val item: Int, val hash: Int = 0) {
+        /** The item chosen on [s], or -1: by identity while composed, by content once restored. */
+        fun on(s: WhosWhoGraphState): Int = when {
+            item < 0 -> -1
+            board === s -> item
+            board == null && hash == s.hashCode() -> item
+            else -> -1
+        }
+    }
+
+    private val HeldSaver = listSaver<Held, Int>(
+        save = { listOf(it.item, it.board?.hashCode() ?: it.hash) },
+        restore = { Held(null, it[0], it[1]) },
+    )
+
     /** A hue per category: the people, then each column. */
     private val HUES = listOf(268f, 175f, 34f, 215f)
 
@@ -410,8 +434,11 @@ object WhosWho : PuzzleType {
         // The chosen item, the view and the grouping are the screen's, never the board's: the play screen pushes an undo
         // entry for every state it is handed. The choice belongs to the state it was made on (or emitted from), so a
         // board that arrives from elsewhere (an undo, "Show me", the walkthrough's next frame) starts with nothing chosen.
-        var held by remember { mutableStateOf<Pair<WhosWhoGraphState?, Int>>(null to -1) }
-        val selected = if (held.first === s) held.second else -1
+        // Saved, so a rotation keeps it: the board comes back equal, not the same, so a restored choice holds by content.
+        var held by rememberSaveable(stateSaver = HeldSaver) { mutableStateOf(Held(null, -1)) }
+        val selected = held.on(s)
+        // The keyboard cursor, an item: transient, as the choice was before it was saved.
+        var cursor by remember(b) { mutableStateOf<Int?>(null) }
         var view by rememberSaveable { mutableIntStateOf(-1) }
         var grouped by rememberSaveable { mutableIntStateOf(0) }
         // Once solved, the board turns to the people's table (view 0: a row per person, every item in its row), so the
@@ -434,7 +461,30 @@ object WhosWho : PuzzleType {
         val badPair = rememberSettledFlags(closure.badPair, b.clues, s.links)
 
         CappedFontScale {
-            Column(Modifier.fillMaxSize().padding(horizontal = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            // A tap on item i (-1: the empty board), from a finger or the keyboard: one state at most.
+            fun tap(i: Int) {
+                val (next, chosen) = s.tap(selected, i)
+                if (next !== s) onState(next)
+                held = Held(next, chosen)
+            }
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    // Only the graph takes keys: a table view takes no taps either.
+                    .boardKeys(interactive) { key, _, repeat ->
+                        val action = whosWhoKeyAction(key) ?: return@boardKeys false
+                        if (view >= 0 || (action == WhosWhoKeyAction.Clear && selected < 0)) return@boardKeys false
+                        when (action) {
+                            is WhosWhoKeyAction.Move ->
+                                cursor = s.cursorAfter(cursor ?: selected.takeIf { it >= 0 }, action.dRow, action.dCol, rows(s, closure, grouped == 1).first)
+                            WhosWhoKeyAction.Tap -> if (!repeat) tap(cursor ?: return@boardKeys true)
+                            WhosWhoKeyAction.Clear -> tap(-1)
+                        }
+                        true
+                    }
+                    .padding(horizontal = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Row(
                     Modifier.fillMaxWidth().height(CHIPS).horizontalScroll(rememberScrollState()).padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
@@ -444,22 +494,12 @@ object WhosWho : PuzzleType {
                     for (c in 0..b.columns) Chip(null, view == c, { Header(b, c, dark, Modifier.size(20.dp)) }) { view = c }
                 }
                 Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
-                    Graph(s, closure, selected, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive) { i ->
-                        val now = selected
-                        held = when {
-                            i < 0 -> s to -1
-                            now < 0 || now / b.n == i / b.n -> s to if (i == now) -1 else i
-                            else -> s.cycle(now, i).let { next ->
-                                onState(next)
-                                next to now
-                            }
-                        }
-                    }
+                    Graph(s, closure, selected, cursor, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive, ::tap)
                 }
                 Clues(b, badClue, paint.highlight, paint.glow, paint.pulse, dark, interactive, Modifier.weight(1f).fillMaxWidth().widthIn(max = 560.dp)) {
                     val next = s.strike(it)
                     onState(next)
-                    held = next to selected
+                    held = Held(next, selected)
                 }
             }
         }
@@ -523,6 +563,7 @@ object WhosWho : PuzzleType {
         s: WhosWhoGraphState,
         closure: WhosWhoGraphLogic.Closure,
         selected: Int,
+        cursor: Int?,
         grouped: Boolean,
         view: Int,
         badItem: BooleanArray,
@@ -652,6 +693,14 @@ object WhosWho : PuzzleType {
                         .alpha(node.alpha.value)
                         .highlightAnchor(i)
                         .ring(hint, glow, pulse, h / 2, outside = true)
+                        // The keyboard cursor: a ring just outside the pill (the choice is the pill's own edge), not in a table.
+                        .then(if (i == cursor && !table) Modifier.drawBehind {
+                            val gap = 3.dp.toPx()
+                            drawRoundRect(
+                                scheme.primary, Offset(-gap, -gap), Size(size.width + 2 * gap, size.height + 2 * gap),
+                                CornerRadius(size.height / 2 + gap), style = Stroke(2.dp.toPx()),
+                            )
+                        } else Modifier)
                         .then(if (sticker != null) Modifier.arcadeLift(sticker, h / 2) else Modifier)
                         .clip(shape)
                         .then(if (sticker != null) Modifier.background(sticker.brush) else Modifier.background(BoardHues.fill(hue, dark)))
