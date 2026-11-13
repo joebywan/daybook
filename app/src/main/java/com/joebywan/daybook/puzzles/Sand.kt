@@ -56,7 +56,9 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -291,7 +293,10 @@ object Sand : PuzzleType {
             val total = n * w + (n - 1) * gap
             val left = (size.width - total) / 2
             val top = (size.height - w * bodyUnits(4)) / 2 + w * 0.1f
-            val look = Look(scheme.outline, maxOf(1f, w * 0.06f), scheme.surface)
+            // Arcade's glass is the board's plain square in its frame; Classic's the surface in the outline.
+            val classic = classicLook()
+            val a = ArcadeBoard.of(scheme)
+            val look = Look(if (classic) scheme.outline else a.frame, maxOf(1f, w * 0.06f), if (classic) scheme.surface else a.square)
             for ((i, t) in motif.withIndex()) drawTube(t, 4, i, left + i * (w + gap), top, w, look, symbols = w > 14f)
         }
     }
@@ -333,8 +338,15 @@ object Sand : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SandState
         val scheme = MaterialTheme.colorScheme
-        val (highlight, glowColour, pulse) = rememberHintPaint()
-        val accentColour = vivid(accent)
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        val (highlight, glowColour, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
+        val accentColour = if (classic) vivid(accent) else a.selected.from
+        // Arcade: glass is the plain square in the frame's colour; the lifted tube takes the selection's edge and an amber halo.
+        val glass = if (classic) scheme.surface else a.square
+        val rim = if (classic) scheme.outline else a.frame
+        val liftedRim = if (classic) accentColour else a.selectedEdge
+        val wrong = if (classic) scheme.error else a.error
 
         // Transient: the lifted tube starts over whenever the board changes (a pour, undo, a hint).
         var lifted by remember(s.tubes) { mutableStateOf<Int?>(null) }
@@ -440,13 +452,14 @@ object Sand : PuzzleType {
                                 val w = u.toPx()
                                 val refused = if (shaking == i) refusal.value else 0f
                                 val look = Look(
-                                    outline = lerp(if (lifted == i) accentColour else scheme.outline, scheme.error, refused),
+                                    outline = lerp(if (lifted == i) liftedRim else rim, wrong, refused),
                                     outlineWidth = if (lifted == i) 2.5.dp.toPx() else 1.5.dp.toPx(),
-                                    inside = lerp(scheme.surface, scheme.error, 0.22f * refused),
+                                    inside = lerp(glass, wrong, 0.22f * refused),
                                     glow = when {
                                         hint.strong -> glowColour.copy(alpha = pulse.value)
                                         hint.soft -> glowColour.copy(alpha = 0.5f)
                                         feel.glow(i) > 0f -> accentColour.copy(alpha = feel.glow(i))
+                                        !classic && lifted == i -> a.selected.from.copy(alpha = 0.8f)
                                         else -> null
                                     },
                                     glowWidth = if (hint.strong) 3.dp.toPx() else 2.dp.toPx(),
@@ -484,7 +497,7 @@ object Sand : PuzzleType {
                 Box(Modifier.offset(y = boardH).width(boardW).height(captionH), contentAlignment = Alignment.Center) {
                     if (stuck) Text(
                         "No pours left: undo a few",
-                        color = scheme.error,
+                        color = wrong,
                         fontSize = 14.sp,
                         maxLines = 1,
                         textAlign = TextAlign.Center,
