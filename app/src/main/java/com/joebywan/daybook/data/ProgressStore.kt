@@ -3,6 +3,7 @@ package com.joebywan.daybook.data
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LevelBoard
+import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.Streak
@@ -234,6 +235,9 @@ private fun PuzzleState.wellFormed(): Boolean = when (this) {
     is SudokuState -> listOf(givens, cells, solution, notes).all { it.size == 81 } && (selected ?: 0) in 0..80
     else -> true
 }
+
+/** This save with every state in the shape [puzzle] plays now ([PuzzleType.restored]). */
+fun SavedGame.restoredFor(puzzle: PuzzleType): SavedGame = copy(state = puzzle.restored(state), history = history.map(puzzle::restored))
 
 /** A [SavedGame] tagged with the board it belongs to, as it is held on disk. */
 @Serializable
@@ -541,7 +545,7 @@ object PuzzleOrder {
         "sudoku", "words", "sand", // Familiar, or (Sand) see it, do it.
         "wordwheel", "mini", "target", "dwindle", "nonogram", "mines", // Familiar: most players know them from elsewhere.
         "unblock", "kings", "mambo", "mosaic", "links", "sets", "inequality", "tents", "lamps", "regions", "tally", "thermometers", // Quick to learn: few rules, instant feedback.
-        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", "pearls", "loop", "whoswho", "logicweb", "hexwords", "equation", // Takes a bit: more rules, or a longer chain of reasoning.
+        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", "pearls", "loop", "whoswho", "hexwords", "equation", // Takes a bit: more rules, or a longer chain of reasoning.
         "tower", // Last: a colour-code guesser, much the same game as Lexicon, which a new player has met by now.
     )
 

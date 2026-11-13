@@ -103,6 +103,7 @@ import com.joebywan.daybook.core.tierNotes
 import com.joebywan.daybook.core.undone
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.data.fits
+import com.joebywan.daybook.data.restoredFor
 import com.joebywan.daybook.platform.rememberOpenUrl
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.GENERATION_ANIMATES
@@ -291,7 +292,8 @@ fun PlayScreen(
 
     LaunchedEffect(initial) {
         if (consulted) return@LaunchedEffect
-        val stored = restore()
+        // An old build's save in this build's shape (Who's Who's table turned into its graph).
+        val stored = restore()?.restoredFor(puzzle)
         // Reading the store takes a moment; a tap that landed in the meantime outranks it.
         // A stored game that does not fit this board (a crafted backup) is dropped: the board starts fresh.
         if (stored != null && game == pristine && stored.fits(initial)) {

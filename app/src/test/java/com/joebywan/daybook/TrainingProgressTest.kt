@@ -6,7 +6,7 @@ import com.joebywan.daybook.core.PearlsTraining
 import com.joebywan.daybook.core.WhosWhoTraining
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.PearlsState
-import com.joebywan.daybook.puzzles.WhosWhoState
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.KingsTraining
 import com.joebywan.daybook.core.LampsTraining
@@ -63,8 +63,10 @@ class TrainingProgressTest {
         AtomsTraining to { s, i, f ->
             (s as AtomsState).copy(counts = s.counts.toMutableList().also { it[i - s.atoms.size] = (f as AtomsState).counts[i - s.atoms.size] })
         },
-        // A who's-who target is a square of the table, n marks wide.
-        WhosWhoTraining to { s, i, f -> (s as WhosWhoState).let { w -> w.copy(marks = w.marks.replaceRange(i * w.n, (i + 1) * w.n, (f as WhosWhoState).marks.substring(i * w.n, (i + 1) * w.n))) } },
+        // A who's-who target is a node of the graph: copy every pair mark it is part of.
+        WhosWhoTraining to { s, i, f ->
+            (0 until (s as WhosWhoGraphState).size).filter { it != i }.fold(s) { g, x -> g.withMark(i, x, (f as WhosWhoGraphState).mark(i, x)) }
+        },
     )
 
     /** The step's squares that its Show me changes, read off each state's own fields. */
@@ -81,7 +83,7 @@ class TrainingProgressTest {
             is MamboState -> b.cells[i] != (f as MamboState).cells[i]
             is PearlsState -> b.edges[i - b.size * b.size] != (f as PearlsState).edges[i - b.size * b.size]
             is AtomsState -> b.counts[i - b.atoms.size] != (f as AtomsState).counts[i - b.atoms.size]
-            is WhosWhoState -> b.marks.substring(i * b.n, (i + 1) * b.n) != (f as WhosWhoState).marks.substring(i * b.n, (i + 1) * b.n)
+            is WhosWhoGraphState -> (0 until b.size).any { it != i && b.mark(i, it) != (f as WhosWhoGraphState).mark(i, it) }
             else -> error("no course $b")
         }
     }

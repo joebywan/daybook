@@ -5,6 +5,8 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.data.StoredGame
+import com.joebywan.daybook.data.fits
+import com.joebywan.daybook.data.restoredFor
 import com.joebywan.daybook.data.savedGameKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -46,12 +48,18 @@ class SaveCompatibilityTest {
     fun `every save a released build wrote still loads unchanged`() {
         for (file in captures) for (raw in entries(file)) {
             val label = "${file.name} ${(raw as JsonObject)["key"]}"
-            val stored = StoredGame.decode(raw.toString()) ?: throw AssertionError("$label no longer decodes: the player loses this game")
-            val puzzleId = stored.key.substringBefore('|')
+            val read = StoredGame.decode(raw.toString()) ?: throw AssertionError("$label no longer decodes: the player loses this game")
+            val puzzleId = read.key.substringBefore('|')
             val puzzle = PuzzleRegistry.byId(puzzleId) ?: throw AssertionError("$label: no puzzle has id $puzzleId")
 
             // A field renamed or dropped decodes (unknown keys are ignored) but its value is gone: re-encoding shows it.
-            assertEquals("$label: a saved field is no longer read", raw, Json.parseToJsonElement(stored.encode()))
+            assertEquals("$label: a saved field is no longer read", raw, Json.parseToJsonElement(read.encode()))
+
+            // As the play screen takes it: in the shape the puzzle plays now (Who's Who's table turned into its graph),
+            // and fitting the board that puzzle starts, or the player's game is dropped.
+            val stored = read.copy(game = read.game.restoredFor(puzzle))
+            val seed = read.key.split('|')[2].toLong()
+            assertTrue("$label: no longer fits its board, so the game is dropped", stored.game.fits(puzzle.generate(seed, Difficulty.valueOf(read.key.split('|')[1]))))
 
             // The play screen reads these on the way in; a state that decodes but breaks an invariant fails here.
             for (state in stored.game.history + stored.game.state) {

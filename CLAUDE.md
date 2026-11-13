@@ -1109,14 +1109,24 @@ walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into e
   8.7 / 8.7 / 8.6 up and 1.4 / 1.4 / 1.8 down notes a board over 42 / 69 / 112 taps, so no settle delay.
 - Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
 
-## Who's Who (a logic grid)
+## Who's Who (a logic grid, drawn as a graph)
 
 People in a row of houses, each with one item of every category (a pet, a job...), and numbered clues that fix one
-assignment. Spec and measurements: `docs/WHOSWHO_SPEC.md`. Never "Einstein puzzle" or "Zebra puzzle" where the player sees.
-`puzzles/WhosWhoRules.kt` (state, `WhosWhoLogic`: candidates, the ladder, the count, generator, clue text), `WhosWhoTeacher.kt`,
-`WhosWhoKeys.kt`, `WhosWhoWords.kt` (names, five categories of five words, how a clue says each), `WhosWho.kt` (board, walkthrough,
-motif). `id = "whoswho"` is hashed into every seed: never rename it.
+assignment, played as a graph: every person and item a pill in its category's column, joined by lines and ruled-out pairs.
+Spec and measurements: `docs/WHOSWHO_SPEC.md`. Never "Einstein puzzle" or "Zebra puzzle" where the player sees.
+`puzzles/WhosWhoRules.kt` (the dealt board `WhosWhoState`, `WhosWhoLogic`: candidates, the ladder, the count, generator, clue
+text), `WhosWhoGraphRules.kt` (`WhosWhoGraphState`, `WhosWhoGraphLogic`: the marks' closure, the rules), `WhosWhoTeacher.kt`,
+`WhosWhoWords.kt` (names, five categories of five words, how a clue says each), `WhosWho.kt` (board, walkthrough, motif),
+`WhosWhoIcons.kt` (the category marks). `id = "whoswho"` is hashed into every seed: never rename it.
 
+- **The graph replaced the table** (the owner, 2026-11-13; it was tried as the lab puzzle `test-whoswho`). The dealt boards did
+  not move (`WhosWhoLogic.generate` wrapped in a `WhosWhoGraphState`; `BoardPinTest` unchanged). **A table save loads as the
+  graph** (`PuzzleType.restored`, applied by `SavedGame.restoredFor` on the play screen's way in and in `SaveCompatibilityTest`):
+  every tick becomes a line from both ends, every cross an anti-link, struck clues and moves kept
+  (`WhosWhoGraphState.fromTable`); every table mark is a person-item fact, so all of them map and nothing starts fresh.
+  `WhosWhoState` stays serialisable for that and as the dealt board inside the graph state. Lab saves under `test-whoswho`
+  are not migrated (other seeds, nothing recorded): a route under that id goes home and its games are never read. The table's
+  board, keys (`WhosWhoKeys.kt`) and walkthrough are gone; the graph has no keyboard and no move feel yet.
 - **The word lists are a contract** (indices are stored and drawn by index): append-only, with a re-pin.
 - **Tiers: 4 people, house + 1 category, every clue naming a person / 4 people, house + 2, plus links and next to / left of /
   5 people, house + 2, plus either-or**, gated by the deepest ladder level the walk needs (direct / link or house / what-if).
@@ -1124,53 +1134,39 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
   permutations, no budget, sealed `Verdict`). Clues are drawn until the ladder finishes, shown in a fixed shuffled order (the
   ladder reads them in order, so the checks run on that order), then taken back while it still finishes, repeated until none
   goes (the what-if is not monotone). `WhosWhoOracle` (every combination, its own clue reading) is the independent check.
-- **The table holds the player's ticks and crosses per (person, item)**; what a tick rules out is derived. One pad tap or one
-  clue strike is one state; the selection and pen are `remember`. `solved` checks the clues. A cell or clue no answer the marks
-  allow can keep turns red after a 1 s settle. The board is a Compose layout (table, scrolling clue strip, pad), not a canvas.
-- **Teacher:** clue, only, link, house, what-if (at most 3 steps). From boards marked the player's own way the short what-if
-  can be led astray (its steps are taken first come), so the teacher alone tries a 12-step one before giving up; measured.
-
-## Logic Web (Who's Who as a graph)
-
-Who's Who's boards drawn as a graph: every person and item a pill in its category's column; the player draws lines and rules
-pairs out. `puzzles/WhosWhoGraph.kt` (object `WhosWhoGraph`: board, walkthrough, hints' mapping), `WhosWhoGraphRules.kt`
-(`WhosWhoGraphState`, `WhosWhoGraphLogic`: the marks' closure, the rules), `WhosWhoIcons.kt` (the category marks).
-`id = "logicweb"` is hashed into every seed: never rename it. The display name is provisional (the owner names it); it is
-never "Who's Who" (the table puzzle, which stays as it is) and never "Einstein" or "Zebra puzzle".
-
-- **Graduated from the lab** (`test-whoswho`, the owner, 2026-11-13) under a new id, so its seeds are its own. The lab build
-  recorded nothing, and its saves are keyed by the old id with boards from the old id's seeds, so they are not migrated: a
-  saved route under `test-whoswho` finds no puzzle and goes home, and its saved games are never read.
-- **The boards are Who's Who's** (`WhosWhoLogic.generate` wrapped in a `WhosWhoGraphState`): same tiers, same proof, same
-  `TierNotes` lines; `FallbackTest` walks its own seeds for a year a tier. Changing Who's Who's generator moves both.
 - **Lines have an end** (the players' own reading, 2026-11-10: one line into a category means that one, several mean one of
-  those): `>` / `<` drawn from the pair's lower / higher item, `o` from both (an old save's link, which reads the same), `x` an
-  anti-link. A tap from the chosen item adds its line, then makes the pair `x`, then opens it. `WhosWhoGraphState` holds a whole
-  dealt `WhosWhoState` (its table marks unused) and the pair marks; `WhosWhoGraphLogic.close` anti-links an item to the items of
-  a category it drew no line to (lines are never followed further), then derives the rest (links join groups, anti-links hold
-  across groups, one-to-one, last item left). A line the closure rules out is drawn faint, never red.
+  those): `>` / `<` drawn from the pair's lower / higher item, `o` from both, `x` an anti-link. A tap from the chosen item adds
+  its line, then makes the pair `x`, then opens it; a clue tap strikes it (a note). `WhosWhoGraphState` holds the dealt
+  `WhosWhoState` (its table marks unused) and the pair marks; `WhosWhoGraphLogic.close` anti-links an item to the items of a
+  category it drew no line to (lines are never followed further), then derives the rest (links join groups, anti-links hold
+  across groups, one-to-one, last item left). A line the closure rules out is drawn faint, never red. `solved` is the closure's
+  table solved with no clash (the rules, not the answer). A pill with nothing left in a column, two of a kind linked, or a clue
+  no answer the marks allow can keep turns red after a 1 s settle.
 - **Implied links count**: anti-links that rule out everything else win the board with no line drawn (the owner, 2026-11-10,
   after a build that demanded every link be drawn "wasn't fun"). When a solve left some person-item link implied
-  (`WhosWhoGraphLogic.leftImplied`), the finished frame says so with one of `WhosWhoGraph.ELIMINATION_NOTES` (`kotlin.random`,
+  (`WhosWhoGraphLogic.leftImplied`), the finished frame says so with one of `WhosWho.ELIMINATION_NOTES` (`kotlin.random`,
   `PuzzleType.finishNote`, saved with the praise); a solve turns the board to the people's table (view 0, once per board).
 - **The chosen pill is `remember`, tied to the state it was chosen on**: a board that arrives from elsewhere (undo, "Show me",
   the walkthrough's next frame) starts with nothing chosen.
-- **Hints are Who's Who's teacher asked of the table the closure makes** (`WhosWhoTeacher.teach(table, graph = true)`, its
-  words for a graph: "draw Ann's line to", "rule ... out for", never row, column, tick, cross or table; the test fails on
-  them), mapped to nodes (a tick drawn from both ends, stray lines either end drew there ruled out). The closure links a last
-  item left by itself, so the hints never give "the one item left" (`NOT_PRAISED`). A mistake is an anti-link on a true pair, or
-  an item's lines into a category that leave out its partner. Measured (`WhosWhoGraphTeachingTest`, 200 daily boards a tier):
-  6.5 / 13.9 / 24.7 steps a board, link 0 / 3.8 / 6.8, house 0 / 7.7 / 9.8, what-if 0 / 0 / 4.4, every Expert board at least
-  one; no fallback exists. No Training course: Who's Who's course drills the same ladder on the table.
-- **Views**: "Group" lines linked items up in their person's row; the category buttons (drawn icons, `WhosWhoIcons.kt`) show the
-  marks as a table with that category as the rows, the same pills gliding into place (350 ms, snapped under reduced motion), an
-  item not yet certain fading and its row's place saying what is left; the table takes no taps. A line that skips a column is
-  drawn over the pills, so every line stops at its pills' edges (`curveBetween`) and the names stay readable.
+- **Hints are the ladder asked of the table the closure makes** (`WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s))`, mapped to
+  nodes: a tick drawn from both ends, stray lines either end drew there ruled out), worded for the graph ("draw Ann's line to",
+  "rule ... out for"; never row, column, tick, cross or table: `WhosWhoGraphTeachingTest` fails on them). Ladder: clue, only,
+  link, house, what-if (at most 3 steps; from boards marked the player's own way the teacher alone tries a 12-step one). The
+  closure links a last item left by itself, so the hints never give "the one item left" (`NOT_PRAISED`; Training leaves it
+  out). A mistake is an anti-link on a true pair, or an item's lines into a category that leave out its partner. Measured
+  (200 daily boards a tier): 6.5 / 13.9 / 24.7 steps a board, link 0 / 3.8 / 6.8, house 0 / 7.7 / 9.8, what-if 0 / 0 / 4.4,
+  every Expert board at least one; no fallback exists.
+- **Views**: "Group" lines linked items up in their person's row; the category buttons (drawn icons) show the marks as a table
+  with that category as the rows, the same pills gliding into place (350 ms, snapped under reduced motion), an item not yet
+  certain fading and its row's place saying what is left; the table takes no taps. A line that skips a column is drawn over
+  the pills, so every line stops at its pills' edges (`curveBetween`) and the names stay readable.
 - **Arcade and Classic**: in Arcade a pill is a sticker in its category's `ArcadeBoard.arcadeTile` gradient, carrying its own
-  ink and lifted; Classic keeps the flat `BoardHues.fill` under an inked edge. Its accent is Who's Who's (`AccentSpacingTest`'s
-  `SHARED`: the set is full).
-- The walkthrough is Who's Who's board (Ann, Ben, Cara; a house and a pet) played as a graph: a line, a strike, two lines for
-  "one of those", a line tapped into an anti-link, a wrong anti-link that turns clue 3 red and its clearing, then free play.
+  ink and lifted; Classic keeps the flat `BoardHues.fill` under an inked edge.
+- **The walkthrough** (Ann, Ben, Cara; a house and a pet): a line, a strike, two lines for "one of those", a line tapped into an
+  anti-link, a wrong anti-link that turns clue 3 red and its clearing, then free play. No state on the way may solve the board:
+  a solve turns it to the table, where taps do nothing (`WhosWhoTutorialTest`).
+- **Training** (`core/training/WhosWhoTraining.kt`): clue, link, house, what-if on graph positions, judged on the closure; a
+  verdict waits a second, since ruling a pair out passes through a line the hints would call a mistake.
 
 ## Test puzzles (`PuzzleRegistry.lab`)
 
@@ -1180,7 +1176,7 @@ three, Levels, Training, the archive, achievements, the counts, parity); `byId` 
 are never recorded (`DaybookApp`'s `onSolved`, the kept card), so no streak, statistic or best time moves. Its display name
 starts `test:`. Graduating one means a new id in `all` with the full standards (`docs/PUZZLE_STANDARDS.md`).
 
-None now: Logic Web graduated (2026-11-13), so `lab` is empty and Settings hides the switch until one is added.
+None now: test:Who's who replaced the table Who's Who (2026-11-13), so `lab` is empty and Settings hides the switch until one is added.
 
 ## Motion and haptics
 
@@ -1386,7 +1382,7 @@ never the captured value.
 **Every board with two kinds of mark takes taps the same way** (`ui/TwinTaps.kt`; the owner, 2026-11-05: one way to
 learn across the games): a tap makes the first (the pen's, where there is a pen), a double tap on the same square or a
 long press the other. The tap is drawn at once and emitted after the 300 ms window, so a double tap is one move.
-Kings, Tents, Lamps, Nonogram and Tally (through `penGrid`), Mines and Who's Who's pad all use it; a new two-mark board
+Kings, Tents, Lamps, Nonogram and Tally (through `penGrid`), and Mines all use it; a new two-mark board
 does too, never its own copy (three had grown). A tap that would show what the twin must not (Mines' reveal) or that
 undoes the twin (taking a crown back) passes `holds = false`. Detectors read `TwinTaps.board`, so they are not keyed on the state.
 

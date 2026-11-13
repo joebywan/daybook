@@ -275,13 +275,6 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "house" to "where the houses allow",
         "what-if" to "a what-if",
     ),
-    "logicweb" to linkedMapOf(
-        "clue" to "a clue that names someone",
-        "only" to "the one item left",
-        "link" to "two things a clue ties together",
-        "house" to "where the houses allow",
-        "what-if" to "a what-if",
-    ),
 )
 
 /**
@@ -305,8 +298,8 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "sand" to setOf("finish"),
     "unblock" to setOf("exit"),
     "cipher" to setOf("only-letter"),
-    // Logic Web links an item's one choice left by itself (`WhosWhoGraphLogic.close`), so no hint is ever this.
-    "logicweb" to setOf("only"),
+    // Who's Who's graph links an item's one choice left by itself (`WhosWhoGraphLogic.close`), so no hint is ever this.
+    "whoswho" to setOf("only"),
     "pearls" to setOf("pearl-ways"),
     "tents" to setOf("touch"),
 )

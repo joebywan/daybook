@@ -5,6 +5,7 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.WhoClue
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.WhosWhoWords
@@ -16,7 +17,7 @@ import org.junit.Test
 class WhosWhoRulesTest {
 
     private fun daily(day: Long, tier: Difficulty): WhosWhoState =
-        WhosWho.generate(daySeed(day.toInt(), WhosWho.id, tier), tier) as WhosWhoState
+        (WhosWho.generate(daySeed(day.toInt(), WhosWho.id, tier), tier) as WhosWhoGraphState).board
 
     /** [s] with every square ticked as [assignment] says. */
     private fun ticked(s: WhosWhoState, assignment: List<List<Int>>): WhosWhoState {

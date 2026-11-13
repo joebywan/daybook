@@ -83,11 +83,6 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "4 people, 2 things each, clues link things",
         "5 people, 2 things each, either-or clues",
     ),
-    "logicweb" to listOf(
-        "4 people, 1 thing each, clues name the person",
-        "4 people, 2 things each, clues link things",
-        "5 people, 2 things each, either-or clues",
-    ),
     "mini" to listOf("5x5 grid, plain clues", "6x6 grid, many across clues indirect", "7x7 grid, most clues indirect"),
 )
 

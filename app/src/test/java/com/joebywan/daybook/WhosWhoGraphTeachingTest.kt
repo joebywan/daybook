@@ -3,7 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
-import com.joebywan.daybook.puzzles.WhosWhoGraph
+import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
 import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoTeacher
@@ -14,13 +14,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Logic Web's hints on its own daily boards. Truth is read off the stored answer (who holds each item, [WhosWhoGraphLogic.holder]),
+ * Who's Who's hints on its graph, on daily boards. Truth is read off the stored answer (who holds each item, [WhosWhoGraphLogic.holder]),
  * never through the closure or the teacher, so every step's links are checked against something they do not share.
  */
 class WhosWhoGraphTeachingTest {
 
     private fun daily(day: Int, tier: Difficulty) =
-        WhosWhoGraph.generate(daySeed(day, WhosWhoGraph.id, tier), tier) as WhosWhoGraphState
+        WhosWho.generate(daySeed(day, WhosWho.id, tier), tier) as WhosWhoGraphState
 
     private fun same(s: WhosWhoGraphState, a: Int, b: Int) = WhosWhoGraphLogic.holder(s.board, a) == WhosWhoGraphLogic.holder(s.board, b)
 
@@ -49,7 +49,7 @@ class WhosWhoGraphTeachingTest {
         var s = from
         val used = ArrayList<String>()
         while (!s.solved) {
-            val d = WhosWhoGraph.teach(s)
+            val d = WhosWho.teach(s)
             assertNotNull("$why: no hint on an unsolved board", d)
             d!!
             assertFalse("$why: a correct board was called wrong: ${d.explanation}", d.mistake)
@@ -82,13 +82,13 @@ class WhosWhoGraphTeachingTest {
                 if (WhosWhoTeacher.WHAT_IF in used) needWhatIf++
                 if (tier != Difficulty.EXPERT) assertFalse("$tier day $day: a what-if", WhosWhoTeacher.WHAT_IF in used)
             }
-            val line = "logicweb $tier: ${"%.1f".format(steps / boards.toDouble())} steps a board; " +
+            val line = "whoswho $tier: ${"%.1f".format(steps / boards.toDouble())} steps a board; " +
                 counts.entries.joinToString(", ") { "${it.key} ${"%.2f".format(it.value / boards.toDouble())}" } +
                 "; boards needing a what-if $needWhatIf of $boards; fallback none exists"
             println(line)
             report.appendLine(line)
         }
-        writeReport("logicweb-teaching-coverage.txt", report.toString())
+        writeReport("whoswho-teaching-coverage.txt", report.toString())
     }
 
     @Test
@@ -123,7 +123,7 @@ class WhosWhoGraphTeachingTest {
             val partner = (n until 2 * n).first { same(s, a, it) }
             val wrong = (n until 2 * n).first { !same(s, a, it) }
             for (bad in listOf(s.withMark(a, partner, WhosWhoGraphLogic.ANTI), s.withLine(a, wrong))) {
-                val d = WhosWhoGraph.teach(bad)!!
+                val d = WhosWho.teach(bad)!!
                 assertTrue(d.mistake)
                 assertGraphWords(d)
                 val fixed = d.apply(bad) as WhosWhoGraphState

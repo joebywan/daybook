@@ -74,7 +74,6 @@ class TechniqueNamesTest {
         "mini" to MiniTeacher.TECHNIQUES,
         "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
         "links" to LinksTeacher.TECHNIQUES,
-        "logicweb" to WhosWhoTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 

@@ -4,6 +4,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.WhosWhoTeacher
@@ -13,14 +14,41 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * The ladder itself, on the table the graph's marks imply ([com.joebywan.daybook.puzzles.WhosWhoGraphLogic.table]): the
+ * teacher reasons over ticks and crosses, which the graph shows as links and anti-links. The graph's own hints are
+ * [WhosWhoGraphTeachingTest]'s.
+ */
 class WhosWhoTeachingTest {
+
+    /** Whether [s] shows [step]: its ticks made, what it crosses ruled out, a wrong mark taken off. */
+    private fun reached(s: WhosWhoState, step: WhosWhoTeacher.Lesson): Boolean {
+        val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
+        return step.ticks.all { s.marks[it] == WhosWhoLogic.TICK } &&
+            step.crosses.all { grid.cand[it / s.n] shr (it % s.n) and 1 == 0 } &&
+            step.clears.all { s.marks[it] == WhosWhoLogic.EMPTY }
+    }
+
+    /** [step] made on the table: one move. */
+    private fun applyStep(s: WhosWhoState, step: WhosWhoTeacher.Lesson): WhosWhoState {
+        val next = s.marks.toCharArray()
+        step.clears.forEach { next[it] = WhosWhoLogic.EMPTY }
+        step.crosses.forEach { if (next[it] == WhosWhoLogic.EMPTY) next[it] = WhosWhoLogic.CROSS }
+        for (t in step.ticks) {
+            val cell = t / s.n
+            for (j in 0 until s.n) if (next[cell * s.n + j] == WhosWhoLogic.TICK) next[cell * s.n + j] = WhosWhoLogic.EMPTY
+            next[t] = WhosWhoLogic.TICK
+        }
+        val marks = next.concatToString()
+        return if (marks == s.marks) s else s.copy(marks = marks, moves = s.moves + 1)
+    }
 
     /** Steps walked, and what-ifs that needed the teacher's longer chain (a board marked the player's own way). */
     private var steps = 0
     private var longWhatIfs = 0
 
     private fun daily(day: Int, tier: Difficulty): WhosWhoState =
-        WhosWho.generate(daySeed(day, WhosWho.id, tier), tier) as WhosWhoState
+        (WhosWho.generate(daySeed(day, WhosWho.id, tier), tier) as WhosWhoGraphState).board
 
     private fun isAnswer(s: WhosWhoState, mark: Int): Boolean {
         val cell = mark / s.n
@@ -38,9 +66,9 @@ class WhosWhoTeachingTest {
             assertFalse("a correct board was called wrong", lesson.technique == WhosWhoTeacher.MISTAKE)
             for (t in lesson.ticks) assertTrue("tick off the answer: ${lesson.explanation}", isAnswer(s, t))
             for (c in lesson.crosses) assertFalse("cross on the answer: ${lesson.explanation}", isAnswer(s, c))
-            assertFalse("already reached: ${lesson.explanation}", WhosWho.reached(s, lesson))
-            val next = WhosWho.applyStep(s, lesson)
-            assertTrue("Show me reaches it", WhosWho.reached(next, lesson))
+            assertFalse("already reached: ${lesson.explanation}", reached(s, lesson))
+            val next = applyStep(s, lesson)
+            assertTrue("Show me reaches it", reached(next, lesson))
             assertEquals("one move", s.moves + 1, next.moves)
             used += lesson.technique
             if (lesson.explanation.contains("following clues")) longWhatIfs++
@@ -73,13 +101,13 @@ class WhosWhoTeachingTest {
                     Difficulty.EXPERT -> assertTrue("expert day $day needs a what-if", WhosWhoTeacher.WHAT_IF in used)
                 }
             }
-            val line = "whoswho $tier: ${"%.1f".format(steps / boards.toDouble())} steps a board; " +
+            val line = "whoswho table ladder $tier: ${"%.1f".format(steps / boards.toDouble())} steps a board; " +
                 counts.entries.joinToString(", ") { "${it.key} ${"%.2f".format(it.value / boards.toDouble())}" } +
                 "; boards needing a what-if $needWhatIf of $boards; fallback none exists"
             println("$line; longer what-ifs $longWhatIfs")
             report.appendLine(line)
         }
-        writeReport("whoswho-teaching-coverage.txt", report.toString())
+        writeReport("whoswho-ladder-coverage.txt", report.toString())
     }
 
     @Test
@@ -126,7 +154,7 @@ class WhosWhoTeachingTest {
                         for (c in lesson.crosses) assertTrue(lesson.explanation, a[c / s.n % s.columns][c / s.n / s.columns] != c % s.n)
                     }
                     checked++
-                    marks = WhosWho.applyStep(s.copy(marks = marks), lesson).marks
+                    marks = applyStep(s.copy(marks = marks), lesson).marks
                     grid = WhosWhoLogic.gridOf(s.n, s.columns, marks)
                 }
                 break
@@ -148,9 +176,9 @@ class WhosWhoTeachingTest {
                 val lesson = WhosWhoTeacher.teach(bad)!!
                 assertEquals(WhosWhoTeacher.MISTAKE, lesson.technique)
                 assertEquals(setOf(p * s.columns + c), lesson.targets)
-                val fixed = WhosWho.applyStep(bad, lesson)
+                val fixed = applyStep(bad, lesson)
                 assertEquals(s.marks, fixed.marks)
-                assertTrue(WhosWho.reached(fixed, lesson))
+                assertTrue(reached(fixed, lesson))
             }
         }
     }
@@ -172,7 +200,7 @@ class WhosWhoTeachingTest {
                 if (lesson.explanation.length > longest.length) longest = lesson.explanation
                 assertTrue("${lesson.explanation.length}: ${lesson.explanation}", lesson.explanation.length <= WhosWhoTeacher.MAX_EXPLANATION)
                 assertFalse(lesson.explanation, lesson.explanation.contains("  ") || lesson.explanation.contains(" ,"))
-                s = WhosWho.applyStep(s, lesson)
+                s = applyStep(s, lesson)
             }
         }
         println("whoswho longest explanation (${longest.length}): $longest")

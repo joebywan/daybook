@@ -133,6 +133,12 @@ interface PuzzleType {
     fun withoutSelection(state: PuzzleState): PuzzleState = state
 
     /**
+     * A state read from a save, in the shape this build plays: a puzzle whose state class changed turns an old save's
+     * state into its new one here (Who's Who's table into its graph). Default: as it is.
+     */
+    fun restored(state: PuzzleState): PuzzleState = state
+
+    /**
      * Whether [a] and [b] are the same board as far as Undo is concerned: they differ, if at all,
      * only in selection. Undo skips history entries that are the same board as the one on screen,
      * since stepping onto them would change nothing the player can see but a highlight.

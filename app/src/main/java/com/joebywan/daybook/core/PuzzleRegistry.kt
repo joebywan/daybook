@@ -34,7 +34,6 @@ import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.Unblock
 import com.joebywan.daybook.puzzles.WhosWho
-import com.joebywan.daybook.puzzles.WhosWhoGraph
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.Dwindle
 import com.joebywan.daybook.puzzles.Equation
@@ -87,7 +86,6 @@ object PuzzleRegistry {
         Unblock,
         Equation,
         Links,
-        WhosWhoGraph,
     )
 
     /**
