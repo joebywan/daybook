@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,7 +62,10 @@ internal fun CrosswordGrid(
         for (i in 0 until size * size) {
             val at = Modifier.padding(start = square * (i % size), top = square * (i / size)).size(square)
             if (black(i)) {
+                // Arcade: light's frame is navy and serves as the block; dark's frame is a translucent white, lighter than the
+                // squares, so a block there is the square darkened.
                 if (classic) Box(at.padding(0.5.dp).background(block))
+                else if (frame.alpha < 1f) Box(at.padding(gap / 2).clip(RoundedCornerShape(corner)).background(lerp(ArcadeBoard.of(scheme).square, Color.Black, 0.5f)))
                 continue
             }
             val fill = tint(i)
