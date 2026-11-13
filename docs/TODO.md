@@ -284,7 +284,7 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
 
 ## Who's Who (the graph, graduated 2026-11-13)
 
-- [ ] **No keyboard input or move feel**; the table it replaced had both. *M.*
+- [ ] **No keyboard input** (no `keyboardHelp`, no key handler in `WhosWho.kt`); the table it replaced had one. *M.*
 - [ ] **The chosen pill is dropped on rotation** (it is `remember`, not `rememberSaveable`). *S.*
 
 ## Owner's call
