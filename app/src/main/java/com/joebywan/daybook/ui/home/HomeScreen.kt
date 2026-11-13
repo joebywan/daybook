@@ -27,6 +27,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.keyframes
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.draw.drawBehind
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.animateFloatAsState
@@ -174,6 +175,23 @@ private fun twoRows(width: Dp, columns: Int) = (previewSize(tileWidth(width, col
  * remove; at this fraction it is still large enough to recognise a puzzle by its shape.
  */
 private const val PREVIEW_FRACTION = 0.72f
+
+/**
+ * Arcade's home tiles are coloured by their place on the grid, not by their puzzle (the owner, 2026-11-13: a tile's colour may
+ * differ from its board's), so no two touching tiles match, diagonals included, whatever the order and however many columns.
+ * The accent set is full (two pairs share), and by puzzle a player's own order could put any two side by side.
+ * Six accents (Sudoku, Lamps, Mines, Crossword, Codebreaker, Mosaic) whose tiles are furthest apart in both schemes, by CIEDE2000 with colour-blind vision ([HomeTileColoursTest]).
+ */
+internal val TILE_ACCENTS: List<Long> = listOf(0xFF6F7DF7, 0xFF737B39, 0xFFD45C91, 0xFF098777, 0xFFAF7D4C, 0xFFBC4C9C)
+
+/**
+ * The accent of the tile in [row], [column]: one step along [TILE_ACCENTS] per column and three per row, so a tile's eight
+ * neighbours are 1 to 4 steps away, never a whole turn of six, at any column count. Classic keeps each puzzle's own accent.
+ */
+internal fun tileAccentAt(row: Int, column: Int): Long = TILE_ACCENTS[(column + 3 * row).mod(TILE_ACCENTS.size)]
+
+/** The accent [PuzzleTile] takes its tile from, set by the grid that places it ([tileAccentAt]); null, the puzzle's own. */
+internal val LocalTileAccent = compositionLocalOf<Long?> { null }
 
 /**
  * Every puzzle on one screen: pick the difficulty and mode once at the top, then tap a motif.
@@ -631,6 +649,8 @@ private fun PuzzleGrid(
                         )
                         val lift by animateFloatAsState(if (d?.id == id) 1f else 0f, liftSpec, label = "lift")
                         val index = ids.indexOf(id)
+                        // The tile takes the colour of the place it is shown in, so one being dragged over changes as it moves.
+                        CompositionLocalProvider(LocalTileAccent provides tileAccentAt(slot / columns, slot % columns)) {
                         PuzzleTile(
                             byId.getValue(id), (id to difficulty) in doneToday, inProgress, previewSize,
                             cornerTick = false,
@@ -664,6 +684,7 @@ private fun PuzzleGrid(
                                 cleared = { tier -> (id to tier) in doneToday },
                                 popped = justSolved?.takeIf { it.first == id }?.second,
                             )
+                        }
                         }
                     }
                 }
@@ -741,7 +762,11 @@ internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, pre
                     Modifier.height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
-                    row.forEach { i -> tile(i, previewSize, Modifier.weight(1f).fillMaxHeight()) }
+                    row.forEach { i ->
+                        CompositionLocalProvider(LocalTileAccent provides tileAccentAt(i / columns, i % columns)) {
+                            tile(i, previewSize, Modifier.weight(1f).fillMaxHeight())
+                        }
+                    }
                     // Keeps the two tiles of the last row the same width as the three above them.
                     repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
@@ -766,7 +791,7 @@ internal fun PuzzleTile(
     footer: @Composable (accent: Color) -> Unit,
 ) {
     val accent = Color(puzzle.accent)
-    val tile = ArcadeBoard.tile(accent, BoardHues.isDark(MaterialTheme.colorScheme))
+    val tile = ArcadeBoard.tile(Color(LocalTileAccent.current ?: puzzle.accent), BoardHues.isDark(MaterialTheme.colorScheme))
     val started = puzzle.id in inProgress()
     HomeTile(
         name = puzzle.displayName,
