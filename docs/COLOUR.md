@@ -12,6 +12,13 @@ Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel. The other 
 `vivid()` accents and the retuned hue table, so they are lighter than those six until converted (`docs/TODO.md`). Convert a board by reading Tents' or
 Sudoku's; a colour of its own goes in its file with a test beside the tokens'.
 
+Also converted (2026-11-13), each keeping its Classic drawing behind `classicLook()`: Shikaku (each rectangle one sticker in its
+hue, `shikakuSticker`, `ShikakuInksTest`), LITS (`LitsInks`: a gradient per piece, the letter in its ink; `LitsInksTest` holds
+the pieces apart colour-blind included), Lamps (`LampsInks`), Dominoes (`DominoInks`; region tints stay `BoardHues`'), Mosaic
+(`Mosaic.arcadePalette`, solid, since the colours are the game) and Sets (`Sets.arcadePalette`). Mosaic's and Sets' palette tests
+hold the Arcade palettes to Classic's floors. Lits', Sets' and Mosaic's Classic colours were already `BoardHues` steps, not the old
+accents the TODO's colour audit describes.
+
 Why this exists: the old theme was deliberately quiet, ink and parchment with moss. A board that
 draws only with `colorScheme` plus its one `accent` comes out beige and one-note (one board shipped that way: surface
 grey, one teal). The boards that read well (Shikaku's hue-per-region, Nonogram's blended pairs, Kings' regions) all
