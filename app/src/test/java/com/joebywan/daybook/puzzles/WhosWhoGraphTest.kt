@@ -12,7 +12,7 @@ import org.junit.Test
 import kotlin.random.Random
 
 /**
- * The graph Who's Who (a lab puzzle). Truth here is read straight off the stored answer (who holds each item), never
+ * Logic Web, the graph Who's Who. Truth here is read straight off the stored answer (who holds each item), never
  * through the closure, so the closure is checked against something it does not share.
  */
 class WhosWhoGraphTest {
@@ -25,11 +25,13 @@ class WhosWhoGraphTest {
     private fun pairs(s: WhosWhoGraphState) = (0 until s.size).flatMap { a -> (a + 1 until s.size).filter { a / s.n != it / s.n }.map { a to it } }
 
     @Test
-    fun `it is a lab puzzle, found by id and kept out of the registry`() {
-        assertSame(WhosWhoGraph, PuzzleRegistry.byId("test-whoswho"))
-        assertTrue(PuzzleRegistry.isLab("test-whoswho"))
-        assertFalse(PuzzleRegistry.all.any { it.id == "test-whoswho" })
-        assertFalse(PuzzleRegistry.isLab(WhosWho.id))
+    fun `it graduated from the lab under its own id`() {
+        assertSame(WhosWhoGraph, PuzzleRegistry.byId("logicweb"))
+        assertTrue(WhosWhoGraph in PuzzleRegistry.all)
+        assertFalse(PuzzleRegistry.isLab("logicweb"))
+        // The lab build's id is gone: a saved route or game under it finds no puzzle and is left alone.
+        assertNull(PuzzleRegistry.byId("test-whoswho"))
+        assertFalse(WhosWhoGraph.id == WhosWho.id)
     }
 
     /** The item of [category] that goes with [a] in the answer. */

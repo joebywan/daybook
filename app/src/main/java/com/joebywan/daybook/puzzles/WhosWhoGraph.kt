@@ -65,7 +65,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.highlightAnchor
@@ -82,9 +85,9 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Who's Who drawn as a graph, a lab puzzle (`PuzzleRegistry.lab`): shown only with Settings' "Test puzzles" on, and never
- * recorded, so it touches no streak, statistic or achievement. Same boards as Who's Who (its own seeds, by its own id);
- * the table is gone. Every item is a node in a column of its category; tap one, then items of another category, to draw
+ * Logic Web: Who's Who drawn as a graph. It began as the lab puzzle `test-whoswho` and graduated (the owner, 2026-11-13)
+ * under its own id, so its seeds are its own; the boards are Who's Who's generator's ([WhosWhoLogic.generate]: same
+ * tiers, same proof), and the table is gone. Every item is a node in a column of its category; tap one, then items of another category, to draw
  * where it can be (one line: that one; several: one of those); a line tapped again becomes an anti-link, then open. What
  * the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
  * "Group" lines linked items up in their person's row, so a solved board settles into the answer table; the category
@@ -94,15 +97,18 @@ import kotlin.random.Random
  */
 object WhosWhoGraph : PuzzleType {
 
-    override val id = "test-whoswho"
-    override val displayName = "test:Who's who"
-    override val tagline = "Who's Who as a web of links"
+    /** Hashed into every seed: never rename it. Not `whoswho` (the table puzzle) nor `test-whoswho` (the lab build's). */
+    override val id = "logicweb"
+
+    /** Provisional: the owner names it. */
+    override val displayName = "Logic Web"
+    override val tagline = "Match everyone to everything with lines"
     override val accent = 0xFF846CAD
 
     override val rules = listOf(
-        "Every person and every item is a circle, one column per category. The clues fix who has what.",
-        "Tap a circle, then circles in another column to draw where it can be: one line means that one, several mean one of those.",
-        "Tap a line again to rule the pair out (never the same person's), and again to clear it.",
+        "Each person has one item from every category, and no two people share one. The clues fix who has what.",
+        "Every person and every item is a pill, one column per category. Tap one, then pills in another column to draw where it can be: one line means that one, several mean one of those.",
+        "Tap a line again to rule the pair out (never the same person's), and again to clear it. Tap a clue to strike it through: only a note.",
         "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
         "With a circle chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
         "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
@@ -138,6 +144,123 @@ object WhosWhoGraph : PuzzleType {
     internal fun finishNote(s: WhosWhoGraphState, random: Random): String? =
         if (s.solved && WhosWhoGraphLogic.leftImplied(s)) ELIMINATION_NOTES[random.nextInt(ELIMINATION_NOTES.size)] else null
 
+    // ---- the walkthrough ------------------------------------------------------------------------
+
+    /**
+     * Who's Who's walkthrough board ([WhosWho.tutorialBoard]: Ann, Ben and Cara, a house and a pet, one answer). Items:
+     * the people 0-2, houses 1-3 are 3-5, the cat, dog and fish 6-8.
+     */
+    internal fun tutorialBoard() = WhosWhoGraphState(WhosWho.tutorialBoard())
+
+    /** Every line as (the item that drew it, the other end), and every anti-link: what a frame compares. */
+    private fun marksOf(s: WhosWhoGraphState): Pair<Set<Pair<Int, Int>>, Set<Pair<Int, Int>>> {
+        val lines = HashSet<Pair<Int, Int>>()
+        val anti = HashSet<Pair<Int, Int>>()
+        for (a in 0 until s.size) for (b in a + 1 until s.size) {
+            if (s.drew(a, b)) lines += a to b
+            if (s.drew(b, a)) lines += b to a
+            if (s.mark(a, b) == WhosWhoGraphLogic.ANTI) anti += a to b
+        }
+        return lines to anti
+    }
+
+    /** Exactly [want]'s lines, anti-links and struck clues, nothing else. */
+    private fun only(want: WhosWhoGraphState): (PuzzleState) -> Boolean = { next ->
+        next is WhosWhoGraphState && marksOf(next) == marksOf(want) && next.board.struck == want.board.struck
+    }
+
+    /** From [from], the pair [a]-[b] ruled out: its line drawn first (from either end), then the second tap. */
+    private fun lineThenAnti(from: WhosWhoGraphState, a: Int, b: Int) = TutorialPath(
+        { next -> only(from.withLine(a, b))(next) || only(from.withLine(b, a))(next) },
+        only(from.withMark(a, b, WhosWhoGraphLogic.ANTI)),
+    ).steps
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val empty = tutorialBoard()
+        val ann = 0
+        val ben = 1
+        val cara = 2
+        val house = { k: Int -> 2 + k }
+        val cat = 6
+        val dog = 7
+        val fish = 8
+        val clue = { k: Int -> WhosWhoTeacher.CLUE_BASE + k }
+        val solved = empty.withLine(ann, house(2)).withLine(ann, dog).withLine(ben, house(1)).withLine(ben, fish)
+            .withLine(cara, house(3)).withLine(cara, cat).copy(moves = 0)
+        val annTwo = empty.withLine(ann, house(2))
+        val struck = annTwo.strike(0)
+        val benFish = struck.withLine(ben, fish)
+        val benPets = benFish.withLine(ben, cat)
+        val notThree = benPets.withMark(ben, house(3), WhosWhoGraphLogic.ANTI)
+        val slip = notThree.withMark(cara, cat, WhosWhoGraphLogic.ANTI)
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Every person and every item is a pill, one column each. A line joins what goes together: " +
+                    "Ann lives in house 2 and has the dog.",
+                highlight = BoardHighlight(strong = setOf(ann, house(2), dog)),
+            ),
+            TutorialFrame(
+                state = empty,
+                caption = "Clue 1 says Ann lives in house 2. Tap Ann, then house 2.",
+                highlight = BoardHighlight(strong = setOf(ann, house(2)), soft = setOf(clue(0))),
+                // From house 2 to Ann says the same: house 2 is Ann's.
+                accepts = { next -> only(annTwo)(next) || only(empty.withLine(house(2), ann))(next) },
+                retry = "Tap the glowing Ann, then the glowing house 2.",
+                done = "Linked. One line means that one, so the other houses aren't Ann's.",
+            ),
+            TutorialFrame(
+                state = annTwo,
+                caption = "Clue 1 is used up. Tap it to strike it through.",
+                highlight = BoardHighlight(strong = setOf(clue(0))),
+                accepts = only(struck),
+                retry = "Tap the glowing clue.",
+                done = "Struck through: only a note, to keep your place.",
+            ),
+            TutorialFrame(
+                state = struck,
+                caption = "Clue 2: Ben does not have the dog, so he has the cat or the fish. Tap Ben, then the cat and the fish.",
+                highlight = BoardHighlight(strong = setOf(ben, cat, fish), soft = setOf(clue(1))),
+                steps = TutorialPath(
+                    { next -> next is WhosWhoGraphState && (only(benFish)(next) || only(struck.withLine(ben, cat))(next)) },
+                    only(benPets),
+                ).steps,
+                retry = "Tap the glowing Ben, then the cat and the fish.",
+                done = "Two lines mean one of those: the dog is ruled out for Ben.",
+            ),
+            TutorialFrame(
+                state = benPets,
+                caption = "Clue 4: Ben does not live in house 3. Tap Ben, then house 3 twice: a line, then a dashed line that rules the pair out.",
+                highlight = BoardHighlight(strong = setOf(ben, house(3)), soft = setOf(clue(3))),
+                steps = lineThenAnti(benPets, ben, house(3)),
+                retry = "Tap the glowing Ben, then house 3 twice.",
+                done = "Ruled out. House 2 is Ann's, so Ben has only house 1 left: the faint line is what your marks imply.",
+            ),
+            TutorialFrame(
+                state = notThree,
+                caption = "See what a wrong mark does: rule out the cat for Cara. Tap Cara, then the cat twice.",
+                highlight = BoardHighlight(strong = setOf(cara, cat)),
+                steps = lineThenAnti(notThree, cara, cat),
+                retry = "Tap the glowing Cara, then the cat twice.",
+                done = "Clue 3 turns red: the cat's owner lives in house 3, and only Cara can.",
+            ),
+            TutorialFrame(
+                state = slip,
+                caption = "So Cara has the cat. Tap Cara, then the cat, to clear the dashed line.",
+                highlight = BoardHighlight(strong = setOf(cara, cat), soft = setOf(clue(2))),
+                accepts = only(notThree),
+                retry = "Tap the glowing Cara, then the cat.",
+                done = "Cleared. Every board has one answer, so every clue can be kept.",
+            ),
+            TutorialFrame(
+                state = notThree,
+                caption = "Your turn: link everyone to everything. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. Every board works out one clue at a time.",
+            ),
+        )
+    }
+
     // ---- teaching -------------------------------------------------------------------------------
 
     /**
@@ -148,7 +271,7 @@ object WhosWhoGraph : PuzzleType {
         val s = state as WhosWhoGraphState
         if (s.solved) return null
         mistake(s)?.let { return it }
-        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s)) ?: return null
+        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s), graph = true) ?: return null
         if (step.technique == WhosWhoTeacher.MISTAKE) return null
         val b = s.board
         fun item(mark: Int): Pair<Int, Int> {
@@ -213,7 +336,7 @@ object WhosWhoGraph : PuzzleType {
             return Deduction(
                 technique = WhosWhoTeacher.MISTAKE,
                 nudge = "One of your marks doesn't fit.",
-                explanation = "$word's lines to the ${title(b, category)} column leave out the right one, so they can't be kept.",
+                explanation = "None of $word's lines to a ${noun(b, category)} is the right one, so they can't be kept.",
                 focus = setOf(a) + drawn, cited = emptySet(), targets = setOf(a) + drawn,
                 mistake = true,
                 applyTo = { now -> drawn.fold(now as WhosWhoGraphState) { acc, z -> acc.withoutLine(a, z) }.copy(moves = now.moves + 1) },
@@ -237,6 +360,9 @@ object WhosWhoGraph : PuzzleType {
     /** How long a change of view takes to re-sort the board. */
     private const val MORPH_MS = 350
 
+    /** A category's noun: "person", "house", "pet". */
+    private fun noun(b: WhosWhoState, category: Int) = if (category == 0) "person" else WhosWhoWords.NOUNS[b.groups[category - 1]]
+
     private fun title(b: WhosWhoState, category: Int) = if (category == 0) "Person" else WhosWhoWords.HEADERS[b.groups[category - 1]]
 
     /** A category's drawn mark in its column's ink, named for a screen reader. */
@@ -254,8 +380,10 @@ object WhosWhoGraph : PuzzleType {
         val closure = remember(s.links, b) { WhosWhoGraphLogic.close(s) }
         val table = remember(closure) { WhosWhoGraphLogic.table(s, closure) }
         // The chosen item, the view and the grouping are the screen's, never the board's: the play screen pushes an undo
-        // entry for every state it is handed.
-        var selected by remember(b.clues) { mutableIntStateOf(-1) }
+        // entry for every state it is handed. The choice belongs to the state it was made on (or emitted from), so a
+        // board that arrives from elsewhere (an undo, "Show me", the walkthrough's next frame) starts with nothing chosen.
+        var held by remember { mutableStateOf<Pair<WhosWhoGraphState?, Int>>(null to -1) }
+        val selected = if (held.first === s) held.second else -1
         var view by rememberSaveable { mutableIntStateOf(-1) }
         var grouped by rememberSaveable { mutableIntStateOf(0) }
         // Once solved, the board turns to the people's table (view 0: a row per person, every item in its row), so the
@@ -290,18 +418,20 @@ object WhosWhoGraph : PuzzleType {
                 Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
                     Graph(s, closure, selected, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive) { i ->
                         val now = selected
-                        selected = when {
-                            i < 0 -> -1
-                            now < 0 || now / b.n == i / b.n -> if (i == now) -1 else i
-                            else -> {
-                                onState(s.cycle(now, i))
-                                now
+                        held = when {
+                            i < 0 -> s to -1
+                            now < 0 || now / b.n == i / b.n -> s to if (i == now) -1 else i
+                            else -> s.cycle(now, i).let { next ->
+                                onState(next)
+                                next to now
                             }
                         }
                     }
                 }
                 Clues(b, badClue, paint.highlight, paint.glow, paint.pulse, dark, interactive, Modifier.weight(1f).fillMaxWidth().widthIn(max = 560.dp)) {
-                    onState(s.strike(it))
+                    val next = s.strike(it)
+                    onState(next)
+                    held = next to selected
                 }
             }
         }
@@ -464,10 +594,7 @@ object WhosWhoGraph : PuzzleType {
                         val row = cellH.toPx()
                         val midY = (p.y + q.y) / 2
                         val bend = if (!skipping) 0f else if (midY < HEADER.toPx() + row) -row / 2 else row / 2
-                        val path = Path().apply {
-                            moveTo(p.x, p.y)
-                            quadraticTo((p.x + q.x) / 2, midY - bend, q.x, q.y)
-                        }
+                        val path = curveBetween(p, Offset((p.x + q.x) / 2, midY - bend), q, w.toPx() / 2, h.toPx() / 2) ?: continue
                         drawPath(path, colour, style = Stroke(width.toPx(), cap = StrokeCap.Round, pathEffect = effect))
                     }
                 }
@@ -514,6 +641,34 @@ object WhosWhoGraph : PuzzleType {
                 }
             }
             if (t < 1f) Box(edges(true))
+        }
+    }
+
+    /**
+     * The curve from [p] through control [c] to [q], cut where it leaves the pill (half-width [hw], half-height [hh]) at
+     * each end, so a line stops at the pill's edge and never runs over the names it joins. Null when nothing is left.
+     */
+    internal fun curveBetween(p: Offset, c: Offset, q: Offset, hw: Float, hh: Float): Path? {
+        fun at(t: Float): Offset {
+            val u = 1 - t
+            return Offset(u * u * p.x + 2 * u * t * c.x + t * t * q.x, u * u * p.y + 2 * u * t * c.y + t * t * q.y)
+        }
+        fun inside(x: Offset, end: Offset) = kotlin.math.abs(x.x - end.x) <= hw && kotlin.math.abs(x.y - end.y) <= hh
+        // Where the curve crosses an end's edge, by halving: [lo] inside that pill, [hi] outside it.
+        fun edge(lo0: Float, hi0: Float, end: Offset): Float {
+            var lo = lo0
+            var hi = hi0
+            repeat(20) { val mid = (lo + hi) / 2; if (inside(at(mid), end)) lo = mid else hi = mid }
+            return hi
+        }
+        val from = edge(0f, 0.5f, p).takeIf { !inside(at(it), q) } ?: return null
+        val to = edge(1f, 0.5f, q)
+        if (to <= from || inside(at(0.5f), p) || inside(at(0.5f), q)) return null
+        return Path().apply {
+            val start = at(from)
+            moveTo(start.x, start.y)
+            val steps = 24
+            for (k in 1..steps) at(from + (to - from) * k / steps).let { lineTo(it.x, it.y) }
         }
     }
 

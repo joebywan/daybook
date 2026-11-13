@@ -87,6 +87,7 @@ object PuzzleRegistry {
         Unblock,
         Equation,
         Links,
+        WhosWhoGraph,
     )
 
     /**
@@ -94,9 +95,7 @@ object PuzzleRegistry {
      * achievement or best time), and in nothing built from [all] (Today's three, Levels, Training, the archive, the
      * counts). Saves and routes still find them through [byId].
      */
-    val lab: List<PuzzleType> = listOf(
-        WhosWhoGraph,
-    )
+    val lab: List<PuzzleType> = emptyList()
 
     fun isLab(id: String): Boolean = lab.any { it.id == id }
 

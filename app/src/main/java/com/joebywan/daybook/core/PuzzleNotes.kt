@@ -242,6 +242,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Left of means the last house can't be the one on the left.",
         "Strike a clue once it can tell you nothing more.",
     ),
+    "logicweb" to listOf(
+        "Two lines from one pill mean one of those two, and rule out the rest of that column.",
+        "Rule a pair out and it holds for everyone already linked to either end.",
+        "You never have to draw a link the rest already implies: a faint line counts.",
+        "Group lines your links up by person, so a near-finished board reads like a table.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

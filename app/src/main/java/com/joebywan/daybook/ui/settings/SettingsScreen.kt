@@ -1,5 +1,7 @@
 package com.joebywan.daybook.ui.settings
 
+import com.joebywan.daybook.core.PuzzleRegistry
+
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import com.joebywan.daybook.ui.card
@@ -120,7 +122,8 @@ fun SettingsScreen(
             }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
             item { TrainingRow(onTraining) }
-            item {
+            // Nothing to show while no puzzle is on trial.
+            if (PuzzleRegistry.lab.isNotEmpty()) item {
                 SettingSwitch(
                     title = "Test puzzles",
                     detail = "Puzzles still being tried out, at the end of the home grid. They may change or go, and " +
