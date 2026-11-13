@@ -118,32 +118,6 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
   phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger
   sizes are proved and fast on the web) and whether it counts toward streaks. *M.*
 
-## Needs a real iPhone
-
-Nothing below can be verified from a desktop browser. The tester has the device.
-- [ ] **Is the first touch on Home dropped?** In headless Chromium, CDP touches reached Compose only after the page had seen one
-  mouse event (a tap still worked, through the emulated click; a drag did not). Check on a real phone browser that the first
-  scroll or tier swipe after loading Home is not ignored.
-- [ ] **Does the first-frame nudge matter?** `nudgeFirstFrame()` in `web/.../Main.kt` exists because headless
-  WebKit dropped Compose's first frame until a touch. If real Safari does not need it, remove it.
-- [ ] **Repaint after screen changes.** Headless WebKit did not redraw after a screen change until something
-  prompted a frame; the test harness nudges it. Confirm real Safari repaints on its own.
-- [ ] **Offline and Add to Home Screen.** The service worker was proven offline on the shell branch in desktop
-  browsers, but not re-run after the integration merge, and never on iOS. Check: install to home
-  screen, go offline, open, play, solve; and that a new deploy replaces the old copy.
-- [ ] **Speed on a real phone.** All timings are desktop WebKit/Chromium. Check LITS Expert, Snap and Mosaic
-  Expert board creation on the phone.
-- [ ] **Kings dark mode glare.** The new opaque palette is bright tiles on a near-black page. Ask whether it
-  is too much; the alternative (dimmer dark-mode tiles) costs crown/cross contrast.
-- [ ] **Do the sounds work, and are they pleasant?** The bank in `core/Tones.kt` was built and tested by numbers alone until someone listens
-  (the env-gated `TonesTest.writeTheBankForListening` writes it to WAVs). On a phone, listen to a board's phrase of units over a long Sudoku (a note repeats about three times there; is that fine?), the chime against the thump, Word Wheel's scale at speed, and all three wins, and judge the latency by ear. The web
-  build wakes its `AudioContext` on the first tap (`rememberTonePlayer` in `web/.../WebPlatform.kt`).
-  Headless Chromium has no audio output, so nobody has heard it on the web. Check on the iPhone that it is audible after a solve, that the Settings
-  "Sound" switch silences it, and that the Settings note ("a browser cannot see your phone's silent switch") reads right.
-- [ ] **Saves survive?** Safari can clear site data after ~7 days unused, but home-screen web apps are
-  exempt. Confirm progress persists from the home-screen icon; the export/import backup on the stats
-  screen is the safety net.
-
 ## Infrastructure
 
 - [ ] **Can Renovate's token update workflow files?** No Renovate PR among the last 60 touched `.github/`, and GitHub
@@ -217,9 +191,9 @@ Built in parallel and merged in sequence (1.41-1.45). Open items they left:
 - [ ] **Equation's tiers are thin.** Length barely changes guesses needed (2.7 / 3.1 / 3.0); Hard and Expert differ by
   24 vs 28 answers left after the first guess. Five guesses on Expert lost 2 boards a year to a hint-following player.
   Find a measure that separates them (e.g. operators allowed), or accept it. *M.*
-- [ ] **Home tile colours by grid position?** The accent set is full; Equation shares Lexicon's and Links Pearls'
+- [ ] **Home tile colours by grid position.** The accent set is full; Equation shares Lexicon's and Links Pearls'
   (`AccentSpacingTest.SHARED`). The owner suggested tiles coloured by their place on the grid so neighbours never match;
-  asked whether a tile and its board may then differ in colour. Waiting on that answer. *M.*
+  the owner answered (2026-11-13): yes, a tile's colour may differ from its board's. *M.*
 - [ ] **Codebreaker on the shared guess marker.** Equation lifted Lexicon's marking into `core/GuessMarks.kt`; Tower keeps
   its own peg scoring (a count is not a per-slot mark). Look at whether its teacher can share the rest. *S.*
 - [ ] **Links' Training passes only the hint's own line** (`every = null`): `LinksTeacher` has no "every instance of this
@@ -353,8 +327,7 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
   "cross off" (`WhosWhoTeacher` lines 148-274); give the graph its own phrasing or a word map. No walkthrough. Seen on the
   emulator (Pixel 6, 2026-11-11): links, the closure's dashed anti-links and the table views' glide all work; not yet on a
   tablet. Odd: a drawn line runs from the middle of each pill, so it is drawn over the names it joins (Gus, water); stopping
-  it at the pill's edge would keep them readable. Whether it graduates (a new id in `all` with the full standards), replaces the table,
-  or goes is the owner's call after playing it. *M to finish.*
+  it at the pill's edge would keep them readable. The owner's call (2026-11-13): graduate it, a new id in `all` with the full standards (`docs/PUZZLE_STANDARDS.md`). *L.*
 
 ## Owner's call
 
@@ -394,8 +367,9 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
   8. Acceptance for the whole thing: every board shows at least two non-grey, non-accent hues in both schemes; dark
      fills stay clear of the surface; no hex literal for content colour outside the helper; `PUZZLE_STANDARDS.md`
      checklist gets a "content hues from the helper" row so new puzzles start compliant.
-
-- **Let players add words.** Real words a player tried were refused (plied, awed, wean, denial, heaped, deaths on Word Wheel and Dwindle). The owner's idea, large and for later: a
-  personal local list is the small version (nothing global is ranked, so it cannot cheat anyone); shared suggestions need a backend and an approval process.
-- **Frozen screen on iPad (web, 2026-11-01; once in the Hexwords walkthrough).** Unconfirmed cause. Random play found no crash in WebKit or Chromium; a lost WebGL context did kill the page for good, so `reloadOnLostContext` now reloads it. If it still freezes on an iPad, it is something else: try Safari remote debugging.
-- **Short page after rotating an iPad (web, 2026-11-01).** Not reproduced on a device: `followRotation` now measures `#app` itself, again for two seconds and on every touch, checked only with a simulated stale height in desktop WebKit and Chromium. If it stays short on an iPad, try Safari remote debugging.
+- **Declined: players adding words** (the owner, 2026-11-13): the games are quick pickup and play, and typing words in would drag
+  that down. Do not reopen.
+- **Declined: checking on a real iPhone or iPad** (the owner, 2026-11-13): the web build is checked in desktop WebKit and Chromium
+  only, as well as can be done; there is no Apple device to test on and no App Store build. The items that needed one (first touch,
+  first-frame nudge, repaint, offline install, phone speed, Kings' dark glare, sounds, Safari saves, the iPad freeze and short page)
+  are dropped. Do not reopen.
