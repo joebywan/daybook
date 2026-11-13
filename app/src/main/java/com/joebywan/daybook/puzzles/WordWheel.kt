@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -209,6 +210,8 @@ object WordWheel : PuzzleType {
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
+        val a = ArcadeBoard.current
+        val classic = classicLook()
         val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
         val square = BoardHues.fill(hueB, dark)
         val disc = scheme.surface
@@ -218,18 +221,36 @@ object WordWheel : PuzzleType {
             val u = minOf(size.width / 5f, size.height / 5.6f)
             val ox = (size.width - u * 5f) / 2f
             val oy = (size.height - u * 5.6f) / 2f
-            // The grid: four across, crossed by three down.
-            fun sq(r: Int, c: Int) = drawRoundRect(square, Offset(ox + (c + 0.5f) * u + 1f, oy + r * u * 0.8f + 1f), Size(u * 0.8f - 2f, u * 0.8f - 2f), CornerRadius(u * 0.12f))
+            // The grid: four across, crossed by three down. Arcade's are the board's amber letter tiles.
+            fun sq(r: Int, c: Int) {
+                val topLeft = Offset(ox + (c + 0.5f) * u + 1f, oy + r * u * 0.8f + 1f)
+                val box = Size(u * 0.8f - 2f, u * 0.8f - 2f)
+                drawRoundRect(if (classic) SolidColor(square) else a.letter.brush(topLeft, box), topLeft, box, CornerRadius(u * 0.12f))
+            }
             for (c in 0 until 4) sq(1, c)
             sq(0, 2)
             sq(2, 2)
-            // The wheel.
+            // The wheel: Arcade's gradient rim round its dark well, the path and its letters amber, the rest the control's.
             val centre = Offset(ox + u * 2.5f, oy + u * 3.85f)
-            drawCircle(ring, radius = u * 1.7f, center = centre)
+            val wheel = Size(u * 3.4f, u * 3.4f)
+            val corner = centre - Offset(u * 1.7f, u * 1.7f)
+            if (classic) drawCircle(ring, radius = u * 1.7f, center = centre)
+            else {
+                drawCircle(a.control.brush(corner, wheel), radius = u * 1.7f, center = centre)
+                drawCircle(wheelWell(a), radius = u * 1.62f, center = centre)
+            }
+            val path = if (classic) SolidColor(stroke) else a.selected.brush(corner, wheel)
             val spots = List(5) { k -> WheelGeometry.spot(centre, u * 1.1f, k, 5) }
-            drawLine(stroke, spots[0], spots[2], strokeWidth = u * 0.18f, cap = StrokeCap.Round)
-            drawLine(stroke, spots[2], spots[4], strokeWidth = u * 0.18f, cap = StrokeCap.Round)
-            spots.forEachIndexed { k, p -> drawCircle(if (k % 2 == 0) stroke else disc, radius = u * 0.42f, center = p) }
+            drawLine(path, spots[0], spots[2], strokeWidth = u * 0.18f, cap = StrokeCap.Round)
+            drawLine(path, spots[2], spots[4], strokeWidth = u * 0.18f, cap = StrokeCap.Round)
+            spots.forEachIndexed { k, p ->
+                val r = u * 0.42f
+                val fill = when {
+                    classic -> SolidColor(if (k % 2 == 0) stroke else disc)
+                    else -> (if (k % 2 == 0) a.selected else a.control).brush(p - Offset(r, r), Size(2 * r, 2 * r))
+                }
+                drawCircle(fill, radius = r, center = p)
+            }
         }
     }
 
@@ -336,28 +357,7 @@ object WordWheel : PuzzleType {
             val wheelSize = minOf(maxWidth * 0.64f, (tall - fixed) * 0.46f, MAX_WHEEL).coerceAtLeast(0.dp)
 
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                // A notice is a chip, so a refusal differs by shape as well as colour; the line's room never changes.
-                Box(Modifier.fillMaxWidth().height(LINE), contentAlignment = Alignment.Center) {
-                    // Classic's notice is plain text, the error colour for a refusal, as before Arcade.
-                    val chip = if (notice != null && !classic) (if (noticeIsError) ArcadeFill(a.error, a.error, a.errorInk) else a.control) else null
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(50))
-                            .then(if (chip != null) Modifier.background(chip.brush).padding(horizontal = 10.dp) else Modifier),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            headerOf(s, notice),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = chip?.ink ?: if (classic) (if (notice != null && noticeIsError) scheme.error else scheme.onSurfaceVariant) else a.squareInk,
-                            fontWeight = if (chip != null) FontWeight.Bold else null,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                WordHeader(headerOf(s, notice), notice != null, noticeIsError, LINE)
 
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.width, maxHeight / s.height, MAX_CELL).coerceAtLeast(0.dp)
@@ -368,28 +368,7 @@ object WordWheel : PuzzleType {
 
                 // The word being spelled, and Enter for a tapped one. Either tries it; the row's room is always kept, so nothing moves.
                 Box(Modifier.fillMaxWidth().height(PILL).padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
-                    if (picked.isNotEmpty()) {
-                        Box(
-                            Modifier
-                                .arcadeLift(a.letter, 16.dp)
-                                .clip(RoundedCornerShape(50))
-                                .then(
-                                    if (tones != null) Modifier.background(tones.mark)
-                                    else Modifier.background(a.letter.brush).border(2.dp, a.selectedEdge, RoundedCornerShape(50))
-                                )
-                                .clickable(enabled = playable) { submit(picked) }
-                                .padding(horizontal = 18.dp, vertical = 4.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                picked.map { s.wheel[it].uppercaseChar() }.joinToString(""),
-                                color = tones?.let { BoardHues.onFill(it.mark) } ?: a.letter.ink,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                            )
-                        }
-                    }
+                    if (picked.isNotEmpty()) WordPill(picked.map { s.wheel[it].uppercaseChar() }.joinToString(""), tones?.mark, playable) { submit(picked) }
                     if (tapping && picked.isNotEmpty()) EnterButton(playable, Modifier.align(Alignment.CenterEnd)) { submit(picked) }
                 }
 
@@ -688,6 +667,57 @@ private fun ClassicRoundButton(glyph: String, enabled: Boolean, onClick: () -> U
         contentAlignment = Alignment.Center,
     ) {
         Text(glyph, color = scheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.35f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * The line over a word game's board, its room always kept (Word Wheel's and Dwindle's): a count, or a [notice]. In Arcade a
+ * notice is a chip, so a refusal ([error]) differs by shape as well as colour; Classic's is plain text, as before Arcade.
+ */
+@Composable
+internal fun WordHeader(text: String, notice: Boolean, error: Boolean, height: Dp) {
+    val a = ArcadeBoard.current
+    val classic = classicLook()
+    val scheme = MaterialTheme.colorScheme
+    Box(Modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
+        val chip = if (notice && !classic) (if (error) ArcadeFill(a.error, a.error, a.errorInk) else a.control) else null
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(50))
+                .then(if (chip != null) Modifier.background(chip.brush).padding(horizontal = 10.dp) else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text,
+                style = MaterialTheme.typography.labelLarge,
+                color = chip?.ink ?: if (classic) (if (notice && error) scheme.error else scheme.onSurfaceVariant) else a.squareInk,
+                fontWeight = if (chip != null) FontWeight.Bold else null,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** The word being spelled, a pill a tap tries (Word Wheel's and Dwindle's): Arcade's amber letter tile, Classic's [classicMark]. */
+@Composable
+internal fun WordPill(word: String, classicMark: Color?, enabled: Boolean, onClick: () -> Unit) {
+    val a = ArcadeBoard.current
+    Box(
+        Modifier
+            .arcadeLift(a.letter, 16.dp)
+            .clip(RoundedCornerShape(50))
+            .then(
+                if (classicMark != null) Modifier.background(classicMark)
+                else Modifier.background(a.letter.brush).border(2.dp, a.selectedEdge, RoundedCornerShape(50))
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(word, color = classicMark?.let { BoardHues.onFill(it) } ?: a.letter.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 

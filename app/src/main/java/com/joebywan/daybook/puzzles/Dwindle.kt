@@ -1,8 +1,6 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -13,9 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,11 +21,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -40,10 +36,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -60,7 +53,10 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.classicLook
 import kotlinx.coroutines.delay
 import kotlin.math.hypot
 
@@ -178,6 +174,8 @@ object Dwindle : PuzzleType {
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         val (hueA, hueB) = BoardHues.HUE_PAIRS[1]
         val tile = BoardHues.fill(hueB, dark)
         val stroke = BoardHues.mark(hueA)
@@ -194,11 +192,15 @@ object Dwindle : PuzzleType {
             for (r in 0 until 3) for (c in 0 until 3) {
                 if (r == 2 && c == 0) continue
                 val at = centre(r, c)
-                drawRoundRect(tile, Offset(at.x - u * 0.45f, at.y - u * 0.45f), Size(u * 0.9f, u * 0.9f), CornerRadius(u * 0.14f))
+                // Arcade's are the board's amber letter tiles; the swipe is its control colour.
+                val topLeft = Offset(at.x - u * 0.45f, at.y - u * 0.45f)
+                val box = Size(u * 0.9f, u * 0.9f)
+                drawRoundRect(if (classic) SolidColor(tile) else a.letter.brush(topLeft, box), topLeft, box, CornerRadius(u * 0.14f))
             }
             val trail = listOf(centre(0, 0), centre(1, 1), centre(1, 2), centre(2, 1))
-            for (k in 1 until trail.size) drawLine(stroke, trail[k - 1], trail[k], u * 0.18f, StrokeCap.Round)
-            for (p in trail) drawCircle(stroke, u * 0.2f, p)
+            val path = if (classic) SolidColor(stroke) else a.control.brush(Offset.Zero, size)
+            for (k in 1 until trail.size) drawLine(path, trail[k - 1], trail[k], u * 0.18f, StrokeCap.Round)
+            for (p in trail) drawCircle(path, u * 0.2f, p)
         }
     }
 
@@ -267,8 +269,13 @@ object Dwindle : PuzzleType {
         val latest by rememberUpdatedState(s)
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
+        // Classic (issue #418) draws the board as it was before Arcade, in a hue pair derived from the letters, never stored.
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         val (hueA, hueB) = remember(s.letters) { BoardHues.pair(s.letters.hashCode()) }
         val (highlight, glow, pulse) = rememberHintPaint()
+        // Arcade's hint rings sit on the dark frame round amber tiles, so they are amber there (Word Wheel's); the list keeps the page's ink.
+        val tileGlow = if (classic || highlight.warning) glow else a.selected.from
         val playable = interactive && !s.solved
         val measurer = rememberTextMeasurer()
         val counts = s.counts()
@@ -340,42 +347,24 @@ object Dwindle : PuzzleType {
             val tile = fit.tile.dp
 
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
+                WordHeader(
                     notice ?: buildString {
                         append("${s.found.size} of ${s.goals.size} words")
                         if (s.bonus.isNotEmpty()) append(" · ${s.bonus.size} bonus")
                     },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null && noticeIsError) scheme.error else scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().height(LINE.dp),
+                    notice != null, noticeIsError, LINE.dp,
                 )
 
                 Canvas(Modifier.fillMaxWidth().height(fit.listHeight.dp)) {
-                    drawList(s, fit, highlight, glow, pulse.value, hueA, dark, scheme.onSurfaceVariant, measurer, family)
+                    // Arcade's found letters take the given squares' ink, which reads on its page in both schemes.
+                    val found = if (classic) BoardHues.ink(hueA, dark) else a.givenInk
+                    drawList(s, fit, highlight, glow, pulse.value, found, scheme.onSurfaceVariant, measurer, family)
                 }
 
                 // The word being spelled, and Enter for a tapped one. Either tries it; the row's room is always kept, so nothing moves.
                 Box(Modifier.fillMaxWidth().height(PILL.dp).padding(vertical = 3.dp), contentAlignment = Alignment.Center) {
                     if (picked.isNotEmpty()) {
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(BoardHues.mark(hueA))
-                                .clickable(enabled = playable) { submit(picked) }
-                                .padding(horizontal = 18.dp, vertical = 3.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                picked.map { s.letters[it].uppercaseChar() }.joinToString(""),
-                                color = BoardHues.onFill(BoardHues.mark(hueA)),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                            )
-                        }
+                        WordPill(picked.map { s.letters[it].uppercaseChar() }.joinToString(""), if (classic) BoardHues.mark(hueA) else null, playable) { submit(picked) }
                     }
                     if (tapping && picked.isNotEmpty()) EnterButton(playable, Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) { submit(picked) }
                 }
@@ -429,7 +418,8 @@ object Dwindle : PuzzleType {
                                 }
                             },
                     ) {
-                        drawTiles(s, counts, picked, fit.tile.dp.toPx(), highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, vivid(accent), family)
+                        if (classic) drawTiles(s, counts, picked, fit.tile.dp.toPx(), highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, vivid(accent), family)
+                        else drawTilesArcade(s, counts, picked, fit.tile.dp.toPx(), highlight, tileGlow, pulse.value, a, measurer, feel, family)
                     }
                 }
 
@@ -444,14 +434,12 @@ object Dwindle : PuzzleType {
         highlight: BoardHighlight,
         glow: Color,
         pulse: Float,
-        hueA: Float,
-        dark: Boolean,
+        ink: Color,
         dash: Color,
         measurer: TextMeasurer,
         family: FontFamily?,
     ) {
         val u = fit.unit.dp.toPx()
-        val ink = BoardHues.ink(hueA, dark)
         fit.rows.forEachIndexed { row, goals ->
             val total = goals.sumOf { s.goals[it].word.length } * u + (goals.size - 1) * WORD_GAP * u
             var x = (size.width - total) / 2f
@@ -481,6 +469,63 @@ object Dwindle : PuzzleType {
                     }
                 }
                 x += word.length * u + WORD_GAP * u
+            }
+        }
+    }
+
+    /**
+     * Arcade's tiles (`ui/theme/ArcadeBoard.kt`), Word Wheel's grid: the frame behind every place, amber letter tiles, a
+     * vanished one a plain square. The word being spelled is the control's colour with an edge, so it differs by more than hue.
+     */
+    private fun DrawScope.drawTilesArcade(
+        s: DwindleState,
+        counts: IntArray,
+        picked: List<Int>,
+        cell: Float,
+        highlight: BoardHighlight,
+        glow: Color,
+        pulse: Float,
+        a: ArcadeBoard,
+        measurer: TextMeasurer,
+        feel: MoveFeel,
+        family: FontFamily?,
+    ) {
+        val inset = cell * 0.06f
+        val corner = CornerRadius(cell * 0.14f)
+        val box = Size(cell - 2 * inset, cell - 2 * inset)
+        fun centre(i: Int) = Offset((i % s.width + 0.5f) * cell, (i / s.width + 0.5f) * cell)
+        drawRoundRect(a.frame, Offset.Zero, size, CornerRadius(inset * 2))
+        // Under the tiles, so the trail never crosses a letter.
+        val trail = a.control.brush(Offset.Zero, size)
+        for (k in 1 until picked.size) drawLine(trail, centre(picked[k - 1]), centre(picked[k]), cell * 0.14f, StrokeCap.Round)
+        for (i in counts.indices) {
+            val topLeft = Offset((i % s.width) * cell + inset, (i / s.width) * cell + inset)
+            val look = highlight.look(i)
+            val alpha = if (look.dim) 0.3f else 1f
+            feelSquare(feel, i, topLeft, box, Color.White) {
+                if (counts[i] == 0) {
+                    // Vanished: a plain square, so the grid still reads as a grid and nothing seems to have moved.
+                    drawRoundRect(a.square, topLeft, box, corner, alpha = alpha)
+                } else {
+                    val fill = if (i in picked) a.control else a.letter
+                    fill.glow?.let { arcadeGlow(it.copy(alpha = 0.35f * alpha), topLeft, box, corner.x, (inset / density).dp) }
+                    drawRoundRect(fill.brush(topLeft, box), topLeft, box, corner, alpha = alpha)
+                    if (i in picked) drawRoundRect(a.selectedEdge, topLeft, box, corner, alpha = alpha, style = Stroke(cell * 0.05f))
+                    val letter = measurer.measure(s.letters[i].uppercase(), TextStyle(color = fill.ink.copy(alpha = alpha), fontSize = (cell * 0.52f).toSp(), fontWeight = FontWeight.Bold, fontFamily = family))
+                    drawText(letter, topLeft = Offset(topLeft.x + (box.width - letter.size.width) / 2f, topLeft.y + (box.height - letter.size.height) / 2f))
+                    val count = measurer.measure(counts[i].toString(), boardStyle(BoardGlyph.CORNER, cell * 0.8f).copy(color = fill.ink.copy(alpha = alpha), fontFamily = family))
+                    drawText(count, topLeft = Offset(topLeft.x + box.width - count.size.width - cell * 0.07f, topLeft.y + cell * 0.03f))
+                }
+            }
+            if (look.strong || look.soft) {
+                val w = if (look.strong) cell * 0.07f else cell * 0.045f
+                drawRoundRect(
+                    if (look.strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f),
+                    Offset(topLeft.x - w, topLeft.y - w),
+                    Size(box.width + 2 * w, box.height + 2 * w),
+                    CornerRadius(corner.x + w),
+                    style = Stroke(w),
+                )
             }
         }
     }

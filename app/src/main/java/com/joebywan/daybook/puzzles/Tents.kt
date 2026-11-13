@@ -29,9 +29,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -47,6 +45,8 @@ import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.ArcadeBoard
@@ -486,8 +486,9 @@ object Tents : PuzzleType {
         }
     }
 
-    private fun digitLayouts(measurer: androidx.compose.ui.text.TextMeasurer, n: Int, fontPx: Float, density: Density): List<TextLayoutResult> {
-        val style = TextStyle(fontSize = with(density) { fontPx.toSp() }, fontWeight = FontWeight.SemiBold)
+    /** The row and column counts, on the digit scale's clue role (numbers beside the grid). */
+    private fun digitLayouts(measurer: androidx.compose.ui.text.TextMeasurer, n: Int, unitPx: Float, density: Density): List<TextLayoutResult> {
+        val style = density.boardStyle(BoardGlyph.CLUE, unitPx)
         return (0..n).map { measurer.measure(it.toString(), style) }
     }
 
@@ -511,7 +512,7 @@ object Tents : PuzzleType {
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val unit = minOf(maxWidth, maxHeight) / (motif.size + 1)
             val unitPx = with(density) { unit.toPx() }
-            val digits = remember(unitPx) { digitLayouts(measurer, motif.size, unitPx * 0.55f, density) }
+            val digits = remember(unitPx) { digitLayouts(measurer, motif.size, unitPx, density) }
             Canvas(Modifier.size(unit * (motif.size + 1))) {
                 drawBoard(motif, unitPx, digits, scheme, Overlay(), classicHues = BoardHues.HUE_PAIRS[0])
             }
@@ -571,7 +572,7 @@ object Tents : PuzzleType {
             // Both axes: the clue gutter adds a unit each way.
             val unit = if (constraints.hasBoundedHeight) minOf(maxWidth / (n + 1), maxHeight / (n + 1)) else maxWidth / (n + 1)
             val unitPx = with(density) { unit.toPx() }
-            val digits = remember(unitPx, n) { digitLayouts(measurer, n, unitPx * 0.55f, density) }
+            val digits = remember(unitPx, n) { digitLayouts(measurer, n, unitPx, density) }
             val overlay = Overlay(
                 highlight, glow, pulse.value,
                 bad.first.intersect(settled.first), bad.second.intersect(settled.second), bad.third.intersect(settled.third),
