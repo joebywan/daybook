@@ -1,13 +1,16 @@
 # Daybook TODO
 
 
-## Arcade: the rest of the boards
+## Arcade: what is left
 
-Six boards are fully converted (`docs/COLOUR.md`, top). The other 25 are on the lighter look, so the app is uneven until they are done. Also owed:
-- Drawn accent spacing: `vivid()` measured 2.34 light / 1.94 dark on the closest pair against 5.79 for the raw accents, and `AccentSpacingTest` reads only the raw ones. The real form is an accent pair per puzzle, solved as a set per scheme, replacing `vivid()`'s global flag.
-- The hint popover, finish popup and solved pills are not on the Arcade tokens; `hintRims` stays muted in light.
-- Word Wheel's home motif uses its old colours.
-- Behind the switch: a board converted from here on keeps its Classic drawing (`classicLook()`, CLAUDE.md Colour; issue #418), and the per-scheme accent pairs replace `vivid()`'s Arcade branch only.
+Every board but Who's Who's graph is converted (`docs/COLOUR.md`, top); its pills and lines are still on the layer colours. Left over from the conversions:
+- Links' pale pair colours are weak on the white Arcade tiles; Links, Trail and Hexwords draw their letters and digits with a `TextStyle` naming no family (check they are Fredoka). *S.*
+- Lamps: the dark lit wash reads brownish, and plain walls blend into the frame in Arcade light (they read as holes at the edge). Selected, peeked and error states of the regions/pieces boards were not render-checked. *S.*
+- Thermometers' mercury shows seams between squares on the Arcade gradient. *S.*
+- Unblock's "All three tiers!" header overlaps the Moves · par line at 1080x2400. *S.*
+- Arcade hint card and finish frame not yet seen in WebKit dark at 375x537. *S.*
+- Not seen on the emulator in Arcade: Atoms, Pearls, Pipes, Arrows, Trail, Cipher, Codeword, Hexwords, Codebreaker, Inequality, Regions, Sun & Moon, Tally; the line boards' WebKit, Hard/Expert and Classic-solved renders. *S.*
+- Classic was rendered on the web (#472); Classic of Who's Who's graph not rendered in WebKit. *S.*
 
 The one list of outstanding work. Small enough to read in a minute; maintained as part of normal work.
 
@@ -24,27 +27,11 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **The Classic look (#418) has not been rendered.** Built from the code at `3369cc46^` and checked by compile and tests
-  only: the web build could not be made where it was written (yarn's fetch of Kotlin's karma fork from codeload.github.com
-  got 403) and there is no emulator. Render with `tools/render/render.py --storage` seeding `{"daybook_launch.look": "CLASSIC"}`
-  (and once with no `look`, to see Home's one-time card and the welcome's two swatches), light and dark, 375x537 and tall,
-  WebKit too: Home, Settings' Look card, Sudoku, Cage Sudoku, Nonogram, Tents, Word Wheel, Lexicon, and the boards only ever
-  drawn in Arcade (Dwindle, Equation, Hexwords, Links, Loop, Thermometers, Unblock, test:Who's who). Things to look for: Word
-  Wheel's and Dwindle's Enter button (post-Arcade; Classic gives it the side buttons' quiet pill), Sudoku's note discs (#407,
-  post-Arcade; Classic uses the twin square's tint), the welcome at 375x537 (the swatches sit with Start, outside the scroll).
-  Then on the emulator. Comment on #418 once it ships. *M.*
-- [ ] **Boards not yet on the digit scale** (`BoardGlyph`, `ui/BoardText.kt`). Moved: Sudoku, Cage Sudoku, Inequality,
-  Regions, Nonogram, Tally, Mosaic. Still on their own shares: Tents' clues (0.55 SemiBold), Mines' numbers (0.6), Lamps'
-  wall numbers, Shikaku (0.46), Atoms (0.42 Bold), Cipher (0.56 Medium), Dominoes' badges (0.27), Target, Lits' piece
-  letters (0.42 Bold) and Codeword's fixed 14sp letters. Left out of the UX batch because other sessions held those files.
-  Pick each a role (most are `CLUE` or `GIVEN`) and render before and after. *S each.*
+- [ ] **Boards not yet on the digit scale** (`BoardGlyph`, `ui/BoardText.kt`). Most moved with their Arcade conversion
+  (2026-11-13). Check what is left with a grep for `* 0.` font sizes and `.sp` in board files; pick each a role and render
+  before and after. *S each.*
 
-- [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
-  play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
-  Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
-  and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
-  are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
-  under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
+- [ ] **Streak calendar day cells** (Statistics card) are ~42dp at 360 wide; 48 needs the card's padding reduced. *S.*
 - [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
   opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
   player who saw the old offer once is never offered it again (nor shown the first-board walkthrough). A new key would
@@ -52,9 +39,6 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
-- [ ] **Walkthroughs on a wide window stack.** On a tablet in landscape the first-board walkthrough draws the stacked phone
-  layout, not the side panel the play screen uses (`PlayLayout`). Seen while recapturing the README shots (2026-10-27); not checked
-  on the web.
 - [ ] **Web: a touch right after a mouse gesture may be dropped.** Driving the walkthroughs in Playwright (Chromium and
   WebKit), the first touch tap after a mouse drag or click did nothing (Shikaku's remove, LITS's 2x2, Atoms' gap); the
   same taps by mouse, and by touch on the Android emulator, work. Probably the harness mixing pointer types, but a
@@ -137,18 +121,11 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Require SHA-pinned actions.** Once the SHA-pinning PR merges, turn on "Require actions to be pinned to a
   full-length commit SHA" in the repo's Actions settings. Owner only. *S.*
 - [ ] **Consider one approval for `.github/` changes** (a ruleset path rule), so a workflow change cannot merge unseen.
-- [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
-  2025.09 -> 2026.09, activity, datastore, core-ktx) and kotlinx-serialization 1.11
-  are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
-  17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
+- [ ] **kotlinx-serialization 1.13.0** (2026-11-11) waits for Renovate's 7-day minimum age; the androidx libraries are
+  current. The JDK stays 17 (CI too; `renovate.json` holds it); Gradle 9 would run on newer, so moving it is its own change.
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*
-- [ ] **`app/proguard-rules.pro` is not used.** The release build type names no `proguardFiles`, so R8 runs on the
-  library consumer rules alone and the file's `-keepclassmembers class com.joebywan.daybook.core.**` never applies (found
-  while building the release save check: a rule added there changed nothing until `proguardFiles(...)` was added). Saves load
-  without it (the check passes), so either delete the file or wire it in; wiring it in changes the shipped code, so run
-  `tools/save-check/check.py` on the result. *S.*
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
@@ -180,25 +157,10 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 ## The five puzzles added 2026-11-09 (Loop, Thermometers, Unblock, Equation, Links)
 
-Built in parallel and merged in sequence (1.41-1.45). Open items they left:
+Built in parallel and merged in sequence (1.41-1.45); all five checked on the emulator (2026-11-13). Open items they left:
 
-- [ ] **Not yet seen on the emulator.** All five were rendered on the web on 2026-11-11 (Chromium and WebKit, 375x537 and
-  390x844, light and dark, fresh and solved, every tier): Unblock's exit chevron ran off the right edge where width binds
-  (fixed), the rest fitted. Browser generation times are in CLAUDE.md; no day of a year takes over 1.3 s (Links Expert
-  2026-10-26, Loop Expert 2026-12-27 in WebKit, Unblock Hard 2026-10-16). Check them on a phone. *S.*
-- [ ] **Loop: a 0 never steps back.** A number with all its lines drawn turns lighter and smaller, but `k > 0` keeps every 0
-  at full weight, so on a solved board the 0s are the boldest thing left. Odd, not wrong: a 0 has nothing to draw. *S.*
-- [ ] **Equation's tiers are thin.** Length barely changes guesses needed (2.7 / 3.1 / 3.0); Hard and Expert differ by
-  24 vs 28 answers left after the first guess. Five guesses on Expert lost 2 boards a year to a hint-following player.
-  Find a measure that separates them (e.g. operators allowed), or accept it. *M.*
-- [ ] **Home tile colours by grid position.** The accent set is full; Equation shares Lexicon's and Links Pearls'
-  (`AccentSpacingTest.SHARED`). The owner suggested tiles coloured by their place on the grid so neighbours never match;
-  the owner answered (2026-11-13): yes, a tile's colour may differ from its board's. *M.*
 - [ ] **Codebreaker on the shared guess marker.** Equation lifted Lexicon's marking into `core/GuessMarks.kt`; Tower keeps
   its own peg scoring (a count is not a per-slot mark). Look at whether its teacher can share the rest. *S.*
-- [ ] **Links' Training passes only the hint's own line** (`every = null`): `LinksTeacher` has no "every instance of this
-  technique" function yet, so another correct instance plays on rather than passing. *S.*
-
 ## Future puzzle candidates
 
 - **Dwindle's marked-letter daily scoring mode.** The player's game also has a daily mode scored on letters marked on the board. Left out of the first
@@ -320,14 +282,10 @@ Cipher (without "only letter", never reached), Chess, Mambo, Nonogram, Tally, Mi
 Shikaku, Dominoes and LITS; Mosaic has its own judge
 (`MosaicDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
 
-## Test puzzles
+## Who's Who (the graph, graduated 2026-11-13)
 
-- [ ] **test:Who's who** (`puzzles/WhosWhoGraph.kt`, `CLAUDE.md` "Test puzzles"). Built to try Who's Who as a graph; hidden
-  behind Settings' "Test puzzles". Open: hints are Who's Who's teacher, so their words still say "row", "column", "tick" and
-  "cross off" (`WhosWhoTeacher` lines 148-274); give the graph its own phrasing or a word map. No walkthrough. Seen on the
-  emulator (Pixel 6, 2026-11-11): links, the closure's dashed anti-links and the table views' glide all work; not yet on a
-  tablet. Odd: a drawn line runs from the middle of each pill, so it is drawn over the names it joins (Gus, water); stopping
-  it at the pill's edge would keep them readable. The owner's call (2026-11-13): graduate it, a new id in `all` with the full standards (`docs/PUZZLE_STANDARDS.md`). *L.*
+- [ ] **No keyboard input or move feel**; the table it replaced had both. *M.*
+- [ ] **The chosen pill is dropped on rotation** (it is `remember`, not `rememberSaveable`). *S.*
 
 ## Owner's call
 
@@ -355,7 +313,7 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
   of three or four steps cannot see (`docs/LEVELS_SPEC.md`, "Level difficulty"). Solve times by tier would settle it; a
   re-rating ships as a new deal.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
-  Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
+  Sets, Tower and Mosaic no longer hard-code hex lists (their Arcade conversions, 2026-11-13); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),
   a check at 375x537, and no change to any seed, state or save.
   5. Atoms, Pipes, Mambo, Snap, Kings, Lexicon: scheme plus accent today. Give each two content hues (Atoms: element

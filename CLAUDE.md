@@ -1307,7 +1307,7 @@ the floors; the palette tests share its maths (`ColourDistance`).
 drew before Arcade (`3369cc46^`): parchment schemes, raw accents, the old `BoardHues` recipes, flat home tiles, no glow. The
 switch is `classicLook()` in `ui/theme/Theme.kt`, a global set by `DaybookTheme` (as `vivid()`'s dark flag is); `lookScheme`,
 `vivid`, `BoardHues.fill`/`mark`/`ink`/`onFill`, `ArcadeBoard.of`/`tile`, `arcadeGlow`/`arcadeHardShadow` and the page brush
-follow it, and the six Arcade-converted boards (Sudoku and Cage Sudoku, Nonogram, Tents, Word Wheel, `GuessBoard`) and Home
+follow it, and every Arcade-converted board (all of them but Who's Who's graph, `docs/COLOUR.md`) and Home
 branch on it to draw exactly what they drew before. Stored as the `look` launch preference (null until answered: Arcade),
 asked once (the welcome for a new player, `LookOffer` on Home for one from before), held in Settings (`ui/home/LookChoice.kt`).
 **Arcade work stays behind the switch**: a board converted to Arcade keeps its Classic drawing. Tests run in both looks
