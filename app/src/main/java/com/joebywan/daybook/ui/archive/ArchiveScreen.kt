@@ -37,6 +37,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +76,18 @@ private val TIER_ROW = 60.dp
 private val DATE_LINE = 28.dp
 /** The month bar (its arrows are 48 dp touch targets) and the weekday letters. */
 private val MONTH_BAR = 48.dp
+
+/**
+ * "N days, all unlocked" under the title, or nothing in a window under [SHORT_WINDOW] tall (a phone browser with its toolbars,
+ * a phone on its side), where the line's height goes to the day squares instead (about 5dp a square).
+ */
+@Composable
+private fun unlockedLine(today: LocalDate): String? {
+    val short = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() } < SHORT_WINDOW
+    return if (short) null else "${today.toEpochDays() - DailySeed.EPOCH.toEpochDays() + 1} days, all unlocked"
+}
+
+private val SHORT_WINDOW = 600.dp
 private val WEEKDAYS = 20.dp
 private val GAP = 12.dp
 
@@ -133,7 +147,7 @@ fun ArchiveScreen(
 
     TitledScreen(
         "${puzzle.displayName} archive",
-        "${today.toEpochDays() - DailySeed.EPOCH.toEpochDays() + 1} days, all unlocked",
+        unlockedLine(today),
         onBack,
     ) {
         BoxWithConstraints(
@@ -213,8 +227,9 @@ private fun DayCell(
     val open = ArchiveCalendar.playable(day, today)
     val all = Difficulty.entries.all(cleared)
     val shape = RoundedCornerShape(10.dp)
-    var m = modifier.aspectRatio(1f).padding(2.dp).clip(shape)
-    if (open) m = m.background(if (all) accent.copy(alpha = 0.22f) else scheme.surface).clickable(onClick = onClick)
+    // The whole square takes the tap, its 2dp gap included: a day is as big a target as the calendar has room for.
+    var m = modifier.aspectRatio(1f).clip(shape).then(if (open) Modifier.clickable(onClick = onClick) else Modifier).padding(2.dp).clip(shape)
+    if (open) m = m.background(if (all) accent.copy(alpha = 0.22f) else scheme.surface)
     when {
         isSelected -> m = m.border(BorderStroke(2.5.dp, BoardHues.onTint(accent, scheme.background, 3f)), shape)
         day == today -> m = m.border(BorderStroke(1.5.dp, scheme.onSurface), shape)
@@ -328,7 +343,7 @@ fun ArchiveDaysScreen(
 
     TitledScreen(
         "Archive",
-        "${today.toEpochDays() - DailySeed.EPOCH.toEpochDays() + 1} days, all unlocked",
+        unlockedLine(today),
         onBack,
     ) {
         BoxWithConstraints(
@@ -396,8 +411,8 @@ private fun DayMark(day: LocalDate, today: LocalDate, isSelected: Boolean, playe
     val scheme = MaterialTheme.colorScheme
     val open = ArchiveCalendar.playable(day, today)
     val shape = RoundedCornerShape(10.dp)
-    var m = modifier.aspectRatio(1f).padding(2.dp).clip(shape)
-    if (open) m = m.background(scheme.surface).clickable(onClick = onClick)
+    var m = modifier.aspectRatio(1f).clip(shape).then(if (open) Modifier.clickable(onClick = onClick) else Modifier).padding(2.dp).clip(shape)
+    if (open) m = m.background(scheme.surface)
     when {
         isSelected -> m = m.border(BorderStroke(2.5.dp, scheme.primary), shape)
         day == today -> m = m.border(BorderStroke(1.5.dp, scheme.onSurface), shape)
