@@ -44,7 +44,14 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.ring
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
+import androidx.compose.ui.graphics.SolidColor
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.boardSp
@@ -121,17 +128,21 @@ object Target : PuzzleType {
 
     // ---- drawing helpers ----------------------------------------------------------------------
 
+    /** A tile's number on the digit scale: a given's size for its square, the square shrunk until three or four digits fit. */
     @Composable
-    private fun fontFor(value: Int, u: Dp) = (u * when {
-        value >= 1000 -> 0.34f
-        value >= 100 -> 0.42f
-        else -> 0.5f
-    }).boardSp()
+    private fun tileStyle(value: Int, u: Dp) = BoardGlyph.GIVEN.style(
+        u * 0.95f * when {
+            value >= 1000 -> 0.6f
+            value >= 100 -> 0.75f
+            else -> 0.9f
+        },
+    )
 
     // ---- the home motif -----------------------------------------------------------------------
 
     @Composable
     override fun Preview(modifier: Modifier) {
+        if (!classicLook()) return ArcadePreview(modifier)
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
@@ -158,6 +169,33 @@ object Target : PuzzleType {
         }
     }
 
+    /** The motif in Arcade: the target on its given's lavender, two tiles, and the answer they make in the control's gradient. */
+    @Composable
+    private fun ArcadePreview(modifier: Modifier) {
+        val a = ArcadeBoard.current
+        BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+            val u = minOf(maxWidth, maxHeight) / 3.0f
+            val shape = RoundedCornerShape(u * 0.2f)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u * 0.12f)) {
+                Box(
+                    Modifier.width(u * 2.6f).height(u * 0.95f).clip(shape).background(a.given),
+                    contentAlignment = Alignment.Center,
+                ) { Text("42", color = a.givenInk, fontSize = (u * 0.6f).boardSp(), lineHeight = (u * 0.6f).boardSp() * 1.2f, fontWeight = FontWeight.Bold) }
+                Row(horizontalArrangement = Arrangement.spacedBy(u * 0.12f), verticalAlignment = Alignment.CenterVertically) {
+                    for (n in listOf(6, 7)) Box(
+                        Modifier.size(u * 0.95f).clip(shape).background(a.square).border(1.dp, a.frame, shape),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("$n", color = a.squareInk, fontSize = (u * 0.52f).boardSp(), lineHeight = (u * 0.52f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold) }
+                    Text("×", color = a.squareInk, fontSize = (u * 0.6f).boardSp(), lineHeight = (u * 0.6f).boardSp() * 1.2f, fontWeight = FontWeight.Bold)
+                }
+                Box(
+                    Modifier.size(u * 0.95f).clip(shape).background(a.control.brush),
+                    contentAlignment = Alignment.Center,
+                ) { Text("42", color = a.control.ink, fontSize = (u * 0.4f).boardSp(), lineHeight = (u * 0.4f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold) }
+            }
+        }
+    }
+
     // ---- the board ----------------------------------------------------------------------------
 
     /** The line under the target: the move being built, a refusal, the last sum, or what to do. One line, always reserved. */
@@ -179,7 +217,9 @@ object Target : PuzzleType {
         val dark = BoardHues.isDark(scheme)
         val hues = remember(s.start, s.target) { BoardHues.pair((s.start + s.target).hashCode()) }
         val (hueA, hueB) = hues
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
 
         // The move being built is transient: it starts over whenever the board changes (a finished operation, undo, a hint).
         var entry by remember(s.slots) { mutableStateOf(TargetEntry()) }
@@ -222,15 +262,18 @@ object Target : PuzzleType {
                         .highlightAnchor(TARGET)
                         .ring(look, glow, pulse, corner, outside = true)
                         .dimmed(look)
+                        // Arcade: the target is the board's given, lavender; reached, it takes the win's amber.
+                        .then(if (!classic && s.solved) Modifier.arcadeLift(a.selected, corner) else Modifier)
                         .clip(shape)
-                        .background(scheme.surface),
+                        .background(if (classic) SolidColor(scheme.surface) else if (s.solved) a.selected.brush else SolidColor(a.given)),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("TARGET", color = scheme.onSurfaceVariant, fontSize = (u * 0.17f).boardSp(), lineHeight = (u * 0.17f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold)
+                    val targetInk = if (s.solved) a.selected.ink else a.givenInk
+                    Text("TARGET", color = if (classic) scheme.onSurfaceVariant else targetInk.copy(alpha = 0.75f), fontSize = (u * 0.17f).boardSp(), lineHeight = (u * 0.17f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold)
                     Text(
                         "${s.target}",
-                        color = if (s.solved) scheme.primary else BoardHues.ink(hueB, dark),
+                        color = if (!classic) targetInk else if (s.solved) scheme.primary else BoardHues.ink(hueB, dark),
                         fontSize = (u * 0.62f).boardSp(), lineHeight = (u * 0.62f).boardSp() * 1.2f,
                         fontWeight = FontWeight.Bold,
                     )
@@ -240,7 +283,7 @@ object Target : PuzzleType {
                 Box(Modifier.fillMaxWidth().height(u * 0.42f), contentAlignment = Alignment.Center) {
                     Text(
                         captionOf(s, entry, note),
-                        color = if (note != null) scheme.error else scheme.onSurfaceVariant,
+                        color = if (note != null) (if (classic) scheme.error else a.error) else scheme.onSurfaceVariant,
                         fontSize = (u * 0.2f).boardSp(), lineHeight = (u * 0.2f).boardSp() * 1.2f,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -258,34 +301,32 @@ object Target : PuzzleType {
                             val picked = entry.first == slot
                             val hit = value == s.target
                             val fill = if (value > 0 && slot in made) BoardHues.fill(hueB, dark) else scheme.surface
+                            // Arcade: a starting number is a plain tile, one the player made the control's gradient (as Sudoku's
+                            // digits), the picked one amber, the target reached amber too; picked and reached also take an edge.
+                            val tile = when {
+                                value <= 0 -> null
+                                picked || hit -> a.selected
+                                slot in made -> a.control
+                                else -> ArcadeFill(a.square, a.square, a.squareInk)
+                            }
                             Box(
                                 Modifier
                                     .size(u * 1.1f, u * 0.95f)
-                                    .moveFeel(feel, slot, vivid(accent))
+                                    .moveFeel(feel, slot, if (classic) vivid(accent) else a.selected.from)
                                     .highlightAnchor(slot)
                                     .ring(l, glow, pulse, corner, outside = true)
                                     .dimmed(l)
+                                    .then(if (!classic && tile != null) Modifier.arcadeLift(tile, corner) else Modifier)
                                     .clip(shape)
-                                    .background(if (value > 0) fill else Color.Transparent)
-                                    .background(if (picked) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f) else Color.Transparent)
-                                    .border(
-                                        if (hit || picked) 3.dp else 1.dp,
-                                        when {
-                                            hit -> scheme.primary
-                                            picked -> BoardHues.mark(hueA)
-                                            value > 0 -> scheme.outline
-                                            else -> scheme.outline.copy(alpha = 0.3f)
-                                        },
-                                        shape,
-                                    )
+                                    .then(if (classic) Modifier else arcadeTile(tile, picked || hit, shape, a))
+                                    .then(if (classic) classicTile(value, fill, picked, hit, hueA, dark, shape) else Modifier)
                                     .clickable(enabled = interactive && value > 0 && !s.solved) { go(s.tapTile(entry, slot)) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (value > 0) Text(
                                     "$value",
-                                    color = if (fill == scheme.surface) scheme.onSurface else BoardHues.onFill(fill),
-                                    fontSize = fontFor(value, u), lineHeight = fontFor(value, u) * 1.2f,
-                                    fontWeight = FontWeight.SemiBold,
+                                    color = tile?.takeIf { !classic }?.ink ?: if (fill == scheme.surface) scheme.onSurface else BoardHues.onFill(fill),
+                                    style = tileStyle(value, u),
                                     maxLines = 1,
                                 )
                             }
@@ -298,24 +339,57 @@ object Target : PuzzleType {
                     for (op in TargetOp.entries) {
                         val l = highlight.look(OP0 + op.ordinal)
                         val chosen = entry.op == op
+                        // Arcade: an operator is a key on the given's lavender; the chosen one amber with an edge.
+                        val key = if (chosen) a.selected else ArcadeFill(a.given, a.given, a.givenInk)
                         Box(
                             Modifier
                                 .size(u * 0.82f)
                                 .highlightAnchor(OP0 + op.ordinal)
                                 .ring(l, glow, pulse, corner, outside = true)
                                 .dimmed(l)
+                                .then(if (!classic && chosen) Modifier.arcadeLift(key, corner) else Modifier)
                                 .clip(shape)
-                                .background(scheme.surface)
-                                .background(if (chosen) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f) else Color.Transparent)
-                                .border(if (chosen) 3.dp else 1.dp, if (chosen) BoardHues.mark(hueA) else scheme.outline, shape)
+                                .then(
+                                    if (classic) Modifier
+                                        .background(scheme.surface)
+                                        .background(if (chosen) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f) else Color.Transparent)
+                                        .border(if (chosen) 3.dp else 1.dp, if (chosen) BoardHues.mark(hueA) else scheme.outline, shape)
+                                    else arcadeTile(key, chosen, shape, a)
+                                )
                                 .clickable(enabled = interactive && !s.solved) { go(s.tapOp(entry, op)) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(op.symbol, color = BoardHues.ink(hueA, dark), fontSize = (u * 0.5f).boardSp(), lineHeight = (u * 0.5f).boardSp() * 1.2f, fontWeight = FontWeight.Bold)
+                            Text(op.symbol, color = if (classic) BoardHues.ink(hueA, dark) else key.ink, fontSize = (u * 0.5f).boardSp(), lineHeight = (u * 0.5f).boardSp() * 1.2f, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
+    }
+
+    /** Classic's tile, as before Arcade: its fill, the picked tint, and an outline heavier when picked or the target. */
+    @Composable
+    private fun classicTile(value: Int, fill: Color, picked: Boolean, hit: Boolean, hueA: Float, dark: Boolean, shape: RoundedCornerShape): Modifier {
+        val scheme = MaterialTheme.colorScheme
+        return Modifier
+            .background(if (value > 0) fill else Color.Transparent)
+            .background(if (picked) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f) else Color.Transparent)
+            .border(
+                if (hit || picked) 3.dp else 1.dp,
+                when {
+                    hit -> scheme.primary
+                    picked -> BoardHues.mark(hueA)
+                    value > 0 -> scheme.outline
+                    else -> scheme.outline.copy(alpha = 0.3f)
+                },
+                shape,
+            )
+    }
+
+    /** Arcade's tile: [fill], an edge when [edged]; an empty place ([fill] null) is a faint outline of the frame. */
+    private fun arcadeTile(fill: ArcadeFill?, edged: Boolean, shape: RoundedCornerShape, a: ArcadeBoard): Modifier = when {
+        fill == null -> Modifier.border(1.dp, a.frame.copy(alpha = a.frame.alpha * 0.3f), shape)
+        edged -> Modifier.background(fill.brush).border(3.dp, a.selectedEdge, shape)
+        else -> Modifier.background(fill.brush).border(1.dp, a.frame.copy(alpha = a.frame.alpha * 0.35f), shape)
     }
 }

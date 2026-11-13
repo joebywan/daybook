@@ -45,7 +45,12 @@ import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.arcadeHardShadow
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
@@ -135,7 +140,9 @@ object Tower : PuzzleType {
     /** The digit on a peg: the key that picks it, so colour is never the only signal. */
     @Composable
     private fun PegDigit(colour: Int, size: Int) {
-        val ink = if (palette[colour].luminance() > 0.35f) Color(0xFF1B2F29) else Color.White
+        // Classic keeps its old rule (its dark ink is the old scheme's surface); Arcade picks the ink by contrast.
+        val ink = if (!classicLook()) BoardHues.onFill(palette[colour])
+        else if (palette[colour].luminance() > 0.35f) Color(0xFF1B2F29) else Color.White
         Text("${colour + 1}", color = ink, fontSize = size.dp.boardSp(), lineHeight = size.dp.boardSp() * 1.2f, fontWeight = FontWeight.Bold)
     }
 
@@ -215,6 +222,8 @@ object Tower : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         Column(
             modifier,
             verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
@@ -228,7 +237,7 @@ object Tower : PuzzleType {
                         // A tint of the foreground rather than `surface`, because the tile's own
                         // background is the grid's to choose: a surface plate on a surface tile
                         // would be invisible, and then the pegs float with no row to sit in.
-                        .background(scheme.onSurface.copy(alpha = 0.08f)),
+                        .background(if (classic) scheme.onSurface.copy(alpha = 0.08f) else a.given),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     guess.forEach { colour ->
@@ -254,6 +263,11 @@ object Tower : PuzzleType {
     @Composable
     private fun Pips(modifier: Modifier, feedback: Feedback, slots: Int, preview: Boolean) {
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        // Arcade: the board's ink for a pip, the given's lavender for none.
+        val ink = if (classic) scheme.onSurface else if (preview) a.givenInk else a.squareInk
+        val none = if (classic) (if (preview) scheme.outline.copy(alpha = 0.55f) else scheme.surfaceVariant) else if (preview) a.givenInk.copy(alpha = 0.25f) else a.given
         Column(modifier, verticalArrangement = Arrangement.Center) {
             (0 until slots).chunked((slots + 1) / 2).forEach { line ->
                 Row(if (preview) Modifier.weight(1f).fillMaxWidth() else Modifier) {
@@ -263,12 +277,10 @@ object Tower : PuzzleType {
                                 .clip(CircleShape)
                                 .then(
                                     when {
-                                        pip < feedback.exact -> Modifier.background(scheme.onSurface)
+                                        pip < feedback.exact -> Modifier.background(ink)
                                         pip < feedback.exact + feedback.misplaced ->
-                                            Modifier.border(if (preview) 1.2.dp else 1.5.dp, scheme.onSurface, CircleShape)
-                                        else -> Modifier.background(
-                                            if (preview) scheme.outline.copy(alpha = 0.55f) else scheme.surfaceVariant,
-                                        )
+                                            Modifier.border(if (preview) 1.2.dp else 1.5.dp, ink, CircleShape)
+                                        else -> Modifier.background(none)
                                     }
                                 )
                         )
@@ -430,8 +442,10 @@ object Tower : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as TowerState
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         var selectedColour by remember(s.secret) { mutableIntStateOf(0) }
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
         // A guess marked is a unit: its pegs settle and glow along and a note plays as high as its pips landed (they are
         // showing already, so the note tells nothing new). Pegs are `guess * slots + slot`.
         val rows = remember(s.maxGuesses, s.slots) { List(s.maxGuesses) { g -> IntArray(s.slots) { g * s.slots + it } } }
@@ -480,7 +494,8 @@ object Tower : PuzzleType {
                         .fillMaxWidth()
                         .keepClear()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(scheme.surface)
+                        // Arcade: the guess being built sits on the given's lavender, apart from the scored rows.
+                        .background(if (classic) scheme.surface else a.given)
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -495,9 +510,9 @@ object Tower : PuzzleType {
                                 .dimmed(look)
                                 .clip(CircleShape)
                                 .background(
-                                    if (colour >= 0) palette[colour] else scheme.surfaceVariant
+                                    if (colour >= 0) palette[colour] else if (classic) scheme.surfaceVariant else a.square
                                 )
-                                .border(1.dp, scheme.outline, CircleShape)
+                                .border(1.dp, if (classic) scheme.outline else a.frame, CircleShape)
                                 .clickable(enabled = interactive) {
                                     onState(s.withPeg(slot, selectedColour))
                                 },
@@ -507,14 +522,22 @@ object Tower : PuzzleType {
                     Spacer(Modifier.weight(1f))
                     // Capped: at 2x "Submit" wrapped to two lines.
                     CappedFontScale {
+                        // Arcade: a control once the row is full (Lexicon's Enter), flat and faint before.
+                        val submit = a.control.takeIf { !classic && s.ready }
                         Text(
                             "Submit",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (s.ready) scheme.primary else scheme.outline,
+                            style = if (classic) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = when {
+                                classic -> if (s.ready) scheme.primary else scheme.outline
+                                submit != null -> submit.ink
+                                else -> a.givenInk.copy(alpha = 0.45f)
+                            },
                             modifier = Modifier
                                 .highlightAnchor(TowerTeacher.SUBMIT_BUTTON)
                                 .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, 8.dp, outside = true)
+                                .then(submit?.let { Modifier.arcadeLift(it, 10.dp) } ?: Modifier)
                                 .clip(RoundedCornerShape(10.dp))
+                                .then(submit?.let { Modifier.background(it.brush) } ?: Modifier)
                                 .clickable(enabled = interactive && s.ready) { onState(s.submit()) }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         )
@@ -534,11 +557,16 @@ object Tower : PuzzleType {
                                 .height(40.dp)
                                 .highlightAnchor(TowerTeacher.SWATCH + colour)
                                 .ring(highlight.look(TowerTeacher.SWATCH + colour, dims = false), glow, pulse, 8.dp, outside = true)
+                                .then(
+                                    if (classic) Modifier
+                                    else if (selectedColour == colour) a.selected.glow?.let { Modifier.arcadeGlow(it, 10.dp) } ?: Modifier.arcadeHardShadow(10.dp)
+                                    else Modifier.arcadeHardShadow(10.dp)
+                                )
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(palette[colour])
                                 .border(
                                     if (selectedColour == colour) 3.dp else 0.dp,
-                                    scheme.onBackground,
+                                    if (classic) scheme.onBackground else a.selectedEdge,
                                     RoundedCornerShape(10.dp),
                                 )
                                 .clickable(enabled = interactive) {
@@ -556,7 +584,7 @@ object Tower : PuzzleType {
                 Text(
                     "Out of guesses. The code was:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.error,
+                    color = if (classic) scheme.error else a.error,
                     modifier = Modifier.padding(top = 8.dp, bottom = 6.dp),
                 )
                 Row {
@@ -588,20 +616,23 @@ object Tower : PuzzleType {
         feel: MoveFeel,
     ) {
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         val pegs = guess.indices.map { highlight.look(TowerTeacher.peg(slots, index, it)) }
         val pips = highlight.look(TowerTeacher.PIPS + index)
         Row(
             Modifier
                 .fillMaxWidth()
+                .then(if (classic) Modifier else Modifier.arcadeHardShadow(12.dp, 2.dp))
                 .clip(RoundedCornerShape(12.dp))
-                .background(scheme.surface)
+                .background(if (classic) scheme.surface else a.square)
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 "${index + 1}",
                 style = MaterialTheme.typography.labelMedium,
-                color = scheme.onSurfaceVariant,
+                color = if (classic) scheme.onSurfaceVariant else a.squareInk.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .width(18.dp)
@@ -615,7 +646,7 @@ object Tower : PuzzleType {
                         .dimmed(pegs[slot])
                         .clip(CircleShape)
                         // Inside the clip, so a peg glows round.
-                        .moveFeel(feel, index * slots + slot, vivid(accent))
+                        .moveFeel(feel, index * slots + slot, if (classic) vivid(accent) else a.selected.from)
                         .background(palette[colour]),
                     contentAlignment = Alignment.Center,
                 ) { PegDigit(colour, 13) }

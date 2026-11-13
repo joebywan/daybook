@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -242,8 +245,15 @@ object Chess : PuzzleType {
         }
     }
 
-    /** The light and the dark square, whichever way the theme tints them, so a1 is dark in both themes. */
-    private fun squareColours(scheme: androidx.compose.material3.ColorScheme): Pair<Color, Color> {
+    /**
+     * The light and the dark square, whichever way the theme tints them, so a1 is dark in both themes. Arcade's are the
+     * board's plain and given squares (white and lavender, or the deep square and its lighter given in dark); Classic's the
+     * variant and a step towards its ink. Pieces read on all of them by their outline (`ChessSquaresTest`).
+     */
+    internal fun squareColours(scheme: androidx.compose.material3.ColorScheme): Pair<Color, Color> {
+        if (!classicLook()) ArcadeBoard.of(scheme).let { t ->
+            return if (t.given.luminance() > t.square.luminance()) t.given to t.square else t.square to t.given
+        }
         val a = scheme.surfaceVariant
         val b = lerp(a, scheme.onSurfaceVariant, 0.30f)
         return if (b.luminance() > a.luminance()) b to a else a to b
@@ -334,9 +344,13 @@ object Chess : PuzzleType {
         }
 
         val (light, dark) = squareColours(scheme)
-        val note = vivid(accent)
+        val classic = classicLook()
+        val arcade = ArcadeBoard.of(scheme)
+        // Classic marks a move's squares with the accent; Arcade's ochre accent is near its amber selection, so the control's blue.
+        val note = if (classic) vivid(accent) else arcade.control.from
         // The accent over lavender squares went to mud; amber is the selection colour everywhere else in the trial.
         val warm = com.joebywan.daybook.ui.theme.BoardHues.selected(com.joebywan.daybook.ui.theme.BoardHues.isDark(scheme))
+        val wrong = if (classic) scheme.error else arcade.error
 
         BoxWithConstraints(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -353,6 +367,8 @@ object Chess : PuzzleType {
                 Box(
                     Modifier
                         .size(side)
+                        // Arcade: the board in the frame's colour, a hard edge round the squares as every Arcade board has.
+                        .then(if (classic) Modifier else Modifier.border(2.dp, arcade.frame))
                         // The index of a highlight is the square (a1 = 0), whichever way the board faces.
                         .reportHighlight { size, h ->
                             val w = size.width / 8f
@@ -376,11 +392,10 @@ object Chess : PuzzleType {
                             drawRect(if ((sq % 8 + sq / 8) % 2 == 0) dark else light, at(sq), Size(c, c))
                         }
                         // Classic (issue #418): the accent over the squares, as before Arcade.
-                        val classic = com.joebywan.daybook.ui.theme.classicLook()
                         for (sq in lastSquares) drawRect(if (classic) note.copy(alpha = 0.30f) else warm.copy(alpha = 0.55f), at(sq), Size(c, c))
                         if (selected >= 0) drawRect(if (classic) note.copy(alpha = 0.55f) else warm.copy(alpha = 0.85f), at(selected), Size(c, c))
                         if (kingSq >= 0) {
-                            drawCircle(scheme.error.copy(alpha = 0.55f), c * 0.46f, at(kingSq) + Offset(c / 2, c / 2))
+                            drawCircle(wrong.copy(alpha = 0.55f), c * 0.46f, at(kingSq) + Offset(c / 2, c / 2))
                         }
                         for (sq in 0..63) {
                             val v = shown.pieceAt(sq)
@@ -476,7 +491,7 @@ object Chess : PuzzleType {
                     Text(
                         text,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (lost) scheme.error else scheme.onSurfaceVariant,
+                        color = if (lost) wrong else scheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         minLines = CAPTION_LINES,
                         maxLines = CAPTION_LINES,
