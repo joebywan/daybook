@@ -18,14 +18,19 @@ import org.junit.Test
 class MosaicPaletteTest {
     private fun apart(a: Color, b: Color) = ColourDistance.apart(a, b)
 
-    private fun closest(n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(Mosaic.palette[i], Mosaic.palette[j]) } }.min()
+    /** Classic's palette and Arcade's, held to the same floors. */
+    private val palettes = mapOf("Classic" to Mosaic.palette, "Arcade" to Mosaic.arcadePalette)
+
+    private fun closest(p: List<Color>, n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(p[i], p[j]) } }.min()
 
     @Test
     fun `colours are told apart at every tier's count, colour-blind vision included`() {
         // Standard 3, Hard 4, Expert 5; measured 20.7, 15.8, 15.8 (min over normal, deut, prot, trit).
-        assertTrue("3 colours: ${closest(3)}", closest(3) >= 20)
-        assertTrue("4 colours: ${closest(4)}", closest(4) >= 15)
-        assertTrue("5 colours: ${closest(5)}", closest(5) >= 15)
+        for ((look, p) in palettes) {
+            assertTrue("$look 3 colours: ${closest(p, 3)}", closest(p, 3) >= 20)
+            assertTrue("$look 4 colours: ${closest(p, 4)}", closest(p, 4) >= 15)
+            assertTrue("$look 5 colours: ${closest(p, 5)}", closest(p, 5) >= 15)
+        }
     }
 
     private fun wcagY(c: Color) = 0.2126 * lin(c.red.toDouble()) + 0.7152 * lin(c.green.toDouble()) + 0.0722 * lin(c.blue.toDouble())
@@ -34,9 +39,12 @@ class MosaicPaletteTest {
     @Test
     fun `every digit reads on its fill at 4_5 to 1`() {
         // Measured: Amber 8.8 (ink), Teal 5.9 (black), Violet 5.1 (white), Rose 7.4 (white), Blue 7.2 (ink).
-        for (c in Mosaic.palette) {
-            val digit = BoardHues.onFill(c)
-            assertTrue("digit ${ratio(digit, c)} on $c", ratio(digit, c) >= 4.5)
+        // In the look each palette is drawn in, since the digit's ink (onFill) is the look's own.
+        forEachLook { look ->
+            for (c in if (look.label == "Classic") Mosaic.palette else Mosaic.arcadePalette) {
+                val digit = BoardHues.onFill(c)
+                assertTrue("${look.label} digit ${ratio(digit, c)} on $c", ratio(digit, c) >= 4.5)
+            }
         }
     }
 
@@ -44,11 +52,13 @@ class MosaicPaletteTest {
     fun `brightness has at least three separated levels, not one grey`() {
         // Sorted by luminance, count a new level whenever the step from the last one is at least 1.3:1.
         // Measured: rose .09, violet .16 (1.47), teal .24 (1.41), blue .49 (1.83); amber .60 sits with blue (1.22).
-        val ys = Mosaic.palette.map(::wcagY).sorted()
-        var levels = 1
-        var last = ys[0]
-        for (y in ys.drop(1)) if ((y + 0.05) / (last + 0.05) >= 1.3) { levels++; last = y }
-        assertTrue("levels: $levels", levels >= 3)
+        for ((look, p) in palettes) {
+            val ys = p.map(::wcagY).sorted()
+            var levels = 1
+            var last = ys[0]
+            for (y in ys.drop(1)) if ((y + 0.05) / (last + 0.05) >= 1.3) { levels++; last = y }
+            assertTrue("$look levels: $levels", levels >= 3)
+        }
     }
 
     @Test
@@ -57,7 +67,7 @@ class MosaicPaletteTest {
         // In both looks (issue #418).
         forEachLook { look ->
             for ((_, s) in lookSchemes(look)) for (surface in listOf(s.background, s.surface)) {
-                for (c in Mosaic.palette) assertTrue("a colour sits on the ${look.label} surface: ${apart(c, surface)}", apart(c, surface) >= 12)
+                for (c in palettes.getValue(look.label)) assertTrue("a colour sits on the ${look.label} surface: ${apart(c, surface)}", apart(c, surface) >= 12)
             }
         }
     }
@@ -67,7 +77,7 @@ class MosaicPaletteTest {
         // In both looks: Classic's fill, ink and mark are the older recipes (issue #418).
         val reserved = mutableListOf<Color>()
         forEachLook { reserved += listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) } }
-        for (p in Mosaic.palette) assertTrue("a colour is a reserved hue", p !in reserved)
+        for (p in Mosaic.palette + Mosaic.arcadePalette) assertTrue("a colour is a reserved hue", p !in reserved)
     }
 
     @Test
@@ -75,5 +85,6 @@ class MosaicPaletteTest {
         assertEquals(5, Mosaic.palette.size)
         assertEquals(5, Mosaic.palette.toSet().size)
         assertEquals(Mosaic.palette.size, MosaicTeacher.colourNames.size)
+        assertEquals(5, Mosaic.arcadePalette.toSet().size)
     }
 }
