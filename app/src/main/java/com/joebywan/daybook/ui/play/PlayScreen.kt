@@ -1,6 +1,11 @@
 package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.ui.theme.arcadePage
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.arcadeHardShadow
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.graphics.Shape
 
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -24,6 +29,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -555,8 +561,10 @@ fun PlayScreen(
         // The clock, and on a first visit the walkthrough offer drawn over it until the first move.
         // Over the clock rather than under the board: it takes no height from the board, and covers
         // nothing the player plays on. The row keeps the clock's own height either way.
+        val offer = offering && game.history.isEmpty() && !hintSession.active && !state.solved
         Box(
-            Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            // Over the board while the offer shows: its 48dp target reaches past this row, and the board must not take the overlap.
+            Modifier.fillMaxWidth().padding(bottom = 4.dp).then(if (offer) Modifier.zIndex(1f) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             // Hidden by the player's setting: still laid out, so the row, the board and the hint
@@ -570,10 +578,11 @@ fun PlayScreen(
                     modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
                 )
             }
-            if (offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
+            if (offer) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
                     // What the puzzle is about, then the offer: two small lines (the longest tagline fits one at 360dp),
-                    // inside the clock row's height and its padding, so the board never moves.
+                    // inside the clock row's height and its padding, so the board never moves. The target is 48dp, more than the
+                    // row: it overhangs, taking taps but no room (the title row above has nothing to tap in the middle).
                     Text(
                         "${puzzle.tagline}\nOne-minute walkthrough",
                         style = MaterialTheme.typography.bodySmall,
@@ -581,7 +590,7 @@ fun PlayScreen(
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         modifier = Modifier
-                            .requiredHeight(40.dp)
+                            .requiredHeight(48.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { openTutorial() }
                             .padding(horizontal = 12.dp)
@@ -829,21 +838,21 @@ private const val STAMP_FROM = 1.3f
 
 /** The side panel's width in a wide window: the title, clock, hint and three tool buttons, with the walkthrough offer on one line. */
 private val WIN_THUMP_DEPTH = 10.dp
-private val SidePanel = 360.dp
+internal val SidePanel = 360.dp
 
 /** About what the title, clock and toolbar take from a stacked layout's height; only used to choose between the two. */
-private val StackedChrome = 180.dp
+internal val StackedChrome = 180.dp
 
 /**
  * The play screen's four pieces, [content] in this order: title, clock, board, toolbar, then the hint slot. Stacked, it
  * is the column it always was (the board takes what the rest leaves, and the hint slot is not placed: the hint is a
- * popover). [wide] puts the first two at the top of a [SidePanel], the toolbar at its foot and the hint slot (the hint, else
+ * popover, unless [stackSlot], the walkthrough's caption under the board). [wide] puts the first two at the top of a [SidePanel], the toolbar at its foot and the hint slot (the hint, else
  * the rules) between,
  * with the board filling the rest of the window. One layout for both, so a rotation keeps every board's own saved state
  * (Sudoku's notes mode, Nonogram's pen) where a Row/Column switch would compose the board somewhere new and lose it.
  */
 @Composable
-private fun PlayLayout(wide: Boolean, modifier: Modifier, content: @Composable () -> Unit) {
+internal fun PlayLayout(wide: Boolean, modifier: Modifier, stackSlot: Boolean = false, content: @Composable () -> Unit) {
     Layout(content, modifier) { parts, c ->
         val (title, clock, board, tools, slot) = parts
         val w = c.maxWidth
@@ -866,11 +875,15 @@ private fun PlayLayout(wide: Boolean, modifier: Modifier, content: @Composable (
             }
         } else {
             // As the Column with a weighted board was: the board gets exactly the height left, any width up to the window.
-            val g = board.measure(Constraints(maxWidth = w, minHeight = rest, maxHeight = rest))
+            // [stackSlot] (the walkthrough's caption) puts the slot, at its own height, between the board and the toolbar.
+            val s = if (stackSlot) slot.measure(Constraints(maxWidth = w, maxHeight = rest)) else null
+            val boardH = rest - (s?.height ?: 0)
+            val g = board.measure(Constraints(maxWidth = w, minHeight = boardH, maxHeight = boardH))
             layout(w, h) {
                 t.placeRelative(0, 0)
                 k.placeRelative(0, t.height)
                 g.placeRelative(0, t.height + k.height)
+                s?.placeRelative(0, t.height + k.height + boardH)
                 b.placeRelative(0, t.height + k.height + rest)
             }
         }
@@ -906,6 +919,9 @@ internal fun FinishedFrame(
     LaunchedEffect(praise.streak) { count.animateTo(praise.streak.toFloat(), tween(COUNT_MS, easing = FastOutSlowInEasing)) }
     LaunchedEffect(praise.big) { stamp.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow)) }
     val title = praise.title ?: "Congratulations!"
+    // Arcade: the banner is the puzzle's tile, its gradient and its ink; Classic: the surface tinted with the accent, as before.
+    val classic = classicLook()
+    val banner = ArcadeBoard.arcadeTile(accent, BoardHues.isDark(scheme))
     val shown = count.value.toInt()
     val counting = praise.streak > 0 && shown < praise.streak
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -913,7 +929,7 @@ internal fun FinishedFrame(
         val hide = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide)
         Column(
             Modifier.align(Alignment.TopCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()
-                .frameCard(scheme.surface).background(accent.copy(alpha = 0.22f)).then(hide)
+                .frameCard(scheme.surface).then(if (classic) Modifier.background(accent.copy(alpha = 0.22f)) else Modifier.background(banner.brush)).then(hide)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -921,7 +937,7 @@ internal fun FinishedFrame(
                 PartyPopper(Modifier.size(36.dp))
                 val style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall
                 val weight = if (praise.big) FontWeight.Bold else null
-                val titleInk = BoardHues.onTint(accent, scheme.surface)
+                val titleInk = if (classic) BoardHues.onTint(accent, scheme.surface) else banner.ink
                 Box(Modifier.weight(1f, fill = false).graphicsLayer { scaleX = stamp.value; scaleY = stamp.value }, contentAlignment = Alignment.Center) {
                     Text(title, style = style, color = titleInk, fontWeight = weight, maxLines = 1,
                         modifier = if (counting) Modifier.alpha(0f) else Modifier)
@@ -936,16 +952,16 @@ internal fun FinishedFrame(
                         if (hints > 0) append("  ·  ${plural(hints, "hint")}")
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurface,
+                    color = if (classic) scheme.onSurface else banner.ink,
                 )
                 praise.share?.let { ShareChip(it, accent) }
                 praise.setShare?.let { ShareChip(it, accent, praise.setShareLabel) }
             }
             praise.lines.forEach {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = if (classic) scheme.onSurfaceVariant else banner.ink, textAlign = TextAlign.Center)
             }
             if (praise.achievements.isEmpty() && centre == null) praise.toGo?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = if (classic) scheme.onSurface else banner.ink, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
             }
         }
         if (praise.achievements.isNotEmpty()) {
@@ -985,8 +1001,17 @@ internal fun FinishedFrame(
 
 private val FrameShape = RoundedCornerShape(20.dp)
 
-/** One of the finished frame's raised cards. */
-private fun Modifier.frameCard(color: Color): Modifier = shadow(6.dp, FrameShape).clip(FrameShape).background(color)
+/** One of the finished frame's raised cards; in Arcade lifted as the look lifts a tile (the hard shadow in light, a glow in dark). */
+@Composable
+private fun Modifier.frameCard(color: Color): Modifier = arcadeLifted(FrameShape, 20.dp, 6.dp).clip(FrameShape).background(color)
+
+/** Classic's soft [elevation] shadow (none at 0), or Arcade's lift: the hard shadow in light, a white glow in dark (the home tiles'). */
+@Composable
+private fun Modifier.arcadeLifted(shape: Shape, corner: Dp, elevation: Dp): Modifier = when {
+    classicLook() -> if (elevation > 0.dp) shadow(elevation, shape) else this
+    BoardHues.isDark(MaterialTheme.colorScheme) -> arcadeGlow(Color.White.copy(alpha = .25f), corner)
+    else -> arcadeHardShadow(corner)
+}
 
 /** Opens the share preview ([SharePreview]) for the result's card ([Praise.share]). */
 @Composable
@@ -994,8 +1019,9 @@ private fun ShareChip(card: ShareCard, accent: Color, label: String = "Share") {
     // Saveable, so turning the device keeps the preview open.
     // The render hook opens the solve's own card, never the set's over it.
     var open by rememberSaveable { mutableStateOf(sharePreviewOpen && label == "Share") }
+    // Arcade: a plain surface chip on the banner's gradient.
     Row(
-        Modifier.clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.22f))
+        Modifier.clip(RoundedCornerShape(14.dp)).background(if (classicLook()) accent.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surface)
             .clickable { open = true }
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1011,6 +1037,7 @@ private fun ShareChip(card: ShareCard, accent: Color, label: String = "Share") {
 @Composable
 private fun ResultsPill(accent: Color, options: List<NextOption>, onShow: () -> Unit, onOption: (NextOption) -> Unit, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
+    val classic = classicLook()
     val main = mainOption(options)
     // Everything the frame offers, so hiding it never hides a way on: "Show results" and up to five options, in rows of three.
     Column(modifier.padding(horizontal = 18.dp).widthIn(max = 360.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1018,13 +1045,20 @@ private fun ResultsPill(accent: Color, options: List<NextOption>, onShow: () -> 
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { option ->
                     if (option == null) {
+                        // Arcade: the puzzle's tile, as the frame's banner is.
+                        val tile = ArcadeBoard.arcadeTile(accent, BoardHues.isDark(scheme))
                         Box(
-                            Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp).shadow(4.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
-                                .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
+                            Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp).arcadeLifted(RoundedCornerShape(24.dp), 24.dp, 4.dp).clip(RoundedCornerShape(24.dp))
+                                .then(if (classic) Modifier.background(scheme.surface).background(accent.copy(alpha = 0.22f)) else Modifier.background(tile.brush))
+                                .clickable(onClick = onShow),
                             contentAlignment = Alignment.Center,
-                        ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
+                        ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = if (classic) scheme.onSurface else tile.ink) }
                     } else {
-                        NextTile(option, option == main, accent, Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(option) }
+                        NextTile(
+                            option, option == main, accent,
+                            Modifier.weight(1f).fillMaxHeight().arcadeLifted(RoundedCornerShape(14.dp), 14.dp, 0.dp)
+                                .clip(RoundedCornerShape(14.dp)).background(scheme.surface),
+                        ) { onOption(option) }
                     }
                 }
             }
@@ -1035,19 +1069,32 @@ private fun ResultsPill(accent: Color, options: List<NextOption>, onShow: () -> 
 @Composable
 private fun NextTile(option: NextOption, main: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
+    // Arcade: the main way on is the look's control (a gradient pill's colours), the rest its given squares.
+    val arcade = ArcadeBoard.current.takeIf { !classicLook() }
+    val ink = when {
+        arcade == null -> if (main) scheme.onPrimary else scheme.onSurface
+        main -> arcade.control.ink
+        else -> arcade.givenInk
+    }
     Column(
         modifier
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (main) scheme.primary else accent.copy(alpha = 0.22f))
+            .then(
+                when {
+                    arcade == null -> Modifier.background(if (main) scheme.primary else accent.copy(alpha = 0.22f))
+                    main -> Modifier.background(arcade.control.brush)
+                    else -> Modifier.background(arcade.given)
+                }
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (main) scheme.onPrimary else scheme.onSurface, maxLines = 1)
+        Text(option.label, style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
         (option.note ?: option.difficulty?.label)?.let {
-            Text(it, style = MaterialTheme.typography.labelMedium, color = if (main) scheme.onPrimary.copy(alpha = 0.8f) else scheme.onSurfaceVariant, maxLines = 1)
+            Text(it, style = MaterialTheme.typography.labelMedium, color = if (arcade != null) ink else if (main) scheme.onPrimary.copy(alpha = 0.8f) else scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }

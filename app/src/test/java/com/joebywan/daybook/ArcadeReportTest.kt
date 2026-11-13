@@ -15,6 +15,7 @@ import com.joebywan.daybook.ui.theme.BoardHues.contrast
 import com.joebywan.daybook.ui.theme.DarkScheme
 import com.joebywan.daybook.ui.theme.LightScheme
 import com.joebywan.daybook.ui.theme.flatVivid
+import com.joebywan.daybook.ui.theme.arcadeAccent
 import com.joebywan.daybook.ui.theme.vividFor
 import org.junit.Test
 import java.io.File
@@ -44,7 +45,7 @@ class ArcadeReportTest {
             val marks = Worst(); val text = Worst(); val tint = Worst(); val tile = Worst(); val button = Worst()
             line("puzzle       vivid   on-surface on-bg  textOn-surf  onTint-.22 tileInk-solved onFill")
             for (p in PuzzleRegistry.all) {
-                val a = vividFor(p.accent, dark)
+                val a = arcadeAccent(p.accent, dark)
                 val cs = check(3f, a, s.surface, "${p.id} mark on surface")
                 val cb = check(3f, a, s.background, "${p.id} mark on background")
                 marks.see(minOf(cs, cb), p.id)
@@ -102,8 +103,8 @@ class ArcadeReportTest {
                 line("error digit on Sudoku box tint, hue %.0f: %.2f".format(a, check(4.5f, s.error, tint, "error digit on box tint $a")))
             }
             line("-- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)")
-            val acc = PuzzleRegistry.all.map { it.id to vividFor(it.accent, dark) }
-            for ((label, set) in listOf("as built" to acc, "the brief's flat .85" to PuzzleRegistry.all.map { it.id to flatVivid(it.accent, dark) }))
+            val acc = PuzzleRegistry.all.map { it.id to arcadeAccent(it.accent, dark) }
+            for ((label, set) in listOf("as built" to acc, "vividFor" to PuzzleRegistry.all.map { it.id to vividFor(it.accent, dark) }, "the brief's flat .85" to PuzzleRegistry.all.map { it.id to flatVivid(it.accent, dark) }))
             for ((mode, m) in listOf("normal" to null, "deuteranopia" to deut, "protanopia" to prot, "tritanopia" to trit)) {
                 val pairs = set.indices.flatMap { i -> (i + 1 until set.size).map { j ->
                     Triple(de2000(set[i].second, set[j].second, m), set[i].first, set[j].first) } }.sortedBy { it.first }

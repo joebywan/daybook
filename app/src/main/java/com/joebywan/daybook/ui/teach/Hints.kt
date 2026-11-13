@@ -1,6 +1,11 @@
 package com.joebywan.daybook.ui.teach
 
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.arcadeHardShadow
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
@@ -317,15 +322,27 @@ fun HintPanel(
 ) {
     val d = session.deduction ?: return
     val scheme = MaterialTheme.colorScheme
+    val classic = classicLook()
+    val arcade = ArcadeBoard.current
     val ink = if (d.mistake) scheme.error else accent
-    // The panel's own colour, solid, for the fade over text that scrolls on.
-    val fade = ink.copy(alpha = 0.12f).compositeOver(if (raised) scheme.surface else scheme.background)
+    // The panel's own colour, solid, for the fade over text that scrolls on. Arcade: a plain square's card, edged in the
+    // hint's own colour (the glow on the board), or the error's for a mistake, lifted as the look lifts a tile.
+    val fade = if (classic) ink.copy(alpha = 0.12f).compositeOver(if (raised) scheme.surface else scheme.background) else arcade.square
+    val edge = if (d.mistake) arcade.error else arcade.hint
     val shape = RoundedCornerShape(16.dp)
     Column(
         modifier
-            .then(if (raised) Modifier.shadow(10.dp, shape).border(1.dp, ink.copy(alpha = 0.45f), shape) else Modifier)
+            .then(
+                when {
+                    classic && raised -> Modifier.shadow(10.dp, shape).border(1.dp, ink.copy(alpha = 0.45f), shape)
+                    classic -> Modifier
+                    raised -> Modifier.then(if (BoardHues.isDark(scheme)) Modifier.arcadeGlow(edge.copy(alpha = .35f), 16.dp) else Modifier.arcadeHardShadow(16.dp))
+                        .border(2.dp, edge, shape)
+                    else -> Modifier.border(2.dp, edge, shape)
+                }
+            )
             .clip(shape)
-            .background(if (raised) fade else ink.copy(alpha = 0.12f))
+            .background(if (classic && !raised) ink.copy(alpha = 0.12f) else fade)
             .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 0.dp),
     ) {
         val text = when (session.stage) {
@@ -340,7 +357,7 @@ fun HintPanel(
             Text(
                 text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurface,
+                color = if (classic) scheme.onSurface else arcade.squareInk,
                 modifier = (if (fill) Modifier.fillMaxSize() else Modifier).verticalScroll(scroll),
             )
             if (scroll.canScrollForward) {
@@ -363,7 +380,13 @@ fun HintPanel(
                 TextButton(onClick = { session.clear() }) {
                     Text("Close", color = scheme.onSurfaceVariant)
                 }
-                TextButton(onClick = onNext) { Text(session.buttonLabel(), color = BoardHues.textOn(ink, fade)) }
+                if (classic) TextButton(onClick = onNext) { Text(session.buttonLabel(), color = BoardHues.textOn(ink, fade)) }
+                // Arcade: the next step is the look's control, a gradient pill, as a chosen pen is.
+                else Box(
+                    Modifier.padding(start = 2.dp, end = 8.dp).height(32.dp).clip(RoundedCornerShape(16.dp)).background(arcade.control.brush)
+                        .clickable(onClick = onNext).padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(session.buttonLabel(), style = MaterialTheme.typography.labelLarge, color = arcade.control.ink) }
             }
         }
     }

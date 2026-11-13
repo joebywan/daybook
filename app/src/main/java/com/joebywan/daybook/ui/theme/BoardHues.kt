@@ -9,8 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 
-// ponytail: a global dark flag and a derived colour, so the trial could replace `Color(accent)` at 65 call sites by search and
-// replace, draw lambdas included. The real form is an accent pair per puzzle, solved as a set per scheme (docs/COLOUR.md).
+// A global dark flag, so `vivid(accent)` works in draw lambdas as well as compositions; DaybookTheme sets it.
 private var vividIsDark by mutableStateOf(false)
 private val vividCache = HashMap<Long, Color>()
 
@@ -33,12 +32,66 @@ fun classicAccent(accent: Long, dark: Boolean): Color {
     return toward
 }
 
-/** A puzzle's accent in the scheme now showing: see [vividFor]. In the Classic look, [classicAccent]. */
+/**
+ * A puzzle's accent in the scheme now showing: Arcade's pair for it ([arcadeAccent]), or in the Classic look [classicAccent].
+ * Boards keep passing their raw `accent`; it is the key.
+ */
 fun vivid(accent: Long): Color {
     val dark = vividIsDark
     if (classicLook()) return classicCache.getOrPut(if (dark) accent or (1L shl 40) else accent) { classicAccent(accent, dark) }
-    return vividCache.getOrPut(if (dark) accent or (1L shl 40) else accent) { vividFor(accent, dark) }
+    return vividCache.getOrPut(if (dark) accent or (1L shl 40) else accent) { arcadeAccent(accent, dark) }
 }
+
+/** Arcade's accent for the raw [accent] in light or [dark]: its pair from [ARCADE_ACCENTS], or [vividFor] for one not in it. */
+fun arcadeAccent(accent: Long, dark: Boolean): Color =
+    ARCADE_ACCENTS[accent]?.let { (light, night) -> Color(if (dark) night else light) } ?: vividFor(accent, dark)
+
+/**
+ * Arcade's accents, a light and a dark per raw accent (docs/COLOUR.md, Arcade's drawn accents), solved as a set per scheme:
+ * from [vividFor]'s colour, each moved within 24 degrees of its hue, saturation .45 to 1 and lightness, to keep 3:1 on the
+ * scheme's surface and background (no more than 5.5:1 on light's surface, 7.5:1 on dark's background: vivid, not mud or
+ * pastel), out of the reserved hues and well clear of the error red and the success green, spreading the closest pair
+ * (CIEDE2000, normal or twice the worst colour-blind vision) by local search with random kicks. Closest pair: light 4.56,
+ * dark 8.14, against [vividFor]'s 2.34 / 1.94. `ArcadeAccentTest` pins it. A new puzzle shares an accent (the set is full).
+ */
+val ARCADE_ACCENTS: Map<Long, Pair<Long, Long>> = mapOf(
+    0xFF6F7DF7 to (0xFF3D51FF to 0xFF4065DD),
+    0xFF94669F to (0xFF9D1BF3 to 0xFFBA00E6),
+    0xFF8C79E0 to (0xFF7A5FF7 to 0xFF858BD1),
+    0xFF1C7EAB to (0xFF0870A0 to 0xFF72A8CA),
+    0xFF8D813D to (0xFFB86D05 to 0xFFC18A5C),
+    0xFFBC4C9C to (0xFFAE4281 to 0xFFCD7AA4),
+    0xFF997EB8 to (0xFF9E6FFB to 0xFFBD91E3),
+    0xFFB2659A to (0xFFDB1FA1 to 0xFFC0598B),
+    0xFFCA4383 to (0xFFC86F99 to 0xFFDA52C0),
+    0xFF7A9052 to (0xFF7F9504 to 0xFF5FA008),
+    0xFFAF7D4C to (0xFFC27C05 to 0xFFAA9841),
+    0xFF278E8E to (0xFF0A7B7B to 0xFF20B6B6),
+    0xFFA258C1 to (0xFFC200D6 to 0xFFD48CCC),
+    0xFF1E76D8 to (0xFF6478C4 to 0xFF419DAA),
+    0xFFBE7C1C to (0xFFAE7442 to 0xFF896C34),
+    0xFFBE6B0B to (0xFFA67830 to 0xFF7E6E07),
+    0xFF5C72BE to (0xFF4491C1 to 0xFF1FA9FF),
+    0xFF528DC9 to (0xFF2689ED to 0xFF648FF7),
+    0xFFB47699 to (0xFFF20D8E to 0xFFFF61B9),
+    0xFFA879AA to (0xFFC059B6 to 0xFFB051FB),
+    0xFF2891AC to (0xFF0988AA to 0xFF089189),
+    0xFFA26482 to (0xFFCB1077 to 0xFFD81881),
+    0xFF8A8C34 to (0xFF8E7F0B to 0xFF778112),
+    0xFFB96BCB to (0xFFB526AA to 0xFFFF4CFD),
+    0xFF8F5DD6 to (0xFFB76CDA to 0xFF8342FF),
+    0xFFD45C91 to (0xFFE156A6 to 0xFFFF0F9A),
+    0xFF737B39 to (0xFF6E8934 to 0xFF96AF2C),
+    0xFF0F9B89 to (0xFF0D9C89 to 0xFF297A75),
+    0xFF967028 to (0xFFAA8541 to 0xFFAA8541),
+    0xFF846CAD to (0xFF9551BD to 0xFF9375D7),
+    0xFF098777 to (0xFF197669 to 0xFF1D80A5),
+    0xFF96754A to (0xFFA46C23 to 0xFFA6733F),
+    0xFFA55C09 to (0xFF9A8C2D to 0xFFD17D00),
+    0xFFD062BA to (0xFFEE2FC8 to 0xFFAF51BD),
+    0xFF9F568E to (0xFFC44F82 to 0xFFC2299E),
+    0xFF7B6F3D to (0xFFAE6004 to 0xFFC89D5B),
+)
 
 /**
  * The accent's hue, its saturation raised to .85 give or take how saturated the accent was, its lightness stepped until

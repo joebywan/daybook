@@ -1312,6 +1312,9 @@ branch on it to draw exactly what they drew before. Stored as the `look` launch 
 asked once (the welcome for a new player, `LookOffer` on Home for one from before), held in Settings (`ui/home/LookChoice.kt`).
 **Arcade work stays behind the switch**: a board converted to Arcade keeps its Classic drawing. Tests run in both looks
 (`forEachLook`, `ContrastTest`, `ClassicLookTest`, the palette tests).
+In Arcade, `vivid(accent)` draws the accent's pair from `ARCADE_ACCENTS`, solved as a set per scheme (`ArcadeAccentTest`), Home's
+tiles take their colour from their place on the grid, not their puzzle (`tileAccentAt`, `HomeTileColoursTest`), and the hint
+glows in `ArcadeBoard.hint` (`rememberHintPaint`'s default). All three in `docs/COLOUR.md`, top.
 
 ## Rules that keep being relearned
 

@@ -126,7 +126,7 @@ internal fun LevelGrid(
                 // Classic (issue #418): a tint of the tone behind the icon, the footer in the variant's ink, as before Arcade.
                 val classic = classicLook()
                 HomeTile(
-                    name = "All levels", accent = tone, tile = ArcadeBoard.tile(tone, BoardHues.isDark(scheme)), solved = false, onClick = { onAllLevels?.invoke() }, modifier = modifier,
+                    name = "All levels", accent = tone, tile = ArcadeBoard.tile(LocalTileAccent.current?.let(::Color) ?: tone, BoardHues.isDark(scheme)), solved = false, onClick = { onAllLevels?.invoke() }, modifier = modifier,
                     motif = {
                         Box(
                             Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(if (classic) tone.copy(alpha = 0.14f) else scheme.surface),
@@ -138,7 +138,7 @@ internal fun LevelGrid(
                     footer = {
                         TileFooter(
                             if (progress.done.isEmpty()) "" else "${progress.done.size} done",
-                            if (classic) scheme.onSurfaceVariant else ArcadeBoard.tile(tone, BoardHues.isDark(scheme)).ink,
+                            if (classic) scheme.onSurfaceVariant else ArcadeBoard.tile(LocalTileAccent.current?.let(::Color) ?: tone, BoardHues.isDark(scheme)).ink,
                         )
                     },
                 )
