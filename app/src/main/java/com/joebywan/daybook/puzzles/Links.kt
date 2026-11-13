@@ -16,6 +16,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -50,7 +51,11 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.squareDrag
+import com.joebywan.daybook.ui.arcadeGap
+import com.joebywan.daybook.ui.drawArcadeTiles
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.wall
 
@@ -272,24 +277,35 @@ object Links : PuzzleType {
         val m = LinksLogic.masksOf(s.links)
         val v = LinksLogic.View(b, m)
         val dark = BoardHues.isDark(scheme)
-        val loose = scheme.onSurfaceVariant
+        // Arcade draws on ArcadeBoard's tiles; Classic (classicLook) draws exactly what it drew before.
+        val arcade = !classicLook()
+        val a = ArcadeBoard.of(scheme)
+        val loose = if (arcade) a.squareInk.copy(alpha = 0.5f) else scheme.onSurfaceVariant
         fun centre(q: Int) = Offset((q % n + 0.5f) * u, (q / n + 0.5f) * u)
 
-        drawRect(scheme.surface, Offset.Zero, Size(n * u, n * u))
+        if (arcade) drawArcadeTiles(n, n, u, a) else drawRect(scheme.surface, Offset.Zero, Size(n * u, n * u))
         // Each square on a pair's line takes a wash of its colour, so a filled board reads at a glance.
+        val gap = arcadeGap(u)
         for (q in 0 until b.squares) {
             val c = v.colour[q]
             if (c < 0 || v.deg[q] == 0 && b.pair[q] < 0) continue
-            drawRect(colourOf(c).copy(alpha = if (dark) 0.30f else 0.22f), Offset((q % n) * u, (q / n) * u), Size(u, u))
+            val wash = colourOf(c).copy(alpha = if (dark) 0.30f else 0.22f)
+            if (arcade) {
+                drawRoundRect(wash, Offset((q % n) * u + gap / 2, (q / n) * u + gap / 2), Size(u - gap, u - gap), CornerRadius(u * 0.14f))
+            } else {
+                drawRect(wash, Offset((q % n) * u, (q / n) * u), Size(u, u))
+            }
         }
-        // The grid: thin lines between squares, a frame round them.
-        val grid = scheme.onSurfaceVariant.copy(alpha = 0.22f)
-        val thin = maxOf(u * 0.02f, 1f)
-        for (k in 1 until n) {
-            drawLine(grid, Offset(k * u, 0f), Offset(k * u, n * u), thin)
-            drawLine(grid, Offset(0f, k * u), Offset(n * u, k * u), thin)
+        if (!arcade) {
+            // The grid: thin lines between squares, a frame round them.
+            val grid = scheme.onSurfaceVariant.copy(alpha = 0.22f)
+            val thin = maxOf(u * 0.02f, 1f)
+            for (k in 1 until n) {
+                drawLine(grid, Offset(k * u, 0f), Offset(k * u, n * u), thin)
+                drawLine(grid, Offset(0f, k * u), Offset(n * u, k * u), thin)
+            }
+            drawRect(scheme.wall, Offset.Zero, Size(n * u, n * u), style = Stroke(maxOf(u * 0.04f, 1.5f)))
         }
-        drawRect(scheme.wall, Offset.Zero, Size(n * u, n * u), style = Stroke(maxOf(u * 0.04f, 1.5f)))
 
         // Each square's own half of every line it has, and its end: drawn per square so a move's squares settle.
         val lineW = u * 0.3f
@@ -312,7 +328,7 @@ object Links : PuzzleType {
                     val fill = colourOf(p)
                     drawCircle(fill, u * 0.36f, c)
                     // A rim of the surface's opposite, so a pale end still reads on a light board and a deep one on a dark.
-                    drawCircle(scheme.onSurface.copy(alpha = 0.35f), u * 0.36f, c, style = Stroke(maxOf(u * 0.03f, 1f)))
+                    drawCircle((if (arcade) a.squareInk else scheme.onSurface).copy(alpha = 0.35f), u * 0.36f, c, style = Stroke(maxOf(u * 0.03f, 1f)))
                     val label = numbers.getOrNull(p)
                     if (label != null) {
                         drawText(label, BoardHues.onFill(fill), Offset(c.x - label.size.width / 2f, c.y - label.size.height / 2f))
