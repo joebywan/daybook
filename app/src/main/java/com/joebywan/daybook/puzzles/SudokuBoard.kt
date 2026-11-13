@@ -308,8 +308,8 @@ internal fun SudokuGridBoard(
                                         val top = band * size.height + r * rowHeight
                                         // A disc as well as the ink: a state by colour also changes shape. Its radius keeps it inside its third.
                                         if (twin) {
-                                            // Clear of the selected square's border, which is drawn over it; a label's rows already stop short of the bottom one.
-                                            val edge = if (isSelected) 2.dp.toPx() else 0f
+                                            // Clear of the selected square's border (Arcade's only: Classic draws none), which is drawn over it; a label's rows already stop short of the bottom one.
+                                            val edge = if (isSelected && !classic) 2.dp.toPx() else 0f
                                             val radius = minOf(sub / 2f - edge, rowHeight / 2f - if (band > 0f) 0f else edge)
                                             val centre = Offset(c * sub + sub / 2f, top + rowHeight / 2f)
                                             drawCircle(twinFill.brush(centre - Offset(radius, radius), Size(radius * 2f, radius * 2f)), radius, centre)
