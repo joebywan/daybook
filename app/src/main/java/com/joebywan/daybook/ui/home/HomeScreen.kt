@@ -180,9 +180,11 @@ private const val PREVIEW_FRACTION = 0.72f
  * Arcade's home tiles are coloured by their place on the grid, not by their puzzle (the owner, 2026-11-13: a tile's colour may
  * differ from its board's), so no two touching tiles match, diagonals included, whatever the order and however many columns.
  * The accent set is full (two pairs share), and by puzzle a player's own order could put any two side by side.
- * Six accents (Sudoku, Lamps, Mines, Crossword, Codebreaker, Mosaic) whose tiles are furthest apart in both schemes, by CIEDE2000 with colour-blind vision ([HomeTileColoursTest]).
+ * Six hues round the wheel (violet, orange, cyan, magenta, lime, green: hsl(h, .6, .5), which [ArcadeBoard.tile] makes a tile of),
+ * apart in both schemes by CIEDE2000 with colour-blind vision ([HomeTileColoursTest]). The accents themselves were tried: as tiles
+ * the six furthest apart came out as two magentas; blue made the same tile as violet.
  */
-internal val TILE_ACCENTS: List<Long> = listOf(0xFF6F7DF7, 0xFF737B39, 0xFFD45C91, 0xFF098777, 0xFFAF7D4C, 0xFFBC4C9C)
+internal val TILE_ACCENTS: List<Long> = listOf(0xFF7F33CC, 0xFFCC8033, 0xFF33BFCC, 0xFFCC338C, 0xFF73CC33, 0xFF33CC73)
 
 /**
  * The accent of the tile in [row], [column]: one step along [TILE_ACCENTS] per column and three per row, so a tile's eight

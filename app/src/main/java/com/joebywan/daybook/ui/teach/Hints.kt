@@ -5,7 +5,7 @@ import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.theme.arcadeGlow
 import com.joebywan.daybook.ui.theme.arcadeHardShadow
 import com.joebywan.daybook.ui.theme.classicLook
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
@@ -382,11 +382,11 @@ fun HintPanel(
                 }
                 if (classic) TextButton(onClick = onNext) { Text(session.buttonLabel(), color = BoardHues.textOn(ink, fade)) }
                 // Arcade: the next step is the look's control, a gradient pill, as a chosen pen is.
-                else TextButton(
-                    onClick = onNext,
-                    modifier = Modifier.padding(start = 2.dp, end = 4.dp).height(32.dp).clip(RoundedCornerShape(16.dp)).background(arcade.control.brush),
-                    contentPadding = PaddingValues(horizontal = 14.dp),
-                ) { Text(session.buttonLabel(), color = arcade.control.ink) }
+                else Box(
+                    Modifier.padding(start = 2.dp, end = 8.dp).height(32.dp).clip(RoundedCornerShape(16.dp)).background(arcade.control.brush)
+                        .clickable(onClick = onNext).padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(session.buttonLabel(), style = MaterialTheme.typography.labelLarge, color = arcade.control.ink) }
             }
         }
     }

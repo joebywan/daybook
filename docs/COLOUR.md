@@ -12,6 +12,23 @@ Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel. The other 
 `vivid()` accents and the retuned hue table, so they are lighter than those six until converted (`docs/TODO.md`). Convert a board by reading Tents' or
 Sudoku's; a colour of its own goes in its file with a test beside the tokens'.
 
+**Arcade's drawn accents (2026-11-13).** `vivid(accent)` in Arcade draws a pair per raw accent, light and dark, from
+`ARCADE_ACCENTS` (`ui/theme/BoardHues.kt`), solved as one set per scheme: each starts at `vividFor`'s colour and may move
+within 24 degrees of hue, saturation .45-1 and any lightness that keeps 3:1 on the scheme's surface and background (at most
+5.5:1 on light's surface, 7.5:1 on dark's background, so nothing turns to mud or pastel), outside the reserved hue arcs
+(`AccentSpacingTest.RESERVED`) and 12 or more from the error red and the success green, by the design distance; then the
+closest pair is pushed apart by local search with random kicks. Closest pair: 4.56 light, 8.14 dark (`vividFor` alone gave
+2.34 / 1.94). `ArcadeAccentTest` pins floors of 4.5 / 8.0 and every use's contrast; Classic is untouched (`classicAccent`).
+Boards still call `vivid(accent)` with the raw accent, which is the key.
+
+**Home tiles are coloured by place in Arcade** (the owner, 2026-11-13: a tile's colour may differ from its board's). The tile at
+row r, column c takes `TILE_ACCENTS[(c + 3r) mod 6]` (`ui/home/HomeScreen.kt`): its eight neighbours are 1-4 steps along, never
+six, so no two touching tiles match, diagonals included, at any column count and whatever the order; Today's three are row -1.
+The six are hues round the wheel (violet, orange, cyan, magenta, lime, green at hsl(h, .6, .5), made into tiles by
+`ArcadeBoard.tile`), 11.7 apart at the closest by the design distance in both schemes (`HomeTileColoursTest`). Accents as the
+palette were tried and dropped: the six whose tiles sit furthest apart gave two magentas, and blue makes the same tile as violet. Classic tiles keep their puzzle's accent.
+The hint glow is the `ArcadeBoard.hint` token (magenta light, amber dark) and the hint card is a plain square edged in it.
+
 Why this exists: the old theme was deliberately quiet, ink and parchment with moss. A board that
 draws only with `colorScheme` plus its one `accent` comes out beige and one-note (one board shipped that way: surface
 grey, one teal). The boards that read well (Shikaku's hue-per-region, Nonogram's blended pairs, Kings' regions) all

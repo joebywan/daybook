@@ -13,7 +13,8 @@ import org.junit.Test
 
 /**
  * Arcade's home tiles are coloured by their place (the owner, 2026-11-13): no two touching tiles share a colour, diagonals
- * included, at every column count the grid can take, and the colours are far enough apart to tell.
+ * included, at every column count the grid can take, and the tiles are far apart (CIEDE2000, normal or twice the worst
+ * colour-blind vision, between the middles of their gradients: 11.66 at the closest).
  */
 class HomeTileColoursTest {
     @Test fun `no two touching tiles match, at every column count`() {
@@ -37,8 +38,8 @@ class HomeTileColoursTest {
         for (dark in listOf(false, true)) {
             val mids = TILE_ACCENTS.map { ArcadeBoard.arcadeTile(Color(it), dark).let { t -> lerp(t.from, t.to, .5f) } }
             for (i in mids.indices) for (j in i + 1 until mids.size) {
-                val d = ColourDistance.apart(mids[i], mids[j])
-                assertTrue("tiles $i and $j are $d apart, dark=$dark", d >= 6.5)
+                val d = minOf(ColourDistance.de2000(mids[i], mids[j], null), 2 * ColourDistance.apart(mids[i], mids[j]))
+                assertTrue("tiles $i and $j are $d apart, dark=$dark", d >= 11.0)
             }
         }
     }
