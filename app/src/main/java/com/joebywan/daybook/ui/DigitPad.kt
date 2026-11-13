@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.arcadeLift
+import androidx.compose.ui.text.font.FontWeight
 
 /** The digit pad under a grid (Sudoku, Cages, Inequality, Regions, Cipher), which the grid's size has to leave room for. */
 val PAD_HEIGHT = 48.dp
@@ -70,7 +73,8 @@ fun RowScope.PadKey(
 
 /**
  * A row of digit keys 1..[digits], [width] wide (Inequality, Regions): key d reports [anchor] of d, and a
- * digit [done] with is greyed. [onDigit] is the tap.
+ * digit [done] with is greyed. [onDigit] is the tap. Given [arcade] (the Arcade look), the keys are Sudoku's: the control
+ * gradient, lifted, a used-up digit flat on the given fill.
  */
 @Composable
 fun DigitPadRow(
@@ -82,22 +86,34 @@ fun DigitPadRow(
     pulse: State<Float>,
     enabled: Boolean,
     done: (Int) -> Boolean = { false },
+    arcade: ArcadeBoard? = null,
     onDigit: (Int) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(10.dp)
     Row(Modifier.width(width).keepClear(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         (1..digits).forEach { digit ->
             val finished = done(digit)
             PadKey(
                 anchor(digit), highlight, glow, pulse,
-                fill = if (finished) scheme.surfaceVariant else scheme.surface,
+                fill = if (arcade != null) Color.Transparent else if (finished) scheme.surfaceVariant else scheme.surface,
                 enabled = enabled,
                 onClick = { onDigit(digit) },
+                modifier = when {
+                    arcade == null -> Modifier
+                    finished -> Modifier.background(arcade.given, shape)
+                    else -> Modifier.arcadeLift(arcade.control, 10.dp).background(arcade.control.brush, shape)
+                },
             ) {
                 Text(
                     digit.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (finished) scheme.outline else scheme.onSurface,
+                    style = if (arcade == null) MaterialTheme.typography.titleMedium
+                    else MaterialTheme.typography.titleMedium.copy(fontWeight = if (finished) FontWeight.Normal else FontWeight.Bold),
+                    color = when {
+                        arcade == null -> if (finished) scheme.outline else scheme.onSurface
+                        finished -> arcade.givenInk
+                        else -> arcade.control.ink
+                    },
                 )
             }
         }

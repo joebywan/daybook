@@ -3,13 +3,13 @@
 
 ## How to play
 
-Tap a square in the table, then an item under the board. With the tick chosen beside the items, that item is theirs; with the cross chosen, it isn't. The same tap again takes the mark off. Double-tap or long-press an item for the other mark.
+Every person and every item is a pill, one column per category. Tap a pill to choose it, then tap pills in another column to draw lines from it: one line means that one, and several lines mean one of those. Tap the same pill again to rule the pair out (a dashed line), and once more to clear it. Tap the chosen pill again, or the space between, to let it go.
 
-A tick rules that item out of the rest of its column, and each open square shows what is still possible. Tap a clue to strike it through once you've used it: it's only a note, to keep your place.
+What your marks imply is drawn faint. A pill with one line into a column is linked to that pill and ruled out for the rest of it, whatever is linked to one thing is linked to everything linked to it, a pair ruled out stays ruled out for everything linked to either end, and a pill with one choice left in a column is linked to it. You never need to draw a link the faint lines already show.
 
-On a keyboard, the arrows move between squares, 1 to 5 tick that item, Shift with 1 to 5 crosses it, and Backspace clears the square.
+Choose a pill to see all its pairs: thick for linked, thin for one of its choices, dashed for ruled out, dotted for still open. Group lines every item up in its person's row, and the category buttons above the board show your marks as a table, with that category down the side and what is still possible in each open place. Tap a clue to strike it through once you've used it: it's only a note, to keep your place.
 
-Nothing you mark is refused. A moment later, a square with nothing left, a tick two people share or a clue that can no longer be kept shows in red.
+Nothing you mark is refused. A moment later, a pill with nothing left in some column, two of a kind linked together or a clue that can no longer be kept shows in red.
 
 Stuck? The first tap on Hint says where to look, and the second explains why. You make the move yourself, unless you ask for "Show me". Every board has exactly one answer, and you never need to guess to find it.
 
@@ -27,7 +27,7 @@ Stuck? The first tap on Hint says where to look, and the second explains why. Yo
 
 ## Techniques
 
-These are the steps the hints teach, simplest first. Try them in this order. On each board, the tinted square is where to look, rings mark what the reasoning leans on, and the filled square is the move. Small text is what a square can still hold, and a larger word is ticked. Every board here is a real position from the game, and this is the step the hint gives on it.
+These are the steps the hints teach, simplest first. Try them in this order. Each board is the people's table, as the Person button shows it: a row for each person, and in each open place the items still possible, in small text; a larger word is linked. The tinted place is where to look, rings mark what the reasoning leans on, and the filled place is the move. Every board here is a real position from the game, and this is the step the hint gives on it.
 
 The first four boards are moments from one game, with these clues:
 
@@ -42,7 +42,7 @@ The first four boards are moments from one game, with these clues:
 
 ### clue | A clue that names someone
 
-A clue that names a person says something about them outright: tick what it says they have, or cross what it says they don't. If it says they have either of two things, cross off everything else. Start with these, because they need nothing else on the table.
+A clue that names a person says something about them outright: draw their line to what it says they have, or rule out what it says they don't. If it says they have either of two things, draw a line to each. Start with these, because they need nothing else you have marked.
 
 ~~~board
 . . .
@@ -54,25 +54,12 @@ left: Eve Kai Leo Raj
 notes: r1c1=1,2,3,4 r1c3=red,green,yellow,white r2c1=1,2,3,4 r2c3=red,green,yellow,white r3c1=1,2,3,4 r3c2=piano,violin,harp r3c3=red,green,yellow,white r4c1=1,2,3,4 r4c2=piano,violin,harp r4c3=red,green,yellow,white
 focus: r1c2
 answer: r1c2=piano
-caption: Clue 6 names Eve and says she plays the piano, so tick it.
+caption: Clue 6 names Eve and says she plays the piano, so draw her line to it.
 ~~~
 
 ### only | The one item left
 
-A square with one item left must be that item. It works down a column too: an item that only one person can still have is theirs.
-
-~~~board
-. piano .
-. guitar white
-. . .
-. . .
-top: House Music Colour
-left: Eve Kai Leo Raj
-notes: r1c1=2,3 r1c3=red,yellow r2c1=2,3,4 r3c2=violin,harp r3c3=red,green,yellow r4c1=2,3,4 r4c2=violin,harp r4c3=red,green,yellow
-focus: r3c1
-answer: r3c1=1
-caption: Look down the House column. Nobody else's square offers house 1 any more, so it's Leo's.
-~~~
+Something with one choice left in a column is that choice. On this board you never draw it yourself: the faint line appears as soon as everything else is ruled out, so the hints never need to point at it.
 
 ### link | Two things a clue ties together
 
@@ -89,7 +76,7 @@ notes: r1c1=2,3 r1c3=red,yellow r2c1=2,3,4 r3c2=violin,harp r4c1=2,3,4 r4c2=viol
 focus: r3c3
 cite: r3c1
 answer: r3c3=green
-caption: Clue 8 ties the green house to house 1. Leo, ringed, lives in house 1, so the green house is his.
+caption: Clue 8 ties the green house to house 1. Leo, ringed, lives in house 1, so draw his line to the green house.
 ~~~
 
 ### house | Where the houses allow
@@ -106,12 +93,12 @@ left: Eve Kai Leo Raj
 notes: r1c1=2,3 r1c3=red,yellow r2c1=2,3,4 r3c2=violin,harp r3c3=red,green,yellow r4c1=1,2,3,4 r4c2=violin,harp r4c3=red,green,yellow
 focus: r3c1
 answer: r3c1=not_4
-caption: Clue 4 puts Raj somewhere right of Leo. Nothing is right of house 4, so cross house 4 off for Leo.
+caption: Clue 4 puts Raj somewhere right of Leo. Nothing is right of house 4, so rule house 4 out for Leo.
 ~~~
 
 ### what-if | A what-if
 
-Suppose a tick, and follow what it forces, for a few steps at most. If someone ends up with nothing left, or a clue can't be kept, your supposition was wrong, so put a cross there. This isn't guessing: you only mark it once it has been shown to break.
+Suppose a link, and follow what it forces, for a few steps at most. If someone ends up with nothing left, or a clue can't be kept, your supposition was wrong, so rule that pair out. This isn't guessing: you only mark it once it has been shown to break.
 
 This board is from another game, with these clues:
 
@@ -138,5 +125,5 @@ left: Ann Ben Finn Ivy Kai
 notes: r1c1=3,4,5 r1c2=violin,guitar r1c3=tea,coffee,water r3c3=tea,water r4c1=3,4,5 r5c2=violin,guitar r5c3=tea,coffee,water
 focus: r5c1
 answer: r5c1=not_4
-caption: Suppose Kai lives in house 4. Ann and Ivy, the harpist, would then be in houses 3 and 5, which don't touch, and clue 2 can't be kept. So cross house 4 off for Kai.
+caption: Suppose Kai lives in house 4. Ann and Ivy, the harpist, would then be in houses 3 and 5, which don't touch, and clue 2 can't be kept. So rule house 4 out for Kai.
 ~~~

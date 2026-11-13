@@ -60,6 +60,12 @@ import com.joebywan.daybook.ui.rememberTwinTaps
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.wall
 
@@ -266,17 +272,33 @@ object Thermometers : PuzzleType {
         val dark = BoardHues.isDark(scheme)
         val (hueA, _) = BoardHues.pair(s.fill.hashCode())
         val band = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f)
-        val glass = scheme.onSurfaceVariant.copy(alpha = if (dark) 0.55f else 0.45f)
+        // Arcade (null in Classic, which draws what Thermometers drew before it): tiles on the deep frame, glass in the
+        // given fill under a rim of the board's ink, mercury on the control gradient across the whole board.
+        val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
+        val glass = when {
+            a == null -> scheme.onSurfaceVariant.copy(alpha = if (dark) 0.55f else 0.45f)
+            // Opaque: a translucent rim darkens where its segments overlap, and the joins show as arcs.
+            dark -> Color.White.copy(alpha = 0.6f).compositeOver(a.square)
+            else -> a.squareInk.copy(alpha = 0.6f).compositeOver(a.square)
+        }
+        val inside = a?.given ?: scheme.surface
+        val metal: Brush = if (a == null) SolidColor(mercury) else a.control.brush(Offset.Zero, Size(n * u, n * u))
         val border = maxOf(u * 0.04f, 1f)
 
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
 
         // Squares.
-        for (i in 0 until n * n) drawRect(scheme.surface, Offset((i % n) * u, (i / n) * u), Size(u, u))
+        if (a != null) {
+            val gap = maxOf(2f, u * 0.07f)
+            drawRoundRect(a.frame, Offset(-gap / 2, -gap / 2), Size(n * u + gap, n * u + gap), CornerRadius(u * 0.18f))
+            for (i in 0 until n * n) {
+                drawRoundRect(a.square, Offset((i % n) * u + gap / 2, (i / n) * u + gap / 2), Size(u - gap, u - gap), CornerRadius(u * 0.14f))
+            }
+        } else for (i in 0 until n * n) drawRect(scheme.surface, Offset((i % n) * u, (i / n) * u), Size(u, u))
 
-        // Grid lines.
+        // Grid lines (Arcade's are the frame).
         val thin = maxOf(u * 0.03f, 1f)
-        for (k in 0..n) {
+        if (a == null) for (k in 0..n) {
             val edge = k == 0 || k == n
             val colour = if (edge) scheme.wall else scheme.outline.copy(alpha = 0.6f)
             val w = if (edge) thin * 2f else thin
@@ -286,10 +308,11 @@ object Thermometers : PuzzleType {
 
         // The glass of every thermometer: its outline (red once a fill sits over a cross), then the inside.
         s.tubes.forEachIndexed { t, tube ->
-            val rim = if (brokenTubes[t]) scheme.error else glass
+            val rim = if (brokenTubes[t]) a?.error ?: scheme.error else glass
             for (pass in 0..1) {
-                val colour = if (pass == 0) rim else scheme.surface
-                val grow = if (pass == 0) border else 0f
+                val colour = if (pass == 0) rim else inside
+                // Arcade: a broken tube's rim is wider as well as red.
+                val grow = if (pass == 1) 0f else if (a != null && brokenTubes[t]) border * 2.5f else border
                 for (k in 1 until tube.size) {
                     drawLine(colour, centre(tube[k - 1], n, u), centre(tube[k], n, u), u * TUBE_W + 2 * grow, StrokeCap.Round)
                 }
@@ -307,16 +330,16 @@ object Thermometers : PuzzleType {
                     when (s.marks[i]) {
                         ThermometersLogic.FILLED -> {
                             // Halfway to each neighbour, so a run of filled squares reads as one column of mercury.
-                            if (k > 0) drawLine(mercury, c, (c + centre(tube[k - 1], n, u)) / 2f, inner, StrokeCap.Butt)
-                            if (k < tube.size - 1) drawLine(mercury, c, (c + centre(tube[k + 1], n, u)) / 2f, inner, StrokeCap.Butt)
-                            drawCircle(mercury, if (k == 0) u * (BULB_R - 0.08f) else inner / 2, c)
+                            if (k > 0) drawLine(metal, c, (c + centre(tube[k - 1], n, u)) / 2f, inner, StrokeCap.Butt)
+                            if (k < tube.size - 1) drawLine(metal, c, (c + centre(tube[k + 1], n, u)) / 2f, inner, StrokeCap.Butt)
+                            drawCircle(metal, if (k == 0) u * (BULB_R - 0.08f) else inner / 2, c)
                         }
                         ThermometersLogic.CROSSED -> {
-                            val a = u * 0.14f
+                            val k = u * 0.14f
                             val w = maxOf(u * 0.05f, 1.2f)
-                            val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            drawLine(ink, c + Offset(-a, -a), c + Offset(a, a), w, StrokeCap.Round)
-                            drawLine(ink, c + Offset(a, -a), c + Offset(-a, a), w, StrokeCap.Round)
+                            val ink = a?.squareInk?.copy(alpha = 0.8f) ?: scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            drawLine(ink, c + Offset(-k, -k), c + Offset(k, k), w, StrokeCap.Round)
+                            drawLine(ink, c + Offset(k, -k), c + Offset(-k, k), w, StrokeCap.Round)
                         }
                         else -> {}
                     }
@@ -324,7 +347,7 @@ object Thermometers : PuzzleType {
             }
         }
 
-        drawLineChips(n, u, GAP, COUNT_W, COUNT_H, counts, done, bad, band, scheme, overlay)
+        drawLineChips(n, u, GAP, COUNT_W, COUNT_H, counts, done, bad, band, scheme, overlay, a)
 
         if (!lit) return
 
@@ -362,8 +385,10 @@ object Thermometers : PuzzleType {
         val cursor = remember(s.fill) { mutableStateOf<Int?>(null) }
         val targets = remember(s.tubes, s.fill) { ThermometersLogic.targets(s) }
         val mercury = vivid(accent)
-
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val classic = classicLook()
+        val a = ArcadeBoard.of(scheme)
+        // Arcade: pink in light (the indigo ink would vanish on the frame), amber in dark, as Sudoku's.
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(if (BoardHues.isDark(scheme)) a.selected.from else SudokuHintLight)
 
         Column(
             Modifier
@@ -394,7 +419,7 @@ object Thermometers : PuzzleType {
 
                 Box(Modifier.size(unit * unitsAcross(n), unit * unitsDown(n))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, counts, done, bad, broken, scheme, mercury, HintGlow(highlight, glow, pulse.value), feel, mercury)
+                        drawBoard(shown, unitPx, counts, done, bad, broken, scheme, mercury, HintGlow(highlight, glow, pulse.value), feel, if (classic) mercury else a.selected.from)
                     }
                     // Taps and sweeps are read over the grid alone; the counts are not part of the play area.
                     Box(
@@ -405,15 +430,25 @@ object Thermometers : PuzzleType {
                 }
             }
 
-            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == ThermometersLogic.FILLED) "Fill" else "Cross" }, { pen = it }) { option ->
+            PenRow(
+                s.pens, pen, interactive, vivid(accent), { if (it == ThermometersLogic.FILLED) "Fill" else "Cross" }, { pen = it },
+                arcade = a.takeIf { !classic },
+            ) { option ->
+                // Arcade: the icon in the ink of the button it sits on.
+                val arcadeInk = when {
+                    classic -> null
+                    option == pen -> a.control.ink
+                    else -> a.squareInk
+                }
                 if (option == ThermometersLogic.FILLED) {
-                    drawCircle(vivid(accent), size.width * 0.32f, Offset(size.width / 2f, size.height * 0.7f))
-                    drawLine(vivid(accent), Offset(size.width / 2f, size.height * 0.7f), Offset(size.width / 2f, size.height * 0.12f), size.width * 0.3f, StrokeCap.Round)
+                    val ink = arcadeInk ?: vivid(accent)
+                    drawCircle(ink, size.width * 0.32f, Offset(size.width / 2f, size.height * 0.7f))
+                    drawLine(ink, Offset(size.width / 2f, size.height * 0.7f), Offset(size.width / 2f, size.height * 0.12f), size.width * 0.3f, StrokeCap.Round)
                 } else {
-                    val a = size.width * 0.22f
-                    val ink = scheme.onSurface.copy(alpha = 0.85f)
-                    drawLine(ink, Offset(a, a), Offset(size.width - a, size.height - a), 3f, StrokeCap.Round)
-                    drawLine(ink, Offset(size.width - a, a), Offset(a, size.height - a), 3f, StrokeCap.Round)
+                    val k = size.width * 0.22f
+                    val ink = arcadeInk ?: scheme.onSurface.copy(alpha = 0.85f)
+                    drawLine(ink, Offset(k, k), Offset(size.width - k, size.height - k), 3f, StrokeCap.Round)
+                    drawLine(ink, Offset(size.width - k, k), Offset(k, size.height - k), 3f, StrokeCap.Round)
                 }
             }
         }

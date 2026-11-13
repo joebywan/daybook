@@ -56,6 +56,11 @@ class ArcadeBoard private constructor(
     val control: ArcadeFill,
     /** A letter tile (Lexicon, Word Wheel). */
     val letter: ArcadeFill,
+    /**
+     * The hint's glow round what it names, and the hint card's edge: Sudoku's magenta in light (the page's indigo ink read as a
+     * plain outline there), amber in dark. Classic's is its ink, but Classic's hint draws from its scheme, as before Arcade.
+     */
+    val hint: Color = squareInk,
 ) {
     companion object {
         private val AmberLight = ArcadeFill(Color(0xFFFFD23F), Color(0xFFFF9E1B), Color(0xFF311400))
@@ -73,6 +78,7 @@ class ArcadeBoard private constructor(
             errorInk = Color.White,
             control = ArcadeFill(Color(0xFF0077C8), Color(0xFF5B3DF5), Color.White),
             letter = AmberLight,
+            hint = Color(0xFFE6007E),
         )
 
         val Dark = ArcadeBoard(
@@ -88,6 +94,7 @@ class ArcadeBoard private constructor(
             // The mockup's 7A5CFF misses 4.5:1 with this ink, and white misses on the cyan, so the violet is a step lighter.
             control = ArcadeFill(Color(0xFF00E5FF), Color(0xFF9483FF), Color(0xFF120D33), Color(0xFF00E5FF)),
             letter = AmberDark,
+            hint = AmberDark.from,
         )
 
         // Classic: flat, in the old schemes' colours (ClassicLightScheme / ClassicDarkScheme). The boards that Arcade restyled

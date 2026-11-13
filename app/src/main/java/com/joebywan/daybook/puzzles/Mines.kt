@@ -71,6 +71,10 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.PenRow
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.fitStep
@@ -234,6 +238,10 @@ object Mines : PuzzleType {
     private fun numberColour(k: Int, dark: Boolean, scheme: ColorScheme): Color =
         if (k in 1..NUMBER_HUES.size) BoardHues.ink(NUMBER_HUES[k - 1], dark) else scheme.onSurface
 
+    /** Arcade's number [k] on an open square: its hue's ink, held to 4.5:1 on the square ([ArcadeNumberGridsTest]); 7 and 8 the square's own ink. */
+    internal fun arcadeNumber(k: Int, a: ArcadeBoard, dark: Boolean): Color =
+        if (k in 1..NUMBER_HUES.size) BoardHues.textOn(BoardHues.ink(NUMBER_HUES[k - 1], dark), a.square) else a.squareInk
+
     // ---- drawing ------------------------------------------------------------------------------------------------
 
     private class Overlay(
@@ -246,8 +254,9 @@ object Mines : PuzzleType {
         val blast: Boolean = true,
     )
 
-    private fun digitLayouts(measurer: TextMeasurer, fontPx: Float, density: Density): List<TextLayoutResult> {
-        val style = TextStyle(fontSize = with(density) { fontPx.toSp() }, fontWeight = FontWeight.SemiBold)
+    /** The numbers 0..8 on the digit scale: a number is a given fact, so `BoardGlyph.GIVEN`, sized from the square. */
+    private fun digitLayouts(measurer: TextMeasurer, squarePx: Float, density: Density): List<TextLayoutResult> {
+        val style = density.boardStyle(BoardGlyph.GIVEN, squarePx)
         return (0..8).map { measurer.measure(it.toString(), style) }
     }
 
@@ -269,12 +278,17 @@ object Mines : PuzzleType {
         val hl = overlay.highlight
         val lit = !hl.isEmpty
         fun dim(i: Int) = lit && i !in hl.strong && i !in hl.soft
-        val gap = u * 0.06f
+        // Arcade (null in Classic, which draws what Mines drew before it): every square a tile on the deep frame, a hidden
+        // one raised on the control gradient, a flagged one amber, an open one plain under its number.
+        val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
+        val gap = if (a == null) u * 0.06f else maxOf(1f, u * 0.035f)
 
-        drawRoundRect(scheme.surface, Offset.Zero, Size(w * u, h * u), CornerRadius(u * 0.15f))
-        val thin = maxOf(1f, u * 0.02f)
-        for (c in 1 until w) drawLine(scheme.outline.copy(alpha = 0.35f), Offset(c * u, 0f), Offset(c * u, h * u), thin)
-        for (r in 1 until h) drawLine(scheme.outline.copy(alpha = 0.35f), Offset(0f, r * u), Offset(w * u, r * u), thin)
+        if (a == null) {
+            drawRoundRect(scheme.surface, Offset.Zero, Size(w * u, h * u), CornerRadius(u * 0.15f))
+            val thin = maxOf(1f, u * 0.02f)
+            for (c in 1 until w) drawLine(scheme.outline.copy(alpha = 0.35f), Offset(c * u, 0f), Offset(c * u, h * u), thin)
+            for (r in 1 until h) drawLine(scheme.outline.copy(alpha = 0.35f), Offset(0f, r * u), Offset(w * u, r * u), thin)
+        } else drawRoundRect(a.frame, Offset.Zero, Size(w * u, h * u), CornerRadius(u * 0.15f))
 
         for (i in 0 until w * h) {
             var x = (i % w) * u
@@ -288,6 +302,38 @@ object Mines : PuzzleType {
                 val push = MinesLogic.blastPush(overlay.bump, d) * u / d
                 x += dc * push
                 y += dr * push
+            }
+            if (a != null) {
+                val at = Offset(x + gap, y + gap)
+                val square = Size(u - 2 * gap, u - 2 * gap)
+                val corner = CornerRadius(u * 0.14f)
+                feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                    // A dimmed square fades toward a plain one, not into the frame.
+                    if (alpha < 1f) drawRoundRect(a.square, at, square, corner)
+                    when {
+                        i in s.bumps -> {
+                            drawRoundRect(a.error.copy(alpha = alpha), at, square, corner)
+                            drawMine(x, y, u, a.errorInk.copy(alpha = alpha))
+                        }
+                        s.isOpen(i) -> {
+                            drawRoundRect(a.square.copy(alpha = alpha), at, square, corner)
+                            val k = s.number(i)
+                            if (k > 0) {
+                                val layout = digits[k]
+                                drawText(
+                                    layout, arcadeNumber(k, a, dark).copy(alpha = alpha),
+                                    Offset(x + (u - layout.size.width) / 2f, y + (u - layout.size.height) / 2f),
+                                )
+                            }
+                        }
+                        s.isFlag(i) -> {
+                            drawRoundRect(a.selected.brush(at, square), at, square, corner, alpha = alpha)
+                            drawFlag(x, y, u, a.selected.ink.copy(alpha = alpha), a.selected.ink.copy(alpha = 0.7f * alpha))
+                        }
+                        else -> drawRoundRect(a.control.brush(at, square), at, square, corner, alpha = alpha)
+                    }
+                }
+                continue
             }
             feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
                 when {
@@ -320,7 +366,7 @@ object Mines : PuzzleType {
             val cy = (overlay.bumpAt / w + 0.5f) * u
             val spread = if (overlay.blast) MinesLogic.BLAST_REACH else 0.6f
             clipRect(0f, 0f, w * u, h * u) {
-                drawCircle(scheme.error.copy(alpha = (1f - t) * 0.8f), u * (0.5f + spread * t), Offset(cx, cy), style = Stroke(u * 0.08f))
+                drawCircle((a?.error ?: scheme.error).copy(alpha = (1f - t) * 0.8f), u * (0.5f + spread * t), Offset(cx, cy), style = Stroke(u * 0.08f))
             }
         }
 
@@ -376,7 +422,7 @@ object Mines : PuzzleType {
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val unit = minOf(maxWidth, maxHeight) / 4
             val unitPx = with(density) { unit.toPx() }
-            val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.6f, density) }
+            val digits = remember(unitPx) { digitLayouts(measurer, unitPx, density) }
             Canvas(Modifier.size(unit * 4)) { drawBoard(motif, unitPx, digits, scheme, BoardHues.HUE_PAIRS[0], Overlay()) }
         }
     }
@@ -395,7 +441,9 @@ object Mines : PuzzleType {
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
         val hues = remember(s.mines) { BoardHues.pair(s.mines.hashCode()) }
-        val (highlight, glow, pulse) = rememberHintPaint()
+        // Arcade: pink in light (the indigo ink would vanish on the frame), amber in dark, as Sudoku's.
+        val (highlight, glow, pulse) = if (classicLook()) rememberHintPaint()
+        else rememberHintPaint(if (BoardHues.isDark(scheme)) ArcadeBoard.of(scheme).selected.from else SudokuHintLight)
         // The pen is the screen's, not the board's (Nonogram's): in the state it would be a move.
         var flagPen by rememberSaveable(s.mines) { mutableStateOf(false) }
         var cursor by remember(s.mines) { mutableStateOf<Int?>(null) }
@@ -445,7 +493,7 @@ object Mines : PuzzleType {
         fun Grid(modifier: Modifier) = BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val step = fitStep(s.width, s.height)
             val unitPx = with(density) { step.toPx() }
-            val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.58f, density) }
+            val digits = remember(unitPx) { digitLayouts(measurer, unitPx, density) }
             val b = bump
             Canvas(
                 Modifier
@@ -461,7 +509,7 @@ object Mines : PuzzleType {
                 drawBoard(
                     taps.shown, size.width / s.width, digits, scheme, hues,
                     Overlay(highlight, glow, pulse.value, b?.cell ?: -1, b?.progress?.value ?: 0f, !still),
-                    feel, vivid(accent),
+                    feel, if (classicLook()) vivid(accent) else ArcadeBoard.of(scheme).selected.from,
                 )
             }
         }
@@ -522,16 +570,20 @@ object Mines : PuzzleType {
     private fun Pens(flagPen: Boolean, enabled: Boolean, vertical: Boolean, onPen: (Boolean) -> Unit) {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
+        val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
         PenRow(
             "$REVEAL_PEN$FLAG_PEN", if (flagPen) FLAG_PEN else REVEAL_PEN, enabled, vivid(accent),
-            { if (it == FLAG_PEN) "Flag" else "Reveal" }, { onPen(it == FLAG_PEN) }, vertical,
+            { if (it == FLAG_PEN) "Flag" else "Reveal" }, { onPen(it == FLAG_PEN) }, vertical, a,
         ) { option ->
             val u = size.minDimension
-            if (option == FLAG_PEN) drawFlag(0f, 0f, u, BoardHues.ink(BoardHues.HUE_PAIRS[0].second, dark), scheme.onSurface.copy(alpha = 0.7f))
+            // Arcade: the icon in the ink of the button it sits on.
+            val ink = a?.let { if ((option == FLAG_PEN) == flagPen) it.control.ink else it.squareInk }
+            if (option == FLAG_PEN) drawFlag(0f, 0f, u, ink ?: BoardHues.ink(BoardHues.HUE_PAIRS[0].second, dark), ink?.copy(alpha = 0.7f) ?: scheme.onSurface.copy(alpha = 0.7f))
             else {
                 // An open square: a tile with its number showing.
-                drawRoundRect(scheme.onSurface.copy(alpha = 0.75f), Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.16f), style = Stroke(u * 0.08f))
-                drawCircle(scheme.onSurface.copy(alpha = 0.75f), u * 0.1f, Offset(u / 2, u / 2))
+                val line = ink?.copy(alpha = 0.85f) ?: scheme.onSurface.copy(alpha = 0.75f)
+                drawRoundRect(line, Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.16f), style = Stroke(u * 0.08f))
+                drawCircle(line, u * 0.1f, Offset(u / 2, u / 2))
             }
         }
     }

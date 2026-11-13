@@ -15,6 +15,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
 
 /**
  * The system's "reduce motion" (Android: Remove animations; the web: `prefers-reduced-motion`), read once at
@@ -78,7 +80,8 @@ data class HintPaint(val highlight: BoardHighlight, val glow: Color, val pulse: 
 
 @Composable
 fun rememberHintPaint(
-    ink: Color = MaterialTheme.colorScheme.onBackground,
+    // Arcade: the hint token, vivid in both schemes (the indigo ink was a muted outline in light). Classic: the ink, as before.
+    ink: Color = if (classicLook()) MaterialTheme.colorScheme.onBackground else ArcadeBoard.current.hint,
     low: Float = 0.45f,
     high: Float = 1f,
 ): HintPaint {

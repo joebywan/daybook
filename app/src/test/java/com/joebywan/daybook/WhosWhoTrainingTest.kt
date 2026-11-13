@@ -5,8 +5,11 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.MoveDrill
 import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.WhosWhoTraining
-import com.joebywan.daybook.core.techniqueNamesOf
+import com.joebywan.daybook.core.praisedTechniquesOf
+import com.joebywan.daybook.puzzles.WhosWhoTeacher
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import org.junit.Assert.assertEquals
@@ -16,9 +19,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Who's Who's course (docs/TRAINING_SPEC.md). Each practice is checked against [WhosWhoOracle]'s count of answers and
- * against the ladder's rungs re-read here from the clue kinds and the marks by plain counting (nothing borrowed from
- * the teacher). The words never matter: every rung reads clue kinds and indices only, so no board leans on knowledge.
+ * Who's Who's course (docs/TRAINING_SPEC.md), on the graph. Each practice is checked against [WhosWhoOracle]'s count of
+ * answers and against the ladder's rungs re-read here, by plain counting, from the clue kinds and the table the graph's
+ * marks imply (nothing borrowed from the teacher). The words never matter: every rung reads clue kinds and indices only, so no board leans on knowledge.
  */
 class WhosWhoTrainingTest {
 
@@ -135,17 +138,34 @@ class WhosWhoTrainingTest {
         return s.answer[cell % s.columns][cell / s.columns] == mark % s.n
     }
 
+    /** The table [g]'s marks imply. */
+    private fun table(g: WhosWhoGraphState) = WhosWhoGraphLogic.table(g)
+
+    /** The person and item a table mark index names. */
+    private fun pair(s: WhosWhoState, mark: Int) = mark / s.n / s.columns to (mark / s.n % s.columns + 1) * s.n + mark % s.n
+
+    /** [g] with a table mark made as the graph makes it: a tick a line from both ends, a cross an anti-link. */
+    private fun mark(g: WhosWhoGraphState, at: Int, tick: Boolean): WhosWhoGraphState {
+        val (p, item) = pair(g.board, at)
+        return g.withMark(p, item, if (tick) WhosWhoGraphLogic.LINK else WhosWhoGraphLogic.ANTI)
+    }
+
+    /** The ladder's rung of each course technique, as [Table.has] numbers them (the one item left is never drilled). */
+    private val rungs = listOf(0, 2, 3, 4)
+
     @Test fun `every practice is a real position whose next step is its technique, with no simpler step on it`() {
         assertTrue(WhosWhoTraining.drill is MoveDrill)
-        assertEquals(techniqueNamesOf("whoswho").keys.toList(), WhosWhoTraining.techniques)
-        for ((rung, t) in WhosWhoTraining.techniques.withIndex()) {
+        assertEquals(praisedTechniquesOf("whoswho").toList(), WhosWhoTraining.techniques)
+        for ((i, t) in WhosWhoTraining.techniques.withIndex()) {
+            val rung = rungs[i]
             val list = WhosWhoTraining.practices(t).take(6).toList()
             assertEquals("practices for $t", 6, list.size)
             assertEquals("distinct boards for $t", 6, list.map { it.board }.distinct().size)
             for (p in list) {
-                val b = p.board as WhosWhoState
+                val g = p.board as WhosWhoGraphState
+                val b = table(g)
                 assertEquals(t, p.step.technique)
-                assertEquals("the hint agrees", t, WhosWho.teach(b)!!.technique)
+                assertEquals("the hint agrees", t, WhosWho.teach(g)!!.technique)
                 assertEquals("one answer", listOf(b.answer), WhosWhoOracle.answers(b.n, b.columns, b.clues, limit = 2))
                 assertTrue("walked marks agree with the answer", b.marks.indices.all { m ->
                     when (b.marks[m]) { 'o' -> isAnswer(b, m); 'x' -> !isAnswer(b, m); else -> true }
@@ -153,8 +173,8 @@ class WhosWhoTrainingTest {
                 val table = Table(b)
                 for (lower in 0 until rung) assertFalse("$t board has a rung-$lower step", table.has(lower))
                 if (rung < 4) assertTrue("$t board has its own step by counting", table.has(rung))
-                // What the step ticks is the answer's; what it crosses is not.
-                val after = (p.step as Deduction).apply(b) as WhosWhoState
+                // What the step links is the answer's; what it rules out is not.
+                val after = table((p.step as Deduction).apply(g) as WhosWhoGraphState)
                 assertTrue(after.marks != b.marks)
                 for (m in after.marks.indices) if (after.marks[m] != b.marks[m]) assertEquals(isAnswer(b, m), after.marks[m] == 'o')
             }
@@ -164,12 +184,13 @@ class WhosWhoTrainingTest {
     @Test fun `a move is right when it makes the step, wrong when no answer keeps it, and otherwise plays on`() {
         for (t in WhosWhoTraining.techniques) {
             for (p in WhosWhoTraining.practices(t).take(3)) {
-                val b = p.board as WhosWhoState
+                val g = p.board as WhosWhoGraphState
+                val b = table(g)
                 val d = p.step as Deduction
-                assertEquals(true, WhosWhoTraining.judge(p, d.apply(b)))
+                assertEquals(true, WhosWhoTraining.judge(p, d.apply(g)))
                 val open = b.marks.indices.filter { b.marks[it] == '.' }
-                fun at(m: Int, tick: Boolean) = b.mark(m / b.n / b.columns, m / b.n % b.columns, m % b.n, tick)
-                // A tick off the answer, or a cross on it, is wrong: the one answer does not keep it.
+                fun at(m: Int, tick: Boolean) = mark(g, m, tick)
+                // A link off the answer, or an anti-link on it, is wrong: the one answer does not keep it.
                 assertEquals(false, WhosWhoTraining.judge(p, at(open.first { !isAnswer(b, it) }, tick = true)))
                 open.firstOrNull { isAnswer(b, it) }?.let { assertEquals(false, WhosWhoTraining.judge(p, at(it, tick = false))) }
                 // Another true mark: right or play on by whether an instance makes it (the test below).
@@ -180,17 +201,19 @@ class WhosWhoTrainingTest {
     @Test fun `another instance of the same technique is right, and a true mark no instance justifies plays on`() {
         var others = 0
         var unjustified = 0
-        for ((rung, t) in WhosWhoTraining.techniques.take(2).withIndex()) {
+        run {
+            val t = WhosWhoTeacher.CLUE
             for (p in WhosWhoTraining.practices(t).take(12)) {
-                val b = p.board as WhosWhoState
+                val g = p.board as WhosWhoGraphState
+                val b = table(g)
                 val table = Table(b)
-                val instances = if (rung == 0) table.clues else table.onlys
-                val after = (p.step as Deduction).apply(b) as WhosWhoState
+                val instances = table.clues
+                val after = table((p.step as Deduction).apply(g) as WhosWhoGraphState)
                 val mine = b.marks.indices.filter { after.marks[it] != b.marks[it] }.toSet()
-                fun with(m: Marks): WhosWhoState {
-                    var x = b
-                    for (c in m.crosses) if (x.marks[c] == '.') x = x.mark(c / b.n / b.columns, c / b.n % b.columns, c % b.n, tick = false)
-                    for (c in m.ticks) x = x.mark(c / b.n / b.columns, c / b.n % b.columns, c % b.n, tick = true)
+                fun with(m: Marks): WhosWhoGraphState {
+                    var x = g
+                    for (c in m.crosses) if (b.marks[c] == '.') x = mark(x, c, tick = false)
+                    for (c in m.ticks) x = mark(x, c, tick = true)
                     return x
                 }
                 for (m in instances) {
@@ -213,7 +236,7 @@ class WhosWhoTrainingTest {
     @Test fun `each rung's list of steps starts with the step the ladder picks`() {
         var checked = 0
         for (tier in Difficulty.entries) for (k in 0 until 10) {
-            var b = WhosWho.generate(Training.seed(k), tier) as WhosWhoState
+            var b = (WhosWho.generate(Training.seed(k), tier) as WhosWhoGraphState).board
             while (!b.solved) {
                 val p = WhosWhoLogic.puzzleOf(b)
                 val g = WhosWhoLogic.gridOf(b.n, b.columns, b.marks)
@@ -228,7 +251,11 @@ class WhosWhoTrainingTest {
                         first?.let { listOf(it.technique, it.clue, it.ticks, it.crosses, it.person, it.item, it.partner) })
                     checked++
                 }
-                b = WhosWho.teach(b)!!.apply(b) as WhosWhoState
+                val step = WhosWhoTeacher.teach(b)!!
+                b = b.copy(marks = b.marks.toCharArray().also { m ->
+                    for (c in step.crosses) if (m[c] == '.') m[c] = 'x'
+                    for (t in step.ticks) m[t] = 'o'
+                }.concatToString())
             }
         }
         assertTrue(checked > 1000)
@@ -239,8 +266,8 @@ class WhosWhoTrainingTest {
             WhosWhoTraining.techniquesUsed(WhosWho.generate(Training.seed(k), Difficulty.EXPERT)).containsAll(WhosWhoTraining.techniques)
         }
         assertEquals(Training.seed(index), WhosWhoTraining.examSeed)
-        val exam = WhosWhoTraining.exam() as WhosWhoState
-        assertEquals(listOf(exam.answer), WhosWhoOracle.answers(exam.n, exam.columns, exam.clues, limit = 2))
+        val exam = WhosWhoTraining.exam() as WhosWhoGraphState
+        assertEquals(listOf(exam.board.answer), WhosWhoOracle.answers(exam.n, exam.board.columns, exam.board.clues, limit = 2))
         assertTrue(WhosWhoTraining.techniquesUsed(exam).containsAll(WhosWhoTraining.techniques))
     }
 }

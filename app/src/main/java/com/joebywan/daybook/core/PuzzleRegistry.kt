@@ -34,7 +34,6 @@ import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.Unblock
 import com.joebywan.daybook.puzzles.WhosWho
-import com.joebywan.daybook.puzzles.WhosWhoGraph
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.Dwindle
 import com.joebywan.daybook.puzzles.Equation
@@ -94,9 +93,7 @@ object PuzzleRegistry {
      * achievement or best time), and in nothing built from [all] (Today's three, Levels, Training, the archive, the
      * counts). Saves and routes still find them through [byId].
      */
-    val lab: List<PuzzleType> = listOf(
-        WhosWhoGraph,
-    )
+    val lab: List<PuzzleType> = emptyList()
 
     fun isLab(id: String): Boolean = lab.any { it.id == id }
 

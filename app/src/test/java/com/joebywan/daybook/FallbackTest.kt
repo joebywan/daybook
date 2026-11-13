@@ -35,6 +35,7 @@ import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Thermometers
 import com.joebywan.daybook.puzzles.ThermometersLogic
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.SandLogic
@@ -321,7 +322,10 @@ class FallbackTest {
      */
     @Test
     fun `whoswho proves every daily board of a year on every tier`() =
-        assertYearProved(WhosWho, attempts = WhosWhoLogic.ATTEMPTS, ceiling = WhosWhoLogic.ATTEMPTS / 4, attempt = WhosWhoLogic::attempt) { seed, d -> WhosWhoLogic.generateVerified(seed, d) }
+        assertYearProved(WhosWho, attempts = WhosWhoLogic.ATTEMPTS, ceiling = WhosWhoLogic.ATTEMPTS / 4, attempt = WhosWhoLogic::attempt) { seed, d ->
+            WhosWhoLogic.generateVerified(seed, d)?.let { WhosWhoGraphState(it) }
+        }
+
 
     /**
      * [DominoLogic.generateVerified] returns a board only when the tier's ladder finished it, needing at least the

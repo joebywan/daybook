@@ -12,24 +12,52 @@ import org.junit.Test
 import kotlin.random.Random
 
 /**
- * The graph Who's Who (a lab puzzle). Truth here is read straight off the stored answer (who holds each item), never
+ * Who's Who's graph. Truth here is read straight off the stored answer (who holds each item), never
  * through the closure, so the closure is checked against something it does not share.
  */
 class WhosWhoGraphTest {
 
     private fun board(day: Int, difficulty: Difficulty) =
-        WhosWhoGraph.generate(1000L + day, difficulty) as WhosWhoGraphState
+        WhosWho.generate(1000L + day, difficulty) as WhosWhoGraphState
 
     private fun same(s: WhosWhoGraphState, a: Int, b: Int) = WhosWhoGraphLogic.holder(s.board, a) == WhosWhoGraphLogic.holder(s.board, b)
 
     private fun pairs(s: WhosWhoGraphState) = (0 until s.size).flatMap { a -> (a + 1 until s.size).filter { a / s.n != it / s.n }.map { a to it } }
 
     @Test
-    fun `it is a lab puzzle, found by id and kept out of the registry`() {
-        assertSame(WhosWhoGraph, PuzzleRegistry.byId("test-whoswho"))
-        assertTrue(PuzzleRegistry.isLab("test-whoswho"))
-        assertFalse(PuzzleRegistry.all.any { it.id == "test-whoswho" })
-        assertFalse(PuzzleRegistry.isLab(WhosWho.id))
+    fun `the graph is Who's Who, and the lab build's id is gone`() {
+        assertSame(WhosWho, PuzzleRegistry.byId("whoswho"))
+        assertTrue(WhosWho in PuzzleRegistry.all)
+        assertTrue(PuzzleRegistry.lab.isEmpty())
+        // A saved route or game under the lab's id finds no puzzle and is left alone.
+        assertNull(PuzzleRegistry.byId("test-whoswho"))
+    }
+
+    @Test
+    fun `a table save turns into the same marks on the graph`() {
+        for (difficulty in Difficulty.entries) for (day in 0 until 10) {
+            val t = board(day, difficulty).board
+            val n = t.n
+            // Every person's true house ticked, a wrong item of each other column crossed, clue 0 struck.
+            var table = t
+            for (p in 0 until n) {
+                table = table.mark(p, 0, t.answer[0][p], tick = true)
+                for (c in 1 until t.columns) table = table.mark(p, c, (t.answer[c][p] + 1) % n, tick = false)
+            }
+            table = table.strike(0)
+            val g = WhosWho.restored(table) as WhosWhoGraphState
+            assertEquals(table.moves, g.moves)
+            assertTrue(g.board.isStruck(0))
+            assertEquals("", g.board.marks)
+            val c = WhosWhoGraphLogic.close(g)
+            for (p in 0 until n) {
+                assertEquals(1, c.at(p, n + t.answer[0][p]))
+                for (col in 1 until t.columns) assertEquals(-1, c.at(p, (col + 1) * n + (t.answer[col][p] + 1) % n))
+            }
+            // The table those marks make is the table that was saved, and a graph state is left as it is.
+            assertEquals(WhosWhoLogic.gridOf(n, t.columns, table.marks).cand.toList(), WhosWhoLogic.gridOf(n, t.columns, WhosWhoGraphLogic.table(g).marks).cand.toList())
+            assertSame(g, WhosWho.restored(g))
+        }
     }
 
     /** The item of [category] that goes with [a] in the answer. */
@@ -54,7 +82,7 @@ class WhosWhoGraphTest {
             // Nothing about Fred's other categories, or about the houses' own.
             for (x in 2 * n until s.size) assertEquals(0, c.at(fred, x))
             for (x in 2 * n until s.size) assertEquals(0, c.at(right, x))
-            assertFalse(WhosWhoGraph.teach(s)?.mistake ?: false)
+            assertFalse(WhosWho.teach(s)?.mistake ?: false)
         }
     }
 
@@ -79,7 +107,7 @@ class WhosWhoGraphTest {
                 val v = c.at(a, b)
                 if (v != 0) assertEquals("$difficulty day $day: $a-$b", same(s, a, b), v == 1)
             }
-            assertFalse("$difficulty day $day", WhosWhoGraph.teach(s)?.mistake ?: false)
+            assertFalse("$difficulty day $day", WhosWho.teach(s)?.mistake ?: false)
         }
     }
 
@@ -89,7 +117,7 @@ class WhosWhoGraphTest {
         val n = s0.n
         val wrongs = (2 * n until 3 * n).filter { !same(s0, 1, it) }.take(2)
         val s = wrongs.fold(s0) { acc, z -> acc.withLine(1, z) }
-        val step = WhosWhoGraph.teach(s)!!
+        val step = WhosWho.teach(s)!!
         assertTrue(step.mistake)
         assertEquals(setOf(1) + wrongs, step.targets)
         val fixed = step.apply(s) as WhosWhoGraphState
@@ -129,7 +157,7 @@ class WhosWhoGraphTest {
             assertTrue("$difficulty day $day", s.solved)
             // A person's line to a pet is implied through the house, not drawn: the finish says it was elimination.
             assertTrue(WhosWhoGraphLogic.leftImplied(s))
-            assertNotNull(WhosWhoGraph.finishNote(s))
+            assertNotNull(WhosWho.finishNote(s))
         }
     }
 
@@ -143,7 +171,7 @@ class WhosWhoGraphTest {
             val c = WhosWhoGraphLogic.close(s)
             for (p in 0 until n) for (x in n until s.size) assertEquals(if (same(s, p, x)) 1 else -1, c.at(p, x))
             assertTrue("$difficulty day $day: elimination alone is a win", s.solved)
-            assertNull(WhosWhoGraph.teach(s))
+            assertNull(WhosWho.teach(s))
             assertTrue(WhosWhoGraphLogic.leftImplied(s))
         }
     }
@@ -155,22 +183,22 @@ class WhosWhoGraphTest {
         for ((a, b) in pairs(implied)) if (a < n0 && !same(implied, a, b)) implied = implied.withMark(a, b, WhosWhoGraphLogic.ANTI)
         assertTrue(implied.solved)
         // Every draw is one of the set, and a run of solves meets most of them.
-        val seen = (0 until 200).map { WhosWhoGraph.finishNote(implied, Random(it))!! }.toSet()
-        assertTrue(seen.all { it in WhosWhoGraph.ELIMINATION_NOTES })
-        assertTrue(seen.size >= WhosWhoGraph.ELIMINATION_NOTES.size - 1)
+        val seen = (0 until 200).map { WhosWho.finishNote(implied, Random(it))!! }.toSet()
+        assertTrue(seen.all { it in WhosWho.ELIMINATION_NOTES })
+        assertTrue(seen.size >= WhosWho.ELIMINATION_NOTES.size - 1)
         // The same draw gives the same note: the frame keeps the one it was given.
-        assertEquals(WhosWhoGraph.finishNote(implied, Random(5)), WhosWhoGraph.finishNote(implied, Random(5)))
-        assertTrue(WhosWhoGraph.ELIMINATION_NOTES.all { it.isNotBlank() && it.length <= 100 })
-        assertEquals(WhosWhoGraph.ELIMINATION_NOTES.size, WhosWhoGraph.ELIMINATION_NOTES.toSet().size)
+        assertEquals(WhosWho.finishNote(implied, Random(5)), WhosWho.finishNote(implied, Random(5)))
+        assertTrue(WhosWho.ELIMINATION_NOTES.all { it.isNotBlank() && it.length <= 100 })
+        assertEquals(WhosWho.ELIMINATION_NOTES.size, WhosWho.ELIMINATION_NOTES.toSet().size)
 
         // Every person's line to each of their items drawn, from either end: no note.
         var drawn = implied
         for (p in 0 until n0) for (x in n0 until drawn.size) if (same(drawn, p, x)) drawn = if (x % 2 == 0) drawn.withLine(p, x) else drawn.withLine(x, p)
         assertTrue(drawn.solved)
         assertFalse(WhosWhoGraphLogic.leftImplied(drawn))
-        assertNull(WhosWhoGraph.finishNote(drawn, Random(1)))
+        assertNull(WhosWho.finishNote(drawn, Random(1)))
         // Nor on a board not yet solved.
-        assertNull(WhosWhoGraph.finishNote(board(2, Difficulty.STANDARD), Random(1)))
+        assertNull(WhosWho.finishNote(board(2, Difficulty.STANDARD), Random(1)))
     }
 
     @Test
@@ -179,12 +207,12 @@ class WhosWhoGraphTest {
         val (a, b) = pairs(s).first { !same(s, it.first, it.second) }
         val wrong = s.withMark(a, b, WhosWhoGraphLogic.LINK)
         assertFalse(wrong.solved)
-        val step = WhosWhoGraph.teach(wrong)!!
+        val step = WhosWho.teach(wrong)!!
         assertTrue(step.mistake)
         assertEquals(setOf(a, b), step.targets)
         // Each end's line is its own mistake: the hints take both back.
         val once = step.apply(wrong) as WhosWhoGraphState
-        val twice = WhosWhoGraph.teach(once)!!.also { assertTrue(it.mistake) }.apply(once) as WhosWhoGraphState
+        val twice = WhosWho.teach(once)!!.also { assertTrue(it.mistake) }.apply(once) as WhosWhoGraphState
         assertEquals(WhosWhoGraphLogic.OPEN, twice.mark(a, b))
     }
 
@@ -194,7 +222,7 @@ class WhosWhoGraphTest {
             var s = board(day, difficulty)
             var steps = 0
             while (!s.solved) {
-                val step = WhosWhoGraph.teach(s)
+                val step = WhosWho.teach(s)
                 assertNotNull("$difficulty day $day: hints ran out", step)
                 step!!
                 assertFalse("$difficulty day $day: a mistake on a hints-only walk", step.mistake)
@@ -203,7 +231,7 @@ class WhosWhoGraphTest {
                 assertTrue("$difficulty day $day: ${step.technique} not reached by its own move", step.isReached(s))
                 assertTrue("$difficulty day $day: walk too long", ++steps < 200)
             }
-            assertNull(WhosWhoGraph.teach(s))
+            assertNull(WhosWho.teach(s))
         }
     }
 

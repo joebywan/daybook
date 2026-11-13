@@ -3,7 +3,7 @@ package com.joebywan.daybook.puzzles
 import kotlinx.serialization.Serializable
 
 /**
- * A Who's Who board played as a graph (the lab puzzle `test-whoswho`, `WhosWhoGraph`): every item is a node, the people
+ * A Who's Who board played as a graph (the `whoswho` puzzle, [WhosWho]): every item is a node, the people
  * included. The player draws lines from an item to the items of another category it can be (one line: that one; several:
  * one of those), or marks a pair anti-linked (never the same person's). No category is the base, so the board can be read
  * from the house, a pet or a person alike.
@@ -70,6 +70,25 @@ data class WhosWhoGraphState(
 
     /** Clue [clue] struck through, or back: a note. One move. */
     fun strike(clue: Int): WhosWhoGraphState = copy(board = board.strike(clue), moves = moves + 1)
+
+    companion object {
+        /**
+         * A table save ([WhosWhoState], the build before the graph) as the graph: each tick a line drawn from both ends,
+         * each cross an anti-link, struck clues and moves kept. Every table mark is a person-item fact, so all of them map;
+         * a table that clashed clashes here too.
+         */
+        fun fromTable(t: WhosWhoState): WhosWhoGraphState {
+            var g = WhosWhoGraphState(t.copy(marks = ""))
+            for (at in t.marks.indices) {
+                val mark = t.marks[at]
+                if (mark == WhosWhoLogic.EMPTY) continue
+                val cell = at / t.n
+                val item = (cell % t.columns + 1) * t.n + at % t.n
+                g = g.withMark(cell / t.columns, item, if (mark == WhosWhoLogic.TICK) WhosWhoGraphLogic.LINK else WhosWhoGraphLogic.ANTI)
+            }
+            return g.copy(moves = t.moves)
+        }
+    }
 }
 
 /**
@@ -205,7 +224,7 @@ internal object WhosWhoGraphLogic {
     /**
      * Whether some person-item pair the closure links carries no line of the player's: the marks imply it (anti-links
      * ruling out everything else) without the player drawing it. Never part of [isSolved]; the finished frame says so
-     * ([WhosWhoGraph.finishNote]).
+     * ([WhosWho.finishNote]).
      */
     fun leftImplied(s: WhosWhoGraphState, c: Closure = close(s)): Boolean {
         for (p in 0 until s.n) for (x in s.n until s.size) if (c.at(p, x) == 1 && !isLine(s.mark(p, x))) return true

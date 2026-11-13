@@ -51,7 +51,12 @@ import com.joebywan.daybook.core.LocalHighlightBounds
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialStep
+import androidx.compose.foundation.layout.Spacer
+import com.joebywan.daybook.ui.play.PlayLayout
 import com.joebywan.daybook.ui.play.RulesDialog
+import com.joebywan.daybook.ui.play.SidePanel
+import com.joebywan.daybook.ui.play.StackedChrome
+import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.HintPopover
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
@@ -194,7 +199,10 @@ fun TutorialRunner(
     // the last frame's done line carried in), at most [MaxCaptionSlot]. Measured over every frame, so the slot, and the
     // board above it, is one size for the whole walkthrough; each frame's feedback keeps its own fixed line count, so a
     // line appearing never moves the caption.
-    val textWidth = with(density) { (maxWidth - 36.dp).roundToPx() }.coerceAtLeast(1)
+    // A wide window puts the board beside a side panel, as the play screen does ([PlayLayout]): title at its top, the buttons
+    // at its foot, the caption (and a free-play hint) between.
+    val wide = minOf(maxWidth - SidePanel, maxHeight) > minOf(maxWidth, maxHeight - StackedChrome)
+    val textWidth = with(density) { ((if (wide) SidePanel else maxWidth) - 36.dp).roundToPx() }.coerceAtLeast(1)
     val (slotHeight, feedbackLines) = remember(puzzle.id, textWidth, captionStyle, feedbackStyle, density) {
         val c = Constraints(maxWidth = textWidth)
         fun lines(text: String) = measurer.measure(text, feedbackStyle, maxLines = 2, constraints = c).lineCount
@@ -210,7 +218,7 @@ fun TutorialRunner(
         }
         with(density) { minOf(tallest.toDp(), MaxCaptionSlot) } to perFrame
     }
-    Column(Modifier.fillMaxSize().onGloballyPositioned { contentTop = it.positionInWindow().y }) {
+    PlayLayout(wide, Modifier.fillMaxSize().onGloballyPositioned { contentTop = it.positionInWindow().y }, stackSlot = true) {
         Row(
             Modifier.fillMaxWidth().padding(start = 18.dp, end = 4.dp, top = 8.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -233,8 +241,11 @@ fun TutorialRunner(
             TextButton(onClick = onClose) { Text(if (last) "Close" else "Skip", color = scheme.onSurfaceVariant) }
         }
 
+        // The play screen's clock row, which a walkthrough does without.
+        Spacer(Modifier)
+
         Box(
-            Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { boardTop = it.positionInWindow().y },
+            Modifier.fillMaxSize().onGloballyPositioned { boardTop = it.positionInWindow().y },
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(LocalBoardHighlight provides highlight, LocalHighlightBounds provides highlightBounds) {
@@ -261,38 +272,6 @@ fun TutorialRunner(
                         }
                     },
                     interactive = interactive,
-                )
-            }
-        }
-
-        // One height for every frame, so nothing under the board moves as captions change length.
-        Box(
-            Modifier.fillMaxWidth().height(slotHeight).padding(horizontal = 18.dp)
-                .onGloballyPositioned { slotTop = it.positionInWindow().y },
-        ) {
-            Column(Modifier.fillMaxSize()) {
-                Text(
-                    frame.caption,
-                    style = captionStyle,
-                    color = scheme.onBackground,
-                    // Never cut a word: a caption longer than the slot scrolls instead.
-                    modifier = Modifier.weight(1f).verticalScroll(androidx.compose.runtime.key(index) { rememberScrollState() }),
-                )
-                // Only a frame that asks for a move, or that carries the last move's done line,
-                // has feedback to show; the others give the caption the whole slot.
-                val feedback = when {
-                    status == Status.RETRY -> frame.retry
-                    status == Status.DONE -> frame.done
-                    carried != null -> "\u2713 $carried"
-                    else -> ""
-                }
-                if (feedbackLines[index] > 0) Text(
-                    feedback,
-                    style = feedbackStyle,
-                    color = if (status == Status.RETRY) scheme.onSurfaceVariant else BoardHues.textOn(accent, scheme.background),
-                    maxLines = feedbackLines[index],
-                    minLines = feedbackLines[index],
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -328,9 +307,45 @@ fun TutorialRunner(
                 modifier = Modifier.weight(1f).alpha(if (showNext) 1f else 0f),
             ) { Text(if (last) "Play" else "Next") }
         }
+        // One height for every frame, so nothing under the board moves as captions change length.
+        Box(
+            Modifier.fillMaxWidth().height(slotHeight).padding(horizontal = 18.dp)
+                .onGloballyPositioned { slotTop = it.positionInWindow().y },
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                Text(
+                    frame.caption,
+                    style = captionStyle,
+                    color = scheme.onBackground,
+                    // Never cut a word: a caption longer than the slot scrolls instead.
+                    modifier = Modifier.weight(1f).verticalScroll(androidx.compose.runtime.key(index) { rememberScrollState() }),
+                )
+                // Only a frame that asks for a move, or that carries the last move's done line,
+                // has feedback to show; the others give the caption the whole slot.
+                val feedback = when {
+                    status == Status.RETRY -> frame.retry
+                    status == Status.DONE -> frame.done
+                    carried != null -> "\u2713 $carried"
+                    else -> ""
+                }
+                if (feedbackLines[index] > 0) Text(
+                    feedback,
+                    style = feedbackStyle,
+                    color = if (status == Status.RETRY) scheme.onSurfaceVariant else BoardHues.textOn(accent, scheme.background),
+                    maxLines = feedbackLines[index],
+                    minLines = feedbackLines[index],
+                    overflow = TextOverflow.Ellipsis,
+                )
+                // Wide: the hint takes its place in the panel, under the caption, never over the board (the play screen's way).
+                if (wide && frame.freePlay && hints.active && !board.solved) {
+                    HintPanel(hints, accent, ::onHint, Modifier.padding(top = 8.dp).fillMaxWidth(), fill = false)
+                }
+            }
+        }
+
     }
 
-    if (frame.freePlay && hints.active && !board.solved) {
+    if (frame.freePlay && hints.active && !board.solved && !wide) {
         HintPopover(
             session = hints,
             accent = accent,

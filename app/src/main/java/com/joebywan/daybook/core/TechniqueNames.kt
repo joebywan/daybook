@@ -298,6 +298,8 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "sand" to setOf("finish"),
     "unblock" to setOf("exit"),
     "cipher" to setOf("only-letter"),
+    // Who's Who's graph links an item's one choice left by itself (`WhosWhoGraphLogic.close`), so no hint is ever this.
+    "whoswho" to setOf("only"),
     "pearls" to setOf("pearl-ways"),
     "tents" to setOf("touch"),
 )

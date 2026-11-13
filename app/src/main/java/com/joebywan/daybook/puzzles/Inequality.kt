@@ -51,6 +51,14 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
@@ -244,15 +252,22 @@ object Inequality : PuzzleType {
         drawPath(path, color, style = Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 
+    /** The middle of the gap sign [s] sits in, on an [n]-wide grid of [slot]-sized slots. */
+    private fun signAt(n: Int, s: Sign, slot: Float): Offset {
+        val a = minOf(s.lo, s.hi)
+        val b = maxOf(s.lo, s.hi)
+        return if (b - a != 1) Offset((a % n + 0.5f) * slot, (b / n) * slot) else Offset((b % n) * slot, (a / n + 0.5f) * slot)
+    }
+
     /** Where sign [s] is drawn on an [n]-wide grid of [slot]-sized slots: centre and orientation. */
     private fun DrawScope.drawSign(n: Int, s: Sign, slot: Float, color: Color, width: Float) {
         val a = minOf(s.lo, s.hi)
-        val b = maxOf(s.lo, s.hi)
-        val vertical = b - a != 1
-        val cx = if (vertical) (a % n + 0.5f) * slot else (b % n) * slot
-        val cy = if (vertical) (b / n) * slot else (a / n + 0.5f) * slot
-        chevron(cx, cy, vertical, loFirst = s.lo == a, slot = slot, color = color, width = width)
+        val at = signAt(n, s, slot)
+        chevron(at.x, at.y, maxOf(s.lo, s.hi) - a != 1, loFirst = s.lo == a, slot = slot, color = color, width = width)
     }
+
+    /** Arcade's signs: white on the deep frame in both schemes (`InequalityArcadeTest`). */
+    internal val ARCADE_SIGN = Color.White
 
     // ---- home-grid motif -------------------------------------------------------------------
 
@@ -270,26 +285,35 @@ object Inequality : PuzzleType {
             val dark = BoardHues.isDark(scheme)
             val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
             val ink = BoardHues.ink(hueA, dark)
+            // Arcade (null in Classic): the board's own frame, tiles and white signs.
+            val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
+            if (a != null) Box(Modifier.size(slot * 3).background(a.frame, RoundedCornerShape(8.dp)))
             for (i in 0 until 9) {
+                val fill = when {
+                    a == null -> null
+                    PREVIEW_GIVEN[i] -> ArcadeFill(a.given, a.given, a.givenInk)
+                    i == 8 -> a.control
+                    else -> ArcadeFill(a.square, a.square, a.squareInk)
+                }
                 Box(
                     Modifier
                         .padding(start = slot * (i % 3) + (slot - cell) / 2, top = slot * (i / 3) + (slot - cell) / 2)
                         .size(cell)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (i == 8) BoardHues.fill(hueB, dark) else scheme.surfaceVariant),
+                        .background(fill?.brush ?: SolidColor(if (i == 8) BoardHues.fill(hueB, dark) else scheme.surfaceVariant)),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             PREVIEW_DIGITS[i].toString(),
                             style = (if (PREVIEW_GIVEN[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
-                            color = if (PREVIEW_GIVEN[i]) scheme.onSurface else BoardHues.ink(hueB, dark),
+                            color = fill?.ink ?: if (PREVIEW_GIVEN[i]) scheme.onSurface else BoardHues.ink(hueB, dark),
                         )
                     }
                 }
             }
             Canvas(Modifier.size(slot * 3)) {
-                for (s in PREVIEW_SIGNS) drawSign(3, s, slot.toPx(), ink, slot.toPx() * 0.06f)
+                for (s in PREVIEW_SIGNS) drawSign(3, s, slot.toPx(), if (a == null) ink else ARCADE_SIGN, slot.toPx() * 0.06f)
             }
         }
     }
@@ -311,7 +335,11 @@ object Inequality : PuzzleType {
         val twin = BoardHues.fill(hueB, dark)
         val band = BoardHues.fill(hueA, dark).copy(alpha = 0.45f)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-        val (highlight, glow, pulse) = rememberHintPaint()
+        // The Classic look (issue #418) draws what Inequality drew before Arcade: hue A the signs and selection, B the player's digits.
+        val classic = classicLook()
+        val a = ArcadeBoard.of(scheme)
+        // Arcade's frame takes the glow, as Sudoku's does: pink in light (amber misses on white), amber in dark.
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(if (dark) a.selected.from else SudokuHintLight)
         // A row or column is finished when it holds 1..n and every sign inside it is true.
         val units = remember(n) { lineUnits(n, n) }
         val feel = rememberMoveFeel(s.cells, units) { u ->
@@ -336,36 +364,69 @@ object Inequality : PuzzleType {
             val slot = side / n
             val cell = slot * CELL
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(side).highlightGrid(n, n)) {
+                // Arcade: the tiles sit on the deep frame, and the signs are drawn on it between them.
+                Box(Modifier.size(side).highlightGrid(n, n).then(if (classic) Modifier else Modifier.background(a.frame, RoundedCornerShape(12.dp)))) {
                     for (i in 0 until n * n) {
                         val look = highlight.look(i)
+                        val wrong = i in conflicts
+                        val selected = s.selected == i
+                        val sameValue = selectedValue != 0 && s.cells[i] == selectedValue
+                        val inBand = s.selected != null && (i / n == s.selected / n || i % n == s.selected % n)
+                        // Arcade (null in Classic): a wrong square is red with a heavy underlined digit, never the colour alone;
+                        // the selection and its twins have an edge.
+                        val fill = when {
+                            classic -> null
+                            wrong -> ArcadeFill(a.error, a.error, a.errorInk)
+                            selected -> a.selected
+                            sameValue -> SudokuTwin
+                            s.givens[i] -> ArcadeFill(a.given, a.given, a.givenInk)
+                            s.cells[i] != 0 -> a.control
+                            inBand -> a.boxShade().let { ArcadeFill(it, it, a.squareInk) }
+                            else -> ArcadeFill(a.square, a.square, a.squareInk)
+                        }
                         Box(
                             Modifier
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
-                                .moveFeel(feel, i, vivid(accent))
+                                .moveFeel(feel, i, if (classic) vivid(accent) else a.selected.from)
+                                .then(a.selected.glow?.takeIf { selected && fill != null }?.let { Modifier.arcadeGlow(it, 8.dp, 3.dp) } ?: Modifier)
+                                // Under the dimming, so a dimmed square fades to itself and not to the frame.
+                                .then(if (fill != null) Modifier.background(a.square, RoundedCornerShape(8.dp)) else Modifier)
                                 .dimmed(look)
                                 .ring(look, glow, pulse, corner = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(
+                                .then(
+                                    if (fill != null) Modifier.background(fill.brush)
+                                    else Modifier.background(
+                                        when {
+                                            selected && !wrong -> mark
+                                            sameValue -> twin
+                                            inBand -> band
+                                            else -> scheme.surfaceVariant
+                                        },
+                                    ),
+                                )
+                                .then(
                                     when {
-                                        s.selected == i && i !in conflicts -> mark
-                                        selectedValue != 0 && s.cells[i] == selectedValue -> twin
-                                        s.selected != null && (i / n == s.selected / n || i % n == s.selected % n) -> band
-                                        else -> scheme.surfaceVariant
+                                        fill == null -> if (selected) Modifier.border(3.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier
+                                        selected -> Modifier.border(2.dp, if (wrong) a.errorInk else a.selectedEdge, RoundedCornerShape(8.dp))
+                                        sameValue && !wrong -> Modifier.border(1.dp, fill.ink, RoundedCornerShape(8.dp))
+                                        else -> Modifier
                                     },
                                 )
-                                .then(if (s.selected == i) Modifier.border(3.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier)
                                 .clickable(enabled = interactive) { onState(s.select(i)) },
                             contentAlignment = Alignment.Center,
                         ) {
                             if (s.cells[i] != 0) {
                                 Text(
                                     s.cells[i].toString(),
-                                    style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
+                                    style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell).let {
+                                        if (wrong && fill != null) it.copy(fontWeight = FontWeight.Black, textDecoration = TextDecoration.Underline) else it
+                                    },
                                     color = when {
-                                        i in conflicts -> scheme.error
-                                        s.selected == i -> Color.White
+                                        fill != null -> fill.ink
+                                        wrong -> scheme.error
+                                        selected -> Color.White
                                         s.givens[i] -> scheme.onSurface
                                         else -> ink
                                     },
@@ -379,13 +440,15 @@ object Inequality : PuzzleType {
                         for ((k, sign) in s.signs.withIndex()) {
                             val look = highlight.look(n * n + k)
                             val colour = when {
-                                k in broken -> scheme.error
+                                // Arcade: a broken sign sits on a red disc, a shape as well as a colour.
+                                k in broken -> if (classic) scheme.error else a.errorInk
                                 look.strong -> glow.copy(alpha = pulse.value)
                                 look.soft -> glow.copy(alpha = 0.7f)
-                                look.dim -> scheme.onSurface.copy(alpha = 0.25f)
-                                else -> signInk
+                                look.dim -> (if (classic) scheme.onSurface else ARCADE_SIGN).copy(alpha = 0.25f)
+                                else -> if (classic) signInk else ARCADE_SIGN
                             }
-                            drawSign(n, sign, px, colour, px * (if (look.strong) 0.07f else 0.05f))
+                            if (k in broken && !classic) drawCircle(a.error, px * 0.16f, signAt(n, sign, px))
+                            drawSign(n, sign, px, colour, px * (if (look.strong) 0.07f else if (classic) 0.05f else 0.06f))
                         }
                     }
                 }
@@ -396,6 +459,7 @@ object Inequality : PuzzleType {
                     side, n, InequalityTeacher::pad, highlight, glow, pulse,
                     enabled = interactive && s.selected != null,
                     done = { d -> s.cells.count { it == d } == n },
+                    arcade = a.takeIf { !classic },
                 ) { digit ->
                     val next = s.enter(s.selected ?: return@DigitPadRow, digit)
                     if (next !== s) onState(next)
