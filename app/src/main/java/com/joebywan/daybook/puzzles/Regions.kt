@@ -51,6 +51,13 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -264,13 +271,23 @@ object Regions : PuzzleType {
             val slot = minOf(maxWidth, maxHeight) / 4
             val dark = BoardHues.isDark(scheme)
             val hues = listOf(268f, 34f, 175f, 215f)
+            // Arcade: the board's frame, wide between regions and thin inside one, in place of the drawn walls.
+            val arcade = !classicLook()
+            if (arcade) Box(Modifier.size(slot * 4).background(ArcadeBoard.of(scheme).frame, RoundedCornerShape(5.dp)))
             for (i in 0 until 16) {
                 val fill = BoardHues.fill(hues[TUTORIAL_REGION[i]], dark)
+                fun gap(other: Int, inside: Boolean) = if (inside && TUTORIAL_REGION[other] == TUTORIAL_REGION[i]) 0.5.dp else 1.5.dp
                 Box(
                     Modifier
                         .padding(start = slot * (i % 4), top = slot * (i / 4))
                         .size(slot)
-                        .background(fill),
+                        .then(
+                            if (!arcade) Modifier.background(fill)
+                            else Modifier.padding(
+                                start = gap(i - 1, i % 4 > 0), end = gap(i + 1, i % 4 < 3),
+                                top = gap(i - 4, i / 4 > 0), bottom = gap(i + 4, i / 4 < 3),
+                            ).background(fill, RoundedCornerShape(2.dp)),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (PREVIEW_DIGITS[i] != 0) {
@@ -282,7 +299,7 @@ object Regions : PuzzleType {
                     }
                 }
             }
-            Canvas(Modifier.size(slot * 4)) {
+            if (!arcade) Canvas(Modifier.size(slot * 4)) {
                 walls(4, TUTORIAL_REGION, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.wall, 1.dp.toPx(), 2.5.dp.toPx())
             }
         }
@@ -302,7 +319,11 @@ object Regions : PuzzleType {
         val (_, hueB) = BoardHues.pair(s.solution.hashCode())
         val ink = BoardHues.ink(hueB, dark)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-        val (highlight, glow, pulse) = rememberHintPaint()
+        // The Classic look (issue #418) draws what Regions drew before Arcade: walls drawn over plain squares, a black selection edge.
+        val classic = classicLook()
+        val a = ArcadeBoard.of(scheme)
+        // Arcade's frame takes the glow, as Sudoku's does: pink in light (amber misses on white), amber in dark.
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(if (dark) a.selected.from else SudokuHintLight)
         val digits = layout.digits
         // A region is finished when it holds 1..its size, none of them touching an equal digit.
         val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
@@ -326,28 +347,62 @@ object Regions : PuzzleType {
             val side = padBoardSide()
             val slot = side / n
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(side).highlightGrid(n, n)) {
+                // Arcade: the squares sit on the deep frame, which shows wide between regions and thin inside one: the walls.
+                Box(Modifier.size(side).highlightGrid(n, n).then(if (classic) Modifier else Modifier.background(a.frame, RoundedCornerShape(8.dp)))) {
                     for (i in 0 until n * n) {
                         val look = highlight.look(i)
+                        val wrong = i in conflicts
+                        val selected = s.selected == i
                         val regionFill = BoardHues.fill(BoardHues.REGION_HUES[colours[s.region[i]]], dark)
                         // A selected square, and every square holding its digit, go plain so they stand out from the colours.
-                        val plain = s.selected == i || (selectedValue != 0 && s.cells[i] == selectedValue)
+                        val plain = selected || (selectedValue != 0 && s.cells[i] == selectedValue)
                         // A square in conflict is filled red (and edged red), so a wrong digit is never only a colour on a colour.
                         val fill = when {
-                            i in conflicts -> scheme.error.copy(alpha = 0.8f).compositeOver(if (plain) scheme.surface else regionFill)
-                            plain -> scheme.surface
+                            classic && wrong -> scheme.error.copy(alpha = 0.8f).compositeOver(if (plain) scheme.surface else regionFill)
+                            classic && plain -> scheme.surface
+                            classic -> regionFill
+                            wrong -> a.error
+                            plain -> a.square
                             else -> regionFill
                         }
+                        // Arcade: the frame between this square and the next one each way, half on each side.
+                        fun gap(other: Int, inside: Boolean) = if (inside && s.region[other] == s.region[i]) 0.75.dp else 2.dp
+                        val r = i / n
+                        val c = i % n
                         Box(
                             Modifier
-                                .padding(start = slot * (i % n), top = slot * (i / n))
+                                .padding(start = slot * c, top = slot * r)
                                 .size(slot)
-                                .moveFeel(feel, i, vivid(accent))
+                                .moveFeel(feel, i, if (classic) vivid(accent) else a.selected.from)
+                                .then(
+                                    if (classic) Modifier
+                                    else Modifier
+                                        .padding(
+                                            start = gap(i - 1, c > 0), end = gap(i + 1, c < n - 1),
+                                            top = gap(i - n, r > 0), bottom = gap(i + n, r < n - 1),
+                                        )
+                                        .then(a.selected.glow?.takeIf { selected }?.let { Modifier.arcadeGlow(it, 3.dp, 2.dp) } ?: Modifier)
+                                        // Under the dimming, so a dimmed square fades to itself and not to the frame.
+                                        .background(a.square, RoundedCornerShape(3.dp))
+                                )
                                 .dimmed(look)
-                                .ring(look, glow, pulse, corner = 2.dp)
-                                .background(fill)
-                                .then(if (i in conflicts) Modifier.border(2.dp, scheme.error) else Modifier)
-                                .then(if (s.selected == i) Modifier.border(3.dp, scheme.onBackground) else Modifier)
+                                .ring(look, glow, pulse, corner = if (classic) 2.dp else 3.dp)
+                                .then(
+                                    when {
+                                        classic -> Modifier.background(fill)
+                                        selected && !wrong -> Modifier.clip(RoundedCornerShape(3.dp)).background(a.selected.brush)
+                                        else -> Modifier.background(fill, RoundedCornerShape(3.dp))
+                                    },
+                                )
+                                .then(
+                                    when {
+                                        classic -> (if (wrong) Modifier.border(2.dp, scheme.error) else Modifier)
+                                            .then(if (selected) Modifier.border(3.dp, scheme.onBackground) else Modifier)
+                                        selected -> Modifier.border(2.dp, if (wrong) a.errorInk else a.selectedEdge, RoundedCornerShape(3.dp))
+                                        plain && !wrong -> Modifier.border(1.5.dp, a.squareInk, RoundedCornerShape(3.dp))
+                                        else -> Modifier
+                                    },
+                                )
                                 .clickable(enabled = interactive) { onState(s.select(i)) },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -355,9 +410,15 @@ object Regions : PuzzleType {
                                 val own = if (BoardHues.contrast(ink, fill) >= 4.5f) ink else BoardHues.onFill(fill)
                                 Text(
                                     s.cells[i].toString(),
-                                    style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(slot),
+                                    style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(slot).let {
+                                        if (wrong && !classic) it.copy(fontWeight = FontWeight.Black, textDecoration = TextDecoration.Underline) else it
+                                    },
                                     color = when {
-                                        i in conflicts || s.givens[i] -> BoardHues.onFill(fill)
+                                        !classic && wrong -> a.errorInk
+                                        !classic && selected -> a.selected.ink
+                                        // Arcade's plain squares are a.square, whose own ink reads; the region fills keep Classic's choice.
+                                        !classic && plain -> if (s.givens[i]) a.squareInk else a.control.to
+                                        wrong || s.givens[i] -> BoardHues.onFill(fill)
                                         else -> own
                                     },
                                     textAlign = TextAlign.Center,
@@ -365,14 +426,14 @@ object Regions : PuzzleType {
                             }
                         }
                     }
-                    Canvas(Modifier.fillMaxSize()) {
+                    if (classic) Canvas(Modifier.fillMaxSize()) {
                         walls(n, s.region, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.wall, 1.dp.toPx(), 3.dp.toPx())
                     }
                 }
 
                 Spacer(Modifier.height(PAD_GAP))
 
-                DigitPadRow(side, digits, RegionsTeacher::pad, highlight, glow, pulse, enabled = interactive && s.selected != null) { digit ->
+                DigitPadRow(side, digits, RegionsTeacher::pad, highlight, glow, pulse, enabled = interactive && s.selected != null, arcade = a.takeIf { !classic }) { digit ->
                     val next = s.enter(s.selected ?: return@DigitPadRow, digit)
                     if (next !== s) onState(next)
                 }

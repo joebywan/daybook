@@ -1,6 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -827,10 +831,14 @@ object Mambo : PuzzleType {
     @Composable
     private fun LinkBadge(diameter: Dp, same: Boolean, broken: Boolean, modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val disc = if (broken) scheme.error else scheme.onBackground
-        val ink = if (broken) scheme.onError else scheme.background
+        // Arcade (null in Classic): the given fill and ink, read on the frame and on both symbols' tiles; red when broken.
+        val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
+        val disc = if (a != null) (if (broken) a.error else a.given) else if (broken) scheme.error else scheme.onBackground
+        val ink = if (a != null) (if (broken) a.errorInk else a.givenInk) else if (broken) scheme.onError else scheme.background
         Canvas(modifier.size(diameter)) {
             drawCircle(disc)
+            // Arcade: a rim in the board's ink, so the disc parts from a tile of the same lightness.
+            if (a != null) drawCircle(if (broken) a.errorInk else a.squareInk, style = Stroke(size.minDimension * 0.07f), radius = size.minDimension * 0.465f)
             val span = size.minDimension
             val weight = span * MARK_STROKE
             if (same) {
@@ -962,6 +970,7 @@ object Mambo : PuzzleType {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
             val cell = minOf(maxWidth, maxHeight) / 3
+            if (!classicLook()) Box(Modifier.size(cell * 3).background(ArcadeBoard.current.frame, RoundedCornerShape(cell * 0.2f)))
             for (r in 0 until 3) {
                 for (c in 0 until 3) {
                     val i = r * 3 + c
@@ -1021,7 +1030,9 @@ object Mambo : PuzzleType {
             .map { it.cells[0] to it.cells[1] }
             .toSet()
 
-        val (highlight, glow, pulse) = rememberHintPaint()
+        // Arcade: pink in light (the indigo ink would vanish on the frame), amber in dark, as Sudoku's.
+        val (highlight, glow, pulse) = if (classicLook()) rememberHintPaint()
+        else rememberHintPaint(if (BoardHues.isDark(scheme)) ArcadeBoard.current.selected.from else SudokuHintLight)
         fun named(i: Int) = highlight.isEmpty || i in highlight.strong || i in highlight.soft
         // A row or column is finished when it is full and breaks no rule that lies inside it.
         val units = remember(s.size) { lineUnits(s.size, s.size) }
@@ -1056,6 +1067,8 @@ object Mambo : PuzzleType {
                     Modifier
                         .size(board)
                         .highlightGrid(s.size, s.size)
+                        // Arcade: the tiles sit on the deep frame (the Classic look, issue #418, draws what Mambo drew before).
+                        .then(if (classicLook()) Modifier else Modifier.background(ArcadeBoard.current.frame, RoundedCornerShape(cell * 0.12f)))
                         .pointerInput(s, interactive, cellPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset: Offset ->
@@ -1071,7 +1084,7 @@ object Mambo : PuzzleType {
                             Modifier
                                 .padding(start = cell * (i % s.size), top = cell * (i / s.size))
                                 .size(cell)
-                                .background(scheme.error.copy(alpha = 0.22f))
+                                .background(if (classicLook()) scheme.error.copy(alpha = 0.22f) else ArcadeBoard.current.error.copy(alpha = 0.6f))
                         )
                     }
                     for (r in 0 until s.size) {
@@ -1087,7 +1100,7 @@ object Mambo : PuzzleType {
                                 modifier = Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
-                                    .moveFeel(feel, i, vivid(accent))
+                                    .moveFeel(feel, i, if (classicLook()) vivid(accent) else ArcadeBoard.current.selected.from)
                                     .padding(cell * 0.06f),
                             )
                         }
@@ -1158,6 +1171,7 @@ object Mambo : PuzzleType {
     ) {
         val scheme = MaterialTheme.colorScheme
         val shape = RoundedCornerShape(22)
+        if (!classicLook()) return ArcadeCell(sym, given, ringed, modifier, look, glow, pulse)
         val fill = when (sym) {
             // The scheme's own amber, so the sun follows the theme into dark rather than staying
             // a fixed daylight orange the page has to sit around.
@@ -1180,6 +1194,39 @@ object Mambo : PuzzleType {
         ) {
             if (sym != Sym.NONE) {
                 val ink = scheme.background.copy(alpha = if (given) 1f else 0.72f)
+                Canvas(Modifier.fillMaxWidth(MARK_SHARE).aspectRatio(1f)) {
+                    if (sym == Sym.SUN) drawSun(ink) else drawCrescent(ink)
+                }
+            }
+        }
+    }
+
+    /**
+     * [MamboCell] in the Arcade look: the sun on the amber gradient, the moon on the control gradient, each in the ink its
+     * fill carries (a placed one sunk part-way, as in Classic), an empty square plain; a run of three ringed red and wider.
+     */
+    @Composable
+    private fun ArcadeCell(sym: Sym, given: Boolean, ringed: Boolean, modifier: Modifier, look: HintLook, glow: Color, pulse: () -> Float) {
+        val a = ArcadeBoard.current
+        val shape = RoundedCornerShape(22)
+        val fill = when (sym) {
+            Sym.SUN -> a.selected
+            Sym.MOON -> a.control
+            Sym.NONE -> ArcadeFill(a.square, a.square, a.squareInk)
+        }
+        Box(
+            modifier
+                // Under the dimming, so a dimmed square fades to itself and not to the frame.
+                .background(a.square, shape)
+                .alpha(if (look.dim) DIM_ALPHA else 1f)
+                .clip(shape)
+                .background(fill.brush)
+                .then(if (ringed) Modifier.border(3.dp, a.error, shape) else Modifier)
+                .hintOutline(look.strong, look.soft, glow, pulse, 3.dp, shape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (sym != Sym.NONE) {
+                val ink = fill.ink.copy(alpha = if (given) 1f else 0.72f)
                 Canvas(Modifier.fillMaxWidth(MARK_SHARE).aspectRatio(1f)) {
                     if (sym == Sym.SUN) drawSun(ink) else drawCrescent(ink)
                 }

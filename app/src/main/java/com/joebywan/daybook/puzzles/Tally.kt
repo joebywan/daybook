@@ -47,6 +47,9 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.wall
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.geometry.CornerRadius
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.BoardGlyph
@@ -255,6 +258,13 @@ object Tally : PuzzleType {
         val (hueA, hueB) = BoardHues.pair(s.digits.hashCode())
         val circle = BoardHues.ink(hueB, dark)
         val band = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f)
+        // Arcade (null in Classic, which draws what Tally drew before it): tiles on the deep frame, a kept number on the
+        // control gradient with its ring, a removed one sunk into the given fill.
+        val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
+        val gap = maxOf(2f, u * 0.07f)
+        val corner = CornerRadius(u * 0.14f)
+        val tile = Size(u - gap, u - gap)
+        if (a != null) drawRoundRect(a.frame, Offset(-gap / 2, -gap / 2), Size(n * u + gap, n * u + gap), CornerRadius(u * 0.18f))
 
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
 
@@ -262,6 +272,31 @@ object Tally : PuzzleType {
         for (i in 0 until n * n) {
             val x = (i % n) * u
             val y = (i / n) * u
+            if (a != null) {
+                val at = Offset(x + gap / 2, y + gap / 2)
+                val layout = texts.digits[s.digitAt(i)]
+                val mid = Offset(x + (u - layout.size.width) / 2f, y + (u - layout.size.height) / 2f)
+                feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                    when (s.marks[i]) {
+                        TallyLogic.REMOVED -> {
+                            drawRoundRect(a.given, at, tile, corner)
+                            drawText(layout, a.givenInk.copy(alpha = 0.3f), mid)
+                            val k = u * 0.28f
+                            drawLine(a.givenInk.copy(alpha = 0.75f), Offset(x + k, y + u - k), Offset(x + u - k, y + k), maxOf(u * 0.06f, 1.5f), StrokeCap.Round)
+                        }
+                        TallyLogic.KEPT -> {
+                            drawRoundRect(a.control.brush(at, tile), at, tile, corner)
+                            drawText(layout, a.control.ink, mid)
+                            drawCircle(a.control.ink, u * 0.34f, Offset(x + u / 2f, y + u / 2f), style = Stroke(maxOf(u * 0.07f, 1.5f)))
+                        }
+                        else -> {
+                            drawRoundRect(a.square, at, tile, corner)
+                            drawText(layout, a.squareInk, mid)
+                        }
+                    }
+                }
+                continue
+            }
             drawRect(scheme.surface, Offset(x, y), Size(u, u))
             val layout = texts.digits[s.digitAt(i)]
             val at = Offset(x + (u - layout.size.width) / 2f, y + (u - layout.size.height) / 2f)
@@ -284,9 +319,9 @@ object Tally : PuzzleType {
             }
         }
 
-        // Grid lines.
+        // Grid lines (Arcade's are the frame).
         val thin = maxOf(u * 0.03f, 1f)
-        for (k in 0..n) {
+        if (a == null) for (k in 0..n) {
             val edge = k == 0 || k == n
             val colour = if (edge) scheme.wall else scheme.outline
             val w = if (edge) thin * 2f else thin
@@ -296,7 +331,7 @@ object Tally : PuzzleType {
 
         // Targets: a chip beside each row and under each column, green once the line adds up, red
         // once it can no longer.
-        drawLineChips(n, u, GAP, TARGET_W, TARGET_H, texts.targets, done, bad, band, scheme, overlay)
+        drawLineChips(n, u, GAP, TARGET_W, TARGET_H, texts.targets, done, bad, band, scheme, overlay, a)
 
         if (!lit) return
 
@@ -334,7 +369,10 @@ object Tally : PuzzleType {
         val cursor = remember(s.digits) { mutableStateOf<Int?>(null) }
         val targets = remember(s.digits, s.keep) { TallyLogic.targets(s) }
 
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val classic = classicLook()
+        val a = ArcadeBoard.of(scheme)
+        // Arcade: pink in light (the indigo ink would vanish on the frame), amber in dark, as Sudoku's.
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(if (BoardHues.isDark(scheme)) a.selected.from else SudokuHintLight)
 
         Column(
             Modifier
@@ -364,7 +402,7 @@ object Tally : PuzzleType {
 
                 Box(Modifier.size(unit * unitsAcross(n), unit * unitsDown(n))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, texts, done, bad, scheme, HintGlow(highlight, glow, pulse.value), feel, vivid(accent))
+                        drawBoard(shown, unitPx, texts, done, bad, scheme, HintGlow(highlight, glow, pulse.value), feel, if (classic) vivid(accent) else a.selected.from)
                     }
                     // Taps and sweeps are read over the grid alone; the targets are not part of the play area.
                     Box(
@@ -375,12 +413,21 @@ object Tally : PuzzleType {
                 }
             }
 
-            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == TallyLogic.REMOVED) "Remove" else "Keep" }, { pen = it }) { option ->
+            PenRow(
+                s.pens, pen, interactive, vivid(accent), { if (it == TallyLogic.REMOVED) "Remove" else "Keep" }, { pen = it },
+                arcade = a.takeIf { !classic },
+            ) { option ->
+                // Arcade: the icon in the ink of the button it sits on.
+                val ink = when {
+                    classic -> null
+                    option == pen -> a.control.ink
+                    else -> a.squareInk
+                }
                 if (option == TallyLogic.REMOVED) {
-                    val a = size.width * 0.2f
-                    drawLine(scheme.onSurface.copy(alpha = 0.85f), Offset(a, size.height - a), Offset(size.width - a, a), 3f, StrokeCap.Round)
+                    val k = size.width * 0.2f
+                    drawLine(ink ?: scheme.onSurface.copy(alpha = 0.85f), Offset(k, size.height - k), Offset(size.width - k, k), 3f, StrokeCap.Round)
                 } else {
-                    drawCircle(vivid(accent), size.width * 0.4f, style = Stroke(3f))
+                    drawCircle(ink ?: vivid(accent), size.width * 0.4f, style = Stroke(3f))
                 }
             }
         }
