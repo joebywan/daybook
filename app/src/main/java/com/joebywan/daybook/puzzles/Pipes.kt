@@ -1,6 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -527,25 +531,42 @@ object Pipes : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val ink = pipeInk(scheme.onSurfaceVariant, scheme.surface, vivid(accent))
+        val ink = inkOf(scheme)
 
         Canvas(modifier) {
             val cellPx = size.minDimension / PREVIEW_BOARD.width
+            drawFrame(scheme, PREVIEW_BOARD.width, PREVIEW_BOARD.height, cellPx)
             for (i in PREVIEW_BOARD.cells.indices) {
                 val isSource = i == PREVIEW_BOARD.source
-                drawTile(i, PREVIEW_BOARD.width, cellPx, PREVIEW_BOARD.cells[i], isSource, ink, if (i in PREVIEW_FILLED) 1f else 0f, 0, scheme.surface)
+                drawTile(i, PREVIEW_BOARD.width, cellPx, PREVIEW_BOARD.cells[i], isSource, ink, if (i in PREVIEW_FILLED) 1f else 0f, 0, ink.ground)
             }
         }
     }
 
-    /** The wall, the empty bore inside it, and the water, each blended opaque (see [DRY_TINT]). */
-    private class PipeInk(val wall: Color, val bore: Color, val water: Color)
+    /** The wall, the empty bore inside it, and the water, each blended opaque (see [DRY_TINT]), and the tiles' ground. */
+    private class PipeInk(val wall: Color, val bore: Color, val water: Color, val ground: Color)
 
     private fun pipeInk(fore: Color, ground: Color, water: Color) = PipeInk(
         wall = fore.copy(alpha = WALL_TINT).compositeOver(ground),
         bore = fore.copy(alpha = DRY_TINT * 0.5f).compositeOver(ground),
         water = water,
+        ground = ground,
     )
+
+    /**
+     * The look's pipework. Arcade: ArcadeBoard's square as the ground, its ink for the wall, a given tile's colour for the dry
+     * bore and the control gradient's first stop for the water (`ArcadeLinesTest`). Classic: exactly what it drew before.
+     */
+    private fun inkOf(scheme: ColorScheme): PipeInk {
+        if (classicLook()) return pipeInk(scheme.onSurfaceVariant, scheme.surface, vivid(accent))
+        val a = ArcadeBoard.of(scheme)
+        return PipeInk(wall = a.squareInk.copy(alpha = 0.85f).compositeOver(a.square), bore = a.given, water = a.control.from, ground = a.square)
+    }
+
+    /** Arcade's frame under the tiles, showing between them as the grid lines; Classic has none. */
+    private fun DrawScope.drawFrame(scheme: ColorScheme, width: Int, height: Int, cellPx: Float) {
+        if (!classicLook()) drawRoundRect(ArcadeBoard.of(scheme).frame, Offset.Zero, Size(width * cellPx, height * cellPx), CornerRadius(cellPx * 0.12f))
+    }
 
     /**
      * Tile [i] of a grid [width] tiles across: its ground, its pipes turned by [spin] degrees and, if it is
@@ -575,6 +596,8 @@ object Pipes : PuzzleType {
         val bore = outer * BORE
         val reach = cellPx * 0.5f + JOIN_BLEED_PX
 
+        // Arcade's inlet tint sits on its square, not on the frame under it (Classic's never had one).
+        if (isSource && !classicLook()) drawRect(ground, Offset(c * cellPx + 1f, r * cellPx + 1f), Size(cellPx - 2f, cellPx - 2f))
         drawRect(
             color = if (isSource) ink.water.copy(alpha = 0.16f) else ground,
             topLeft = Offset(c * cellPx + 1f, r * cellPx + 1f),
@@ -639,7 +662,7 @@ object Pipes : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as PipesState
         val scheme = MaterialTheme.colorScheme
-        val ink = pipeInk(scheme.onSurfaceVariant, scheme.surface, vivid(accent))
+        val ink = inkOf(scheme)
         val flow = remember(s.cells, s.source) { flow(s) }
         // The water runs out from the inlet a tile at a time. Tiles wet before the move stay full;
         // the newly reached ones fill as [front] passes their distance (counted from the nearest
@@ -752,6 +775,7 @@ object Pipes : PuzzleType {
                         }
                     }
             ) {
+                drawFrame(scheme, s.width, s.height, cellPx)
                 for (i in s.cells.indices) {
                     val fill = when {
                         flow.dist[i] < 0 -> 0f
@@ -759,7 +783,7 @@ object Pipes : PuzzleType {
                         else -> (front.value - (flow.dist[i] - nearest)).coerceIn(0f, 1f)
                     }
                     feelSquare(feel, i, Offset((i % s.width) * cellPx, (i / s.width) * cellPx), Size(cellPx, cellPx), ink.water) {
-                        drawTile(i, s.width, cellPx, s.cells[i], i == s.source, ink, fill, flow.entry[i], scheme.surface, spins[i].value)
+                        drawTile(i, s.width, cellPx, s.cells[i], i == s.source, ink, fill, flow.entry[i], ink.ground, spins[i].value)
                     }
 
                     // Everything a hint does not name steps back, so the named tiles read without
