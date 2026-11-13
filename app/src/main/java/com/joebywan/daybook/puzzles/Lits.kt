@@ -27,9 +27,7 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
@@ -56,6 +54,44 @@ import com.joebywan.daybook.ui.standOut
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.SolidColor
+
+/**
+ * LITS's own Arcade colours, beyond [ArcadeBoard]'s: a gradient per piece with the ink its letter takes, and the region walls.
+ * The same four hue families as Classic's [Lits.palette] (blue, teal, violet, rose; no Coral or Green, which the hints' right
+ * and wrong use, no amber, which is the in-progress tone), spread over brightness as well as hue. Measured in LitsInksTest.
+ */
+internal class LitsInks private constructor(val pieces: Map<Lits.Piece, ArcadeFill>, val wall: Color) {
+    companion object {
+        val Light = LitsInks(
+            mapOf(
+                Lits.Piece.I to ArcadeFill(Color(0xFF6FC2FF), Color(0xFF2E8BFF), Color(0xFF21145F)),
+                Lits.Piece.L to ArcadeFill(Color(0xFF007D70), Color(0xFF00635A), Color.White),
+                Lits.Piece.T to ArcadeFill(Color(0xFF7F4DFF), Color(0xFF5F2EE0), Color.White),
+                Lits.Piece.S to ArcadeFill(Color(0xFFFF5FA8), Color(0xFFFF4F9A), Color(0xFF21145F)),
+            ),
+            wall = Color(0xFF21145F),
+        )
+        val Dark = LitsInks(
+            mapOf(
+                Lits.Piece.I to ArcadeFill(Color(0xFF6FC2FF), Color(0xFF4FA6FF), Color(0xFF120D33)),
+                Lits.Piece.L to ArcadeFill(Color(0xFF008374), Color(0xFF006A5E), Color.White),
+                Lits.Piece.T to ArcadeFill(Color(0xFF7448FF), Color(0xFF5A2EE6), Color.White),
+                Lits.Piece.S to ArcadeFill(Color(0xFFFF6FB0), Color(0xFFFF4F9A), Color(0xFF120D33)),
+            ),
+            // The dark frame is translucent and would hardly part the regions; a wall is the board's one structure.
+            wall = Color.White.copy(alpha = 0.7f),
+        )
+
+        fun of(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) Dark else Light
+    }
+}
 
 @Serializable
 data class LitsState(
@@ -1240,11 +1276,27 @@ object Lits : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        val inks = LitsInks.of(scheme)
 
         Canvas(modifier) {
             val side = minOf(size.width, size.height)
             val origin = Offset((size.width - side) / 2f, (size.height - side) / 2f)
             val step = side / PREVIEW_SIDE
+            if (!classic) {
+                // Arcade: the frame between plain squares, the finished L a sticker, the walls over all.
+                drawRoundRect(a.frame, origin, Size(side, side), CornerRadius(step * 0.18f))
+                val gap = step * 0.07f
+                for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
+                    val at = Offset(origin.x + (i % PREVIEW_SIDE) * step + gap / 2, origin.y + (i / PREVIEW_SIDE) * step + gap / 2)
+                    val tile = Size(step - gap, step - gap)
+                    val fill = if (previewShaded[i]) inks.pieces.getValue(Piece.L).brush(at, tile) else SolidColor(a.square)
+                    drawRoundRect(fill, at, tile, CornerRadius(step * 0.12f))
+                }
+                drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, step, step * 0.12f, inks.wall, origin, frameInset = step * 0.06f) { previewRegions[it] }
+                return@Canvas
+            }
             // The board's wall is 6% of a cell. At tile size that is under two pixels and the
             // regions stop reading as regions, so the motif takes the walls up to a tenth of a
             // cell — the one thing about a LITS board that has to survive being shrunk.
@@ -1305,6 +1357,9 @@ object Lits : PuzzleType {
         // breathing outline and [BoardHighlight.soft] ones a quiet one — the same language as Kings.
         val (highlight, glow, pulse) = rememberHintPaint()
         val dim = scheme.background
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        val inks = LitsInks.of(scheme)
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
@@ -1369,7 +1424,17 @@ object Lits : PuzzleType {
                         )
                     }
             ) {
+                // Arcade: what fills a square (a gradient carrying its letter's ink).
+                fun arcadeFillOf(i: Int): ArcadeFill {
+                    val piece = letters[i]
+                    return when {
+                        !shown.shaded[i] -> ArcadeFill(a.square, a.square, a.squareInk)
+                        piece == null -> a.selected
+                        else -> inks.pieces.getValue(piece)
+                    }
+                }
                 fun fillOf(i: Int): Color {
+                    if (!classic) return arcadeFillOf(i).from
                     val piece = letters[i]
                     return when {
                         !shown.shaded[i] -> unshaded(scheme)
@@ -1377,38 +1442,42 @@ object Lits : PuzzleType {
                         else -> palette.getValue(piece)
                     }
                 }
+                // Arcade: the frame shows between the squares as the grid lines.
+                val gap = if (classic) 0f else maxOf(1.5f, stepPx * 0.05f)
+                if (!classic) drawRoundRect(a.frame, Offset.Zero, size, CornerRadius(stepPx * 0.16f))
                 for (i in 0 until s.width * s.height) {
                     val r = i / s.width
                     val c = i % s.width
                     val at = Offset(c * stepPx, r * stepPx)
                     val piece = letters[i]
                     feelSquare(feel, i, at, Size(stepPx, stepPx), accentColour) {
+                        if (classic) {
+                            drawRect(
+                                color = fillOf(i),
+                                topLeft = at,
+                                size = Size(stepPx, stepPx),
+                            )
+                        } else {
+                            val tileAt = at + Offset(gap / 2, gap / 2)
+                            val tile = Size(stepPx - gap, stepPx - gap)
+                            drawRoundRect(arcadeFillOf(i).brush(tileAt, tile), tileAt, tile, CornerRadius(stepPx * 0.12f))
+                        }
+                    }
+                    if (classic) {
                         drawRect(
-                            color = fillOf(i),
+                            color = scheme.background.copy(alpha = 0.35f),
                             topLeft = at,
                             size = Size(stepPx, stepPx),
+                            style = Stroke(width = 1f),
                         )
                     }
-                    drawRect(
-                        color = scheme.background.copy(alpha = 0.35f),
-                        topLeft = at,
-                        size = Size(stepPx, stepPx),
-                        style = Stroke(width = 1f),
-                    )
                     // Marks go on before the walls, so a wall is never drawn under one: the walls
                     // are what the player reads the regions from and they outrank both of these.
                     if (piece != null) {
                         // The glyph is the channel a colour-blind player is left with, so its colour is computed
                         // per fill for 4.5:1 (BoardHues.onFill), at full alpha.
-                        val glyph = BoardHues.onFill(palette.getValue(piece))
-                        val layout = measurer.measure(
-                            piece.name,
-                            TextStyle(
-                                color = glyph,
-                                fontSize = (stepPx * 0.42f).toSp(),
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
+                        val glyph = if (classic) BoardHues.onFill(palette.getValue(piece)) else inks.pieces.getValue(piece).ink
+                        val layout = measurer.measure(piece.name, boardStyle(BoardGlyph.CLUE, stepPx).copy(color = glyph))
                         drawText(
                             layout,
                             topLeft = Offset(
@@ -1424,7 +1493,7 @@ object Lits : PuzzleType {
                         // background-coloured cross on it would be all but invisible.
                         val inset = stepPx * CROSS_INSET
                         val span = stepPx - inset * 2f
-                        val ink = scheme.onSurfaceVariant.copy(alpha = 0.55f)
+                        val ink = if (classic) scheme.onSurfaceVariant.copy(alpha = 0.55f) else a.squareInk.copy(alpha = 0.45f)
                         drawLine(
                             ink,
                             Offset(at.x + inset, at.y + inset),
@@ -1447,8 +1516,9 @@ object Lits : PuzzleType {
                 drawHintDim(highlight, s.width, s.height, stepPx, dim)
 
                 // Thick strokes wherever two different regions meet.
-                val edge = stepPx * 0.06f
-                drawWalls(s.width, s.height, stepPx, edge, scheme.wall) { s.region[it] }
+                val edge = stepPx * if (classic) 0.06f else 0.1f
+                if (classic) drawWalls(s.width, s.height, stepPx, edge, scheme.wall) { s.region[it] }
+                else drawWalls(s.width, s.height, stepPx, edge, inks.wall, frameInset = edge / 2f) { s.region[it] }
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.
