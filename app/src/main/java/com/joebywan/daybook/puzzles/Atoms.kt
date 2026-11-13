@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -21,14 +23,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
@@ -584,26 +589,31 @@ object Atoms : PuzzleType {
                 origin.y + (atom.row + 0.5f) * step,
             )
 
-            drawLattice(PREVIEW_SIZE, step, origin, side, scheme.outline.copy(alpha = 0.55f))
+            // Arcade: a finished molecule, the board's full atoms (the control gradient) on its bonds; Classic as before.
+            val arcade = !classicLook()
+            val board = ArcadeBoard.of(scheme)
+            drawLattice(PREVIEW_SIZE, step, origin, side, if (arcade) board.squareInk.copy(alpha = 0.2f) else scheme.outline.copy(alpha = 0.55f))
 
             previewBonds.forEach { (a, b, count) ->
                 val horizontal = previewAtoms[a].row == previewAtoms[b].row
-                drawBond(centre(previewAtoms[a]), centre(previewAtoms[b]), horizontal, count, step * 0.11f, stroke, ink)
+                drawBond(centre(previewAtoms[a]), centre(previewAtoms[b]), horizontal, count, step * 0.11f, stroke, if (arcade) board.squareInk else ink)
             }
 
             previewAtoms.forEach { atom ->
                 val c = centre(atom)
-                drawCircle(color = scheme.background, radius = radius, center = c)
-                drawCircle(
-                    color = ink,
-                    radius = radius,
-                    center = c,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = step * 0.065f),
-                )
-                val layout = measurer.measure(
-                    atom.bonds.toString(),
-                    TextStyle(color = ink, fontSize = (step * 0.42f).toSp(), fontWeight = FontWeight.Bold),
-                )
+                if (arcade) {
+                    drawCircle(board.control.brush(c - Offset(radius, radius), Size(2 * radius, 2 * radius)), radius, c)
+                } else {
+                    drawCircle(color = scheme.background, radius = radius, center = c)
+                    drawCircle(
+                        color = ink,
+                        radius = radius,
+                        center = c,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = step * 0.065f),
+                    )
+                }
+                // The digit scale's given, in the atom's circle as its square.
+                val layout = measurer.measure(atom.bonds.toString(), boardStyle(BoardGlyph.GIVEN, radius * 2).copy(color = if (arcade) board.control.ink else ink))
                 drawText(
                     layout,
                     topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f),
@@ -724,10 +734,19 @@ object Atoms : PuzzleType {
                     fun centre(atom: Atom) =
                         Offset((atom.col + 0.5f) * stepPx, (atom.row + 0.5f) * stepPx)
 
+                    // Arcade draws from ArcadeBoard: a plain framed board, bonds in its ink, a full atom in the control
+                    // gradient, a broken one in its red. Classic (classicLook) draws exactly what it drew before.
+                    val arcade = !classicLook()
+                    val a = ArcadeBoard.of(scheme)
+                    if (arcade) {
+                        val edge = maxOf(stepPx * 0.04f, 1.5f)
+                        drawRoundRect(a.square, cornerRadius = CornerRadius(stepPx * 0.3f))
+                        drawRoundRect(a.frame, Offset(edge / 2, edge / 2), Size(size.width - edge, size.height - edge), CornerRadius(stepPx * 0.3f), style = Stroke(edge))
+                    }
                     // The lattice the atoms stand on. Bonds run along these very lines, so the grid is
                     // drawn first and kept to a hairline at low alpha: heavy enough to answer "do these
                     // two line up?", far too faint to be mistaken for a bond.
-                    drawLattice(s.size, stepPx, Offset.Zero, size.height, scheme.outline.copy(alpha = 0.40f))
+                    drawLattice(s.size, stepPx, Offset.Zero, size.height, if (arcade) a.squareInk.copy(alpha = 0.16f) else scheme.outline.copy(alpha = 0.40f))
 
                     // Lines a hint names, drawn as a wide glow along the line whether or not it holds a
                     // bond yet: "this gap" has to be findable before anything is in it.
@@ -747,7 +766,7 @@ object Atoms : PuzzleType {
                         val count = s.counts[index]
                         if (count == 0) return@forEachIndexed
                         // Everything a highlight does not name steps back.
-                        val ink = vivid(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
+                        val ink = (if (arcade) a.squareInk else vivid(accent)).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
                         drawBond(centre(s.atoms[pair.a]), centre(s.atoms[pair.b]), pair.horizontal, count, stepPx * 0.09f, stepPx * 0.055f, ink)
                     }
 
@@ -774,20 +793,40 @@ object Atoms : PuzzleType {
                         val complete = s.degree(index) == atom.bonds
                         val fade = if (named(index)) 1f else 0.28f
                         scale(feel.scale(index), c) {
-                            drawCircle(color = scheme.background, radius = radius, center = c)
-                            // An atom that has just got its last bond glows once, inside its ring.
-                            val lit = feel.glow(index)
-                            if (lit > 0f) drawCircle(vivid(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
-                            drawCircle(
-                                color = when {
-                                    index in overloaded -> scheme.error
-                                    complete -> vivid(accent)
-                                    else -> scheme.onBackground
-                                }.copy(alpha = fade),
-                                radius = radius,
-                                center = c,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
-                            )
+                            val over = index in overloaded
+                            if (arcade) {
+                                // Full: the control gradient, no ring. Over: the red, ringed in its ink, so not the colour alone.
+                                val disc = Size(2 * radius, 2 * radius)
+                                when {
+                                    over -> drawCircle(a.error.copy(alpha = fade), radius, c)
+                                    complete -> drawCircle(a.control.brush(c - Offset(radius, radius), disc), radius, c, alpha = fade)
+                                    else -> drawCircle(a.square, radius, c)
+                                }
+                                val lit = feel.glow(index)
+                                if (lit > 0f) drawCircle(vivid(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
+                                if (!complete || over) {
+                                    val w = stepPx * if (over) 0.06f else 0.05f
+                                    drawCircle(
+                                        (if (over) a.errorInk else a.squareInk).copy(alpha = fade), if (over) radius - w else radius, c,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = w),
+                                    )
+                                }
+                            } else {
+                                drawCircle(color = scheme.background, radius = radius, center = c)
+                                // An atom that has just got its last bond glows once, inside its ring.
+                                val lit = feel.glow(index)
+                                if (lit > 0f) drawCircle(vivid(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
+                                drawCircle(
+                                    color = when {
+                                        over -> scheme.error
+                                        complete -> vivid(accent)
+                                        else -> scheme.onBackground
+                                    }.copy(alpha = fade),
+                                    radius = radius,
+                                    center = c,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
+                                )
+                            }
                             // The named atoms get a ring outside their own: strong pulses, soft is quiet.
                             if (index in highlight.strong) {
                                 drawCircle(
@@ -804,12 +843,16 @@ object Atoms : PuzzleType {
                                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
                                 )
                             }
+                            // The digit scale's given, in the atom's circle as its square.
                             val layout = measurer.measure(
                                 atom.bonds.toString(),
-                                TextStyle(
-                                    color = (if (complete) vivid(accent) else scheme.onBackground).copy(alpha = fade),
-                                    fontSize = (step * 0.34f).toSp(),
-                                    fontWeight = FontWeight.Bold,
+                                boardStyle(BoardGlyph.GIVEN, radius * 2).copy(
+                                    color = when {
+                                        !arcade -> if (complete) vivid(accent) else scheme.onBackground
+                                        over -> a.errorInk
+                                        complete -> a.control.ink
+                                        else -> a.squareInk
+                                    }.copy(alpha = fade),
                                 ),
                             )
                             drawText(
