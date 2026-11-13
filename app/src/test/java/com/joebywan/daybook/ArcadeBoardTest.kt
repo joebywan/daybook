@@ -79,6 +79,20 @@ class ArcadeBoardTest {
         }
     }
 
+    @Test fun `Dwindle's found words, picked tiles and hint rings read, in both schemes`() {
+        // The page's two stops (arcadePageBrush), under the list of goal words.
+        for ((b, page) in listOf(ArcadeBoard.Light to listOf(0xFFF3EEFF, 0xFFFFF1F7), ArcadeBoard.Dark to listOf(0xFF241A6B, 0xFF120D33))) {
+            for (stop in page) atLeast(4.5f, b.givenInk, Color(stop).compositeOver(Color.White), "found letters on the page")
+            // A picked tile is the control's colour, with an edge (a change of shape): its hue stays well apart from the amber.
+            for ((c, l) in listOf(b.control.from to b.letter.from, b.control.to to b.letter.to)) {
+                val apart = ColourDistance.apart(c, l)
+                assertTrue("picked and letter tiles are $apart apart in the worst vision", apart > 10.0)
+            }
+            // The hint ring sits on the frame round the tiles.
+            atLeast(3f, b.selected.from, b.frame.compositeOver(b.square), "hint ring on the frame")
+        }
+    }
+
     @Test fun `board tokens read, in both schemes`() {
         for ((name, b) in listOf("light" to ArcadeBoard.Light, "dark" to ArcadeBoard.Dark)) {
             atLeast(4.5f, b.squareInk, b.square, "$name square ink")
