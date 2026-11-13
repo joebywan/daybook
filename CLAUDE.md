@@ -1484,6 +1484,11 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   lands (`tools/strip-claude-footer.py`) and fails on anything left; `build` waits up to a minute for that strip before
   it reads the body. The patterns are one file, `tools/claude-attribution.pattern`. If the hook blocks you, take the line
   out; never work around it.
+- **Branches carry a purpose prefix** (the owner, 2026-11-13; a branch name is published too): `feat/`, `fix/`, `docs/`,
+  `chore/`, `refactor/`, `test/`, `ci/`, `perf/`, `build/`, `revert/` (Renovate's `renovate/` aside), never `claude/`.
+  The app names a session's branch `wip/<name>`, so rename it first (`git branch -m fix/<name>`). `build` fails a pull
+  request from any other branch, the ruleset "No claude/ branches" refuses creating one on GitHub, and the attribution
+  hook refuses `git checkout -b`/`switch -c`/`branch`/`push` to one (deleting is allowed).
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically. It runs the unit tests again unless
   `ci.yml` already passed the identical source tree (its `tested-tree-<sha>` artifact); a different tree is always tested.
 - **Versions are `<version.txt>.<run number>`, so 1.x.y.** The last number is the CI run and rises on its own: fixes,

@@ -59,7 +59,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git diff --quiet -- docs fastlane && { echo "screenshots unchanged"; exit 0; }
-          branch="screenshots-${{ github.run_id }}"
+          branch="docs/screenshots-${{ github.run_id }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
