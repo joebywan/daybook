@@ -112,7 +112,7 @@ object WhosWho : PuzzleType {
         "Every person and every item is a pill, one column per category. Tap one, then pills in another column to draw where it can be: one line means that one, several mean one of those.",
         "Tap a line again to rule the pair out (never the same person's), and again to clear it. Tap a clue to strike it through: only a note.",
         "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
-        "With a circle chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
+        "With a pill chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
         "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
         "Solved when every person is linked to one of everything and every clue is true.",
     )
