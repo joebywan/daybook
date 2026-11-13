@@ -25,10 +25,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
@@ -600,10 +600,8 @@ object Atoms : PuzzleType {
                     center = c,
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = step * 0.065f),
                 )
-                val layout = measurer.measure(
-                    atom.bonds.toString(),
-                    TextStyle(color = ink, fontSize = (step * 0.42f).toSp(), fontWeight = FontWeight.Bold),
-                )
+                // The digit scale's given, in the atom's circle as its square.
+                val layout = measurer.measure(atom.bonds.toString(), boardStyle(BoardGlyph.GIVEN, radius * 2).copy(color = ink))
                 drawText(
                     layout,
                     topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f),
@@ -804,13 +802,11 @@ object Atoms : PuzzleType {
                                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
                                 )
                             }
+                            // The digit scale's given, in the atom's circle as its square.
                             val layout = measurer.measure(
                                 atom.bonds.toString(),
-                                TextStyle(
-                                    color = (if (complete) vivid(accent) else scheme.onBackground).copy(alpha = fade),
-                                    fontSize = (step * 0.34f).toSp(),
-                                    fontWeight = FontWeight.Bold,
-                                ),
+                                boardStyle(BoardGlyph.GIVEN, radius * 2)
+                                    .copy(color = (if (complete) vivid(accent) else scheme.onBackground).copy(alpha = fade)),
                             )
                             drawText(
                                 layout,
