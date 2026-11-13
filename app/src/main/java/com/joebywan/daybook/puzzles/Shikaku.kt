@@ -30,7 +30,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
@@ -49,7 +48,25 @@ import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.joebywan.daybook.ui.theme.BoardHues
-import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.graphics.luminance
+
+/**
+ * Shikaku's Arcade sticker for a rectangle of [hue]: the hue running a little round the wheel, under the Arcade scheme's dark
+ * ink, bright enough for that ink at 4.5:1 on both stops (dark's a little dimmer, so it does not glare). Measured in ShikakuInksTest.
+ */
+internal fun shikakuSticker(hue: Float, dark: Boolean): ArcadeFill {
+    fun at(h: Float, sat: Float, luminance: Float): Color {
+        val w = (h + 360f) % 360f
+        return Color.hsl(w, sat, (95 downTo 20).first { Color.hsl(w, sat, it / 100f).luminance() <= luminance } / 100f)
+    }
+    return if (dark) ArcadeFill(at(hue, .9f, .44f), at(hue + 18f, .95f, .34f), Color(0xFF120D33))
+    else ArcadeFill(at(hue, .9f, .55f), at(hue + 18f, .95f, .36f), Color(0xFF21145F))
+}
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -523,6 +540,10 @@ object Shikaku : PuzzleType {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
             val cell = minOf(maxWidth, maxHeight) / 3
+            if (!classicLook()) {
+                ArcadeGrid(cell, 3, 3, PREVIEW_BLOCKS, dark) { i -> PREVIEW_CLUES[i] }
+                return@BoxWithConstraints
+            }
             for (r in 0 until 3) {
                 for (c in 0 until 3) {
                     Square(cell, r, c, PREVIEW_BLOCKS.first { it.contains(r, c) }.fill(dark), PREVIEW_CLUES[r * 3 + c])
@@ -539,6 +560,7 @@ object Shikaku : PuzzleType {
         val s = state as ShikakuState
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
+        val classic = classicLook()
         val (highlight, glow, pulse) = rememberHintPaint()
         // The squares a rectangle takes (or gives back) settle; a rectangle drawn round its number at that number's area
         // glows once and plays its note. A unit per number: its rectangle's squares, or the number's square alone.
@@ -603,18 +625,22 @@ object Shikaku : PuzzleType {
                         )
                     }
             ) {
-                // Squares.
-                for (r in 0 until s.height) {
-                    for (c in 0 until s.width) {
-                        val i = r * s.width + c
-                        val fill = s.blockAt(r, c)?.fill(dark) ?: scheme.surfaceVariant
-                        Square(cell, r, c, fill, s.clues[i], Modifier.moveFeel(feel, i, vivid(accent)))
+                if (classic) {
+                    // Squares.
+                    for (r in 0 until s.height) {
+                        for (c in 0 until s.width) {
+                            val i = r * s.width + c
+                            val fill = s.blockAt(r, c)?.fill(dark) ?: scheme.surfaceVariant
+                            Square(cell, r, c, fill, s.clues[i], Modifier.moveFeel(feel, i, vivid(accent)))
+                        }
                     }
-                }
 
-                // Each committed rectangle is outlined in its own hue, matching its fill.
-                s.blocks.forEach { block ->
-                    Box(Modifier.over(block, cell).border(2.dp, block.edge(dark), RoundedCornerShape(4.dp)))
+                    // Each committed rectangle is outlined in its own hue, matching its fill.
+                    s.blocks.forEach { block ->
+                        Box(Modifier.over(block, cell).border(2.dp, block.edge(dark), RoundedCornerShape(4.dp)))
+                    }
+                } else {
+                    ArcadeGrid(cell, s.width, s.height, s.blocks, dark, { i -> Modifier.moveFeel(feel, i, vivid(accent)) }) { s.clues[it] }
                 }
 
                 // What a hint names. Everything else steps back under a veil in the page colour, so
@@ -658,13 +684,26 @@ object Shikaku : PuzzleType {
                 // fill and a heavier edge — so a rectangle under the finger can never be read as
                 // one already placed.
                 preview?.let { block ->
-                    Box(
-                        Modifier
-                            .over(block, cell)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(scheme.primary.copy(alpha = 0.22f))
-                            .border(3.dp, scheme.primary, RoundedCornerShape(4.dp))
-                    )
+                    if (classic) {
+                        Box(
+                            Modifier
+                                .over(block, cell)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(scheme.primary.copy(alpha = 0.22f))
+                                .border(3.dp, scheme.primary, RoundedCornerShape(4.dp))
+                        )
+                    } else {
+                        // Arcade: the selection's amber, washed, under its edge colour, thicker than any sticker's seam.
+                        val a = ArcadeBoard.current
+                        val shape = RoundedCornerShape(cell * STICKER_CORNER)
+                        Box(
+                            Modifier
+                                .over(block, cell, cell * STICKER_GAP)
+                                .clip(shape)
+                                .background(a.selected.brush, alpha = 0.55f)
+                                .border(3.dp, a.selectedEdge, shape)
+                        )
+                    }
                 }
             }
         }
@@ -672,34 +711,58 @@ object Shikaku : PuzzleType {
 
     /** Square (r, c) of a grid of [cell]-sized squares, in [fill], with its clue if it has one. */
     @Composable
-    private fun Square(cell: Dp, r: Int, c: Int, fill: Color, clue: Int?, feel: Modifier = Modifier) {
+    private fun Square(cell: Dp, r: Int, c: Int, fill: Color, clue: Int?, feel: Modifier = Modifier) =
+        Square(cell, r, c, fill, clue, MaterialTheme.colorScheme.onSurface, 0.7.dp, RoundedCornerShape(3.dp), feel)
+
+    @Composable
+    private fun Square(cell: Dp, r: Int, c: Int, fill: Color, clue: Int?, ink: Color, inset: Dp, shape: RoundedCornerShape, feel: Modifier) {
         Box(
             Modifier
                 .padding(start = cell * c, top = cell * r)
                 .size(cell)
                 .then(feel)
-                .padding(0.7.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .padding(inset)
+                .clip(shape)
                 .background(fill),
             contentAlignment = Alignment.Center,
         ) {
             clue?.let {
-                Text(
-                    it.toString(),
-                    fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Text(it.toString(), style = BoardGlyph.GIVEN.style(cell), color = ink)
             }
         }
     }
 
-    /** Where [block] sits on a grid of [cell]-sized squares, 1dp in. */
-    private fun Modifier.over(block: Block, cell: Dp): Modifier =
+    /** Where [block] sits on a grid of [cell]-sized squares, [inset] in. */
+    private fun Modifier.over(block: Block, cell: Dp, inset: Dp = 1.dp): Modifier =
         padding(start = cell * block.c0, top = cell * block.r0)
             .width(cell * (block.c1 - block.c0 + 1))
             .height(cell * (block.r1 - block.r0 + 1))
-            .padding(1.dp)
+            .padding(inset)
+
+    /** The Arcade gap between squares, where the frame shows as the grid lines, and the corner, as shares of a square. */
+    private const val STICKER_GAP = 0.04f
+    private const val STICKER_CORNER = 0.14f
+
+    /**
+     * The Arcade look: the deep frame showing between plain squares, and each rectangle one sticker over its squares, in its
+     * own hue ([shikakuSticker]), its number in the sticker's ink. The frame between two stickers is their seam.
+     */
+    @Composable
+    private fun ArcadeGrid(cell: Dp, w: Int, h: Int, blocks: List<Block>, dark: Boolean, feel: (Int) -> Modifier = { Modifier }, clue: (Int) -> Int?) {
+        val a = ArcadeBoard.current
+        val shape = RoundedCornerShape(cell * STICKER_CORNER)
+        val inset = cell * STICKER_GAP
+        Box(Modifier.size(cell * w, cell * h).background(a.frame, RoundedCornerShape(cell * (STICKER_CORNER + STICKER_GAP))))
+        for (block in blocks) {
+            Box(Modifier.over(block, cell, inset).clip(shape).background(shikakuSticker(block.hue(), dark).brush))
+        }
+        for (r in 0 until h) for (c in 0 until w) {
+            val i = r * w + c
+            val block = blocks.firstOrNull { it.contains(r, c) }
+            val ink = block?.let { shikakuSticker(it.hue(), dark).ink } ?: a.squareInk
+            Square(cell, r, c, if (block == null) a.square else Color.Transparent, clue(i), ink, inset, shape, feel(i))
+        }
+    }
 
     /** The rectangle with corners [a] and [b], each (row, column). */
     private fun spanning(a: Pair<Int, Int>, b: Pair<Int, Int>) =
