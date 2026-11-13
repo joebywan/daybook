@@ -305,6 +305,8 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "sand" to setOf("finish"),
     "unblock" to setOf("exit"),
     "cipher" to setOf("only-letter"),
+    // Logic Web links an item's one choice left by itself (`WhosWhoGraphLogic.close`), so no hint is ever this.
+    "logicweb" to setOf("only"),
     "pearls" to setOf("pearl-ways"),
     "tents" to setOf("touch"),
 )

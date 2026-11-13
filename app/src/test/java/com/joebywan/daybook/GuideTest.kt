@@ -82,6 +82,9 @@ import com.joebywan.daybook.puzzles.ThermometersTeacher
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
+import com.joebywan.daybook.puzzles.WhosWhoGraph
+import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.WhosWhoTeacher
@@ -168,6 +171,7 @@ class GuideTest {
         "sudoku" to ::sudokuStep,
         "chess" to ::chessStep,
         "whoswho" to ::whosWhoStep,
+        "logicweb" to ::logicWebStep,
         "inequality" to ::inequalityStep,
         "regions" to ::regionsStep,
         "cages" to ::cagesStep,
@@ -425,18 +429,48 @@ class GuideTest {
         "what-if" to whosWhoExpert.copy(marks = "x........x.....o...xxxoxx...o..o...ox.xx.x.x.x.....x.xo..o..x...x........x."),
     )
 
-    private fun whosWhoStep(b: Board): TeachStep? {
-        val s = whosWhoBoards.getValue(b.technique)
+    private fun whosWhoStep(b: Board): TeachStep? = whosWhoStep(b, "whoswho", whosWhoBoards.getValue(b.technique), graph = false)
+
+    /**
+     * Logic Web's boards are the people's table its category button shows, for a graph marked as the Who's Who position:
+     * each tick a line drawn from both ends, each cross an anti-link. The board draws what those marks imply (the
+     * closure's table), and the step is the one the graph's hint gives there, in the graph's words.
+     */
+    private fun logicWebStep(b: Board): TeachStep? {
+        val t = whosWhoBoards.getValue(b.technique)
+        var g = WhosWhoGraphState(t.copy(marks = ""))
+        for (at in t.marks.indices) {
+            val mark = t.marks[at]
+            if (mark == WhosWhoLogic.EMPTY) continue
+            val cell = at / t.n
+            val item = (cell % t.columns + 1) * t.n + at % t.n
+            g = g.withMark(cell / t.columns, item, if (mark == WhosWhoLogic.TICK) WhosWhoGraphLogic.LINK else WhosWhoGraphLogic.ANTI)
+        }
+        val shown = WhosWhoGraphLogic.table(g)
+        val step = whosWhoStep(b, "logicweb", shown, graph = true) ?: return null
+        val d = WhosWhoGraph.teach(g) ?: return null
+        assertEquals("${b.technique}: the graph's hint is this step", step.technique to step.explanation, d.technique to d.explanation)
+        return step
+    }
+
+    private fun whosWhoStep(b: Board, id: String, s: WhosWhoState, graph: Boolean): TeachStep? {
         assertEquals(s.groups.joinToString(" ") { WhosWhoWords.HEADERS[it] }, b.fields["top"])
         assertEquals(s.names.joinToString(" "), b.fields["left"])
-        val text = pages.first { it.id == "whoswho" }.text
+        val text = pages.first { it.id == id }.text
         for (k in s.clues.indices) {
             val line = "- ${k + 1}. ${WhosWhoLogic.clueText(s, k)}"
             assertTrue("${b.technique}: the page should list \"$line\"", line in text)
         }
         // Every square but the move's shows what the marks leave it: its ticked word, or the items still possible.
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
-        val step = WhosWhoTeacher.deduce(s, s.marks) ?: return null
+        val step = WhosWhoTeacher.deduce(s, s.marks, graph) ?: return null
+        if (System.getenv("DAYBOOK_GUIDE_PRINT") != null) {
+            val g = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
+            fun sq(c: Int) = "r${c / s.columns + 1}c${c % s.columns + 1}"
+            val rows = (0 until s.n).joinToString("\n") { p -> (0 until s.columns).joinToString(" ") { col -> g.placed[p * s.columns + col].let { if (it >= 0 && p * s.columns + col !in step.targets) s.word(col, it) else "." } } }
+            val notes = (0 until s.n * s.columns).filter { g.placed[it] < 0 && it !in step.targets }.joinToString(" ") { c -> sq(c) + "=" + (0 until s.n).filter { g.cand[c] shr it and 1 == 1 }.joinToString(",") { s.word(c % s.columns, it) } }
+            println("$id ${b.technique}: ${step.technique} ${step.explanation} focus ${step.focus.filter { it < 1000 }.map(::sq)} cite ${step.cited.filter { it < 1000 }.map(::sq)} targets ${step.targets.map(::sq)} ticks ${step.ticks} crosses ${step.crosses}\n$rows\nnotes: $notes")
+        }
         for (c in 0 until s.n * s.columns) {
             if (c in step.targets) continue
             val column = c % s.columns

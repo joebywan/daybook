@@ -243,10 +243,10 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Strike a clue once it can tell you nothing more.",
     ),
     "logicweb" to listOf(
-        "Two lines from one pill mean one of those two, and rule out the rest of that column.",
-        "Rule a pair out and it holds for everyone already linked to either end.",
-        "You never have to draw a link the rest already implies: a faint line counts.",
-        "Group lines your links up by person, so a near-finished board reads like a table.",
+        "Two lines from one pill mean one of those two, and no other.",
+        "Rule a pair out and it holds for all that is linked to them.",
+        "A faint line is a link your marks imply: no need to draw it.",
+        "Group lines everything up by person, like a table.",
     ),
 )
 
