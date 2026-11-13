@@ -8,7 +8,7 @@ converted to Arcade must keep drawing its Classic self (CLAUDE.md, Colour).
 
 **Arcade (2026-10-31).** The app is indigo and vivid now (`ui/theme/Palette.kt`; players asked for more juice). Home and the converted
 boards draw from `ui/theme/ArcadeBoard.kt`: deep frame, plain squares, gradient fills that carry their own ink, measured by `ArcadeBoardTest`.
-Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel. The other boards still use the layers below on the Arcade scheme, with the
+Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel; then Cipher, Codeword, Crossword (one shared grid, `CrosswordGrid`), Hexwords, Target, Codebreaker, Mate, Sand and Unblock (2026-11-13: a letter or number the puzzle gives is the `given` lavender, one the player makes the `control` gradient, the selection amber with its edge, keys the control's lifted gradient; Mate's squares are `square` and `given`, its pieces held readable by `ChessSquaresTest`; Sand's and Codebreaker's palettes and Unblock's car hues are unchanged). The other boards still use the layers below on the Arcade scheme, with the
 `vivid()` accents and the retuned hue table, so they are lighter than those six until converted (`docs/TODO.md`). Convert a board by reading Tents' or
 Sudoku's; a colour of its own goes in its file with a test beside the tokens'.
 
