@@ -15,7 +15,7 @@ Each puzzle has a page in the **[player guide](https://knowhowit.com.au/daybook/
 
 | Every puzzle, every day | Sudoku | Lexicon | Word Wheel |
 |---|---|---|---|
-| ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three (Atoms, Sudoku, Word Wheel) and the grid of all 38 puzzles, gentlest first: Arrows, Pipes, Trail, Sudoku, Lexicon and Sand in view](docs/screenshots/home.png) | ![A Sudoku board on Standard, in the Arcade look](docs/screenshots/sudoku.png) | ![A Lexicon board two guesses in, its letters marked](docs/screenshots/lexicon.png) | ![A Word Wheel board: a wheel of letters under a small crossword](docs/screenshots/word-wheel.png) |
+| ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three (Atoms, Sudoku, Word Wheel) and the grid of all 39 puzzles, gentlest first: Arrows, Pipes, Trail, Sudoku, Lexicon and Sand in view](docs/screenshots/home.png) | ![A Sudoku board on Standard, in the Arcade look](docs/screenshots/sudoku.png) | ![A Lexicon board two guesses in, its letters marked](docs/screenshots/lexicon.png) | ![A Word Wheel board: a wheel of letters under a small crossword](docs/screenshots/word-wheel.png) |
 
 ![On a tablet the board sits beside the title, hints and tools: a Sudoku](docs/screenshots/tablet-sudoku.png)
 
@@ -97,6 +97,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Loop | Slitherlink (loop through the dots) | One closed loop along the squares' sides, from dot to dot: each number says how many of its square's four sides the loop uses |
 | Links | Numberlink (pair-joining paths) | Join each pair of matching numbers with one path through side-touching squares; paths never cross and every square is used |
 | Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
+| Logic Web | Logic grid as a graph | Who's Who's boards with the table gone: draw lines between people and things, rule pairs out, and let what they imply join up |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -215,6 +216,7 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   answer and the hint ladder (a clue naming someone, the one item left, two things a clue ties together, the houses each
   side allows, and on Expert a short what-if) finishes it; then every clue the rest already implies is taken back. A board
   ships only if it needs its tier's deepest step; an independent solver that tries every combination confirms it in the tests.
+- **Logic Web** — Who's Who's generator, from its own seeds: the same proof and the same tiers.
 - **Crossword** (the mini) — grids are dense fills from the same screened lists, built offline with Codeword's filler, every
   word clued by hand. A clue names one word, so the answer is the clues'; what is proved is how much the crossings
   give: the hints' walk (a slot only one word fits, one word its crossings leave, every crossing worked through) must

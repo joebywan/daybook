@@ -80,7 +80,10 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.ring
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -608,6 +611,15 @@ object WhosWhoGraph : PuzzleType {
                 val nw = w
                 val nh = h
                 val shape = RoundedCornerShape(h / 2)
+                // Arcade: a sticker in its category's gradient, carrying its own ink and lifted off the page. Classic: the
+                // flat tint under an inked edge it always had.
+                val sticker = if (classicLook()) null else ArcadeBoard.arcadeTile(Color.hsl(hue, 0.75f, 0.5f), dark)
+                val edge = when {
+                    badItem[i] -> scheme.error
+                    i == selected -> scheme.onSurface
+                    sticker != null -> Color.Transparent
+                    else -> BoardHues.ink(hue, dark)
+                }
                 Box(
                     Modifier
                         .offset { IntOffset((p.value.x - nw.toPx() / 2).roundToInt(), (p.value.y - nh.toPx() / 2).roundToInt()) }
@@ -615,13 +627,10 @@ object WhosWhoGraph : PuzzleType {
                         .alpha(node.alpha.value)
                         .highlightAnchor(i)
                         .ring(hint, glow, pulse, h / 2, outside = true)
+                        .then(if (sticker != null) Modifier.arcadeLift(sticker, h / 2) else Modifier)
                         .clip(shape)
-                        .background(BoardHues.fill(hue, dark))
-                        .border(
-                            if (i == selected || badItem[i]) 2.5.dp else 0.5.dp,
-                            if (badItem[i]) scheme.error else if (i == selected) scheme.onSurface else BoardHues.ink(hue, dark),
-                            shape,
-                        )
+                        .then(if (sticker != null) Modifier.background(sticker.brush) else Modifier.background(BoardHues.fill(hue, dark)))
+                        .border(if (i == selected || badItem[i]) 2.5.dp else 0.5.dp, edge, shape)
                         // A table is for reading: its taps did nothing before it shared the nodes, and still do nothing.
                         .clickable(enabled = interactive && !table) { onItem(i) }
                         .dimmed(hint),
@@ -633,7 +642,7 @@ object WhosWhoGraph : PuzzleType {
                         fontSize = minOf(nh * 0.4f, 14.dp).boardSp(),
                         lineHeight = minOf(nh * 0.5f, 18.dp).boardSp(),
                         fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
-                        color = scheme.onSurface,
+                        color = sticker?.ink ?: scheme.onSurface,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
