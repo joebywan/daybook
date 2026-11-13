@@ -26,18 +26,20 @@ class SetsPaletteTest {
     private fun luminance(c: Color): Double = rgb(c).map(::lin).let { 0.2126 * it[0] + 0.7152 * it[1] + 0.0722 * it[2] }
     private fun contrast(a: Color, b: Color) = (maxOf(luminance(a), luminance(b)) + 0.05) / (minOf(luminance(a), luminance(b)) + 0.05)
 
-    // The card surface of ui/theme/Palette.kt: light, then dark.
-    // Both looks (issue #418): Classic's surfaces, then Arcade's.
-    private val surfaces = listOf(Color(0xFFFFFBF2) to false, Color(0xFF1B2F29) to true, Color.White to false, Color(0xFF211A5C) to true)
+    // The card each palette is drawn on, and that palette: Classic's on its surface (ui/theme/Palette.kt, light then dark),
+    // Arcade's on its own card, ArcadeBoard's square (and the dark scheme's surface, which the found strip sits on).
+    private val surfaces = listOf(
+        Color(0xFFFFFBF2) to Sets.palette(false), Color(0xFF1B2F29) to Sets.palette(true),
+        Color.White to Sets.arcadePalette(false), Color(0xFF1B1450) to Sets.arcadePalette(true), Color(0xFF211A5C) to Sets.arcadePalette(true),
+    )
 
     @Test
     fun `the three card colours are far apart in both schemes, all three kinds of colour-blindness included`() {
         // Measured min: light 24.2, dark 20.3 (colour-blind distances are the binding ones).
-        for ((_, dark) in surfaces) {
-            val p = Sets.palette(dark)
+        for ((surface, p) in surfaces) {
             for (i in 0 until 3) for (j in i + 1 until 3) {
                 val d = apart(p[i], p[j])
-                assertTrue("dark=$dark colours $i and $j: $d", d >= 20)
+                assertTrue("on $surface colours $i and $j: $d", d >= 20)
             }
         }
     }
@@ -45,20 +47,19 @@ class SetsPaletteTest {
     @Test
     fun `each card colour is at least 3 to 1 against the card surface in both schemes`() {
         // Measured min: light 3.47 (Teal), dark 3.91 (Violet).
-        for ((surface, dark) in surfaces) for (c in Sets.palette(dark)) {
+        for ((surface, p) in surfaces) for (c in p) {
             val r = contrast(c, surface)
-            assertTrue("dark=$dark: only $r:1", r >= 3.0)
+            assertTrue("on $surface: only $r:1", r >= 3.0)
         }
     }
 
     @Test
     fun `the colours differ in lightness as well as hue, so no two collapse to one grey`() {
         // Amber and Teal are the close pair (1.36 light, 1.24 dark); Violet is clear of both.
-        for ((_, dark) in surfaces) {
-            val p = Sets.palette(dark)
+        for ((surface, p) in surfaces) {
             for (i in 0 until 3) for (j in i + 1 until 3) {
                 val dl = abs(lab(rgb(p[i]))[0] - lab(rgb(p[j]))[0])
-                assertTrue("dark=$dark colours $i and $j: dL* $dl", dl >= 6)
+                assertTrue("on $surface colours $i and $j: dL* $dl", dl >= 6)
             }
         }
     }
@@ -72,12 +73,12 @@ class SetsPaletteTest {
                 listOf(false, true).flatMap { d -> listOf(BoardHues.fill(h, d), BoardHues.ink(h, d), BoardHues.mark(h)) }
             }
         }
-        for ((_, dark) in surfaces) for (p in Sets.palette(dark)) assertTrue("a card colour is a reserved hue", p !in reserved)
+        for ((_, palette) in surfaces) for (p in palette) assertTrue("a card colour is a reserved hue", p !in reserved)
     }
 
     @Test
     fun `three distinct colours, named in the teacher index for index`() {
-        for ((_, dark) in surfaces) assertEquals(3, Sets.palette(dark).toSet().size)
+        for ((_, p) in surfaces) assertEquals(3, p.toSet().size)
         val names = listOf("amber", "teal", "violet")
         for (i in 0 until 3) {
             val words = SetsTeacher.describe(Card(count = 0, shape = 0, shading = 0, colour = i)).split(" ")
