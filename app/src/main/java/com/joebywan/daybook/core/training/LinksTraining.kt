@@ -7,8 +7,8 @@ import com.joebywan.daybook.puzzles.LinksTeacher
 
 /**
  * Links' course on the move drill: the player draws the lines the step forces. A line the board's one answer lacks is the
- * teacher's mistake and ends the run (sound: every board has one answer). The teacher has no list of every instance of a
- * technique yet, so a practice is passed by the hint's own lines (`MoveDrill(every = null)`).
+ * teacher's mistake and ends the run (sound: every board has one answer). Any instance of the technique on the position
+ * passes, the hint's own or another (`LinksTeacher.steps`).
  */
 val LinksTraining: Course = Course(
     puzzle = Links,
@@ -28,6 +28,7 @@ val LinksTraining: Course = Course(
     drill = MoveDrill(
         view = { (it as LinksState).links.toList() },
         next = { s -> (s as LinksState).let { l -> LinksTeacher.deduce(l.size, l.ends, l.links)?.let(Links::deduction) } },
+        every = { s, t -> (s as LinksState).let { l -> LinksTeacher.steps(l.size, l.ends, l.links, t).map(Links::deduction) } },
     ),
     badge = "1-1",
     examIndex = EXAM_INDEX,

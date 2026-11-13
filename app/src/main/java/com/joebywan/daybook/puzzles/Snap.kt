@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -685,12 +687,18 @@ object Snap : PuzzleType {
             origin.x + (cell % cols + 0.5f) * step,
             origin.y + (cell / cols + 0.5f) * step,
         )
+        // Arcade: ArcadeBoard's tiles on its frame, the line in the control gradient, numbers amber stickers. Classic
+        // (classicLook) draws exactly what it drew before.
+        val arcade = !classicLook()
+        val a = ArcadeBoard.of(scheme)
+        val board = Size(cols * step, waypoints.size / cols * step)
+        if (arcade) drawRoundRect(a.frame, origin, board, CornerRadius(corner + gutter))
 
         for (cell in waypoints.indices) {
             val square = Offset(origin.x + (cell % cols) * step, origin.y + (cell / cols) * step)
             feelSquare(feel, cell, square, Size(step, step), vivid(accent)) {
                 drawRoundRect(
-                    color = scheme.surfaceVariant,
+                    color = if (arcade) a.square else scheme.surfaceVariant,
                     topLeft = Offset(square.x + gutter, square.y + gutter),
                     size = Size(step - 2 * gutter, step - 2 * gutter),
                     cornerRadius = CornerRadius(corner),
@@ -704,16 +712,23 @@ object Snap : PuzzleType {
                 val at = centre(cell)
                 if (i == 0) line.moveTo(at.x, at.y) else line.lineTo(at.x, at.y)
             }
-            drawPath(line, vivid(accent), style = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = join))
+            val stroke = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = join)
+            if (arcade) drawPath(line, a.control.brush(origin, board), style = stroke) else drawPath(line, vivid(accent), style = stroke)
         }
 
         waypoints.forEachIndexed { cell, number ->
             if (number == 0) return@forEachIndexed
             val at = centre(cell)
-            drawCircle(scheme.onBackground, radius = step * 0.30f, center = at)
+            val r = step * 0.30f
+            if (arcade) {
+                drawCircle(a.selected.brush(at - Offset(r, r), Size(2 * r, 2 * r)), r, at)
+                drawCircle(a.selectedEdge, r, at, style = Stroke(maxOf(step * 0.05f, 1f)))
+            } else {
+                drawCircle(scheme.onBackground, radius = r, center = at)
+            }
             val layout = measurer.measure(
                 number.toString(),
-                TextStyle(color = scheme.background, fontSize = numberSize, fontWeight = FontWeight.Bold),
+                TextStyle(color = if (arcade) a.selected.ink else scheme.background, fontSize = numberSize, fontWeight = FontWeight.Bold),
             )
             drawText(layout, topLeft = Offset(at.x - layout.size.width / 2f, at.y - layout.size.height / 2f))
         }

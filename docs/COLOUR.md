@@ -8,8 +8,9 @@ converted to Arcade must keep drawing its Classic self (CLAUDE.md, Colour).
 
 **Arcade (2026-10-31).** The app is indigo and vivid now (`ui/theme/Palette.kt`; players asked for more juice). Home and the converted
 boards draw from `ui/theme/ArcadeBoard.kt`: deep frame, plain squares, gradient fills that carry their own ink, measured by `ArcadeBoardTest`.
-Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel. The other boards still use the layers below on the Arcade scheme, with the
-`vivid()` accents and the retuned hue table, so they are lighter than those six until converted (`docs/TODO.md`). Convert a board by reading Tents' or
+Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel, Atoms, Pearls, Loop, Links, Pipes, Arrows, Trail, Shikaku,
+LITS, Lamps, Dominoes, Mosaic, Sets. The other boards still use the layers below on the Arcade scheme, with the
+`vivid()` accents and the retuned hue table, so they are lighter than those until converted (`docs/TODO.md`). Convert a board by reading Tents' or
 Sudoku's; a colour of its own goes in its file with a test beside the tokens'.
 
 Also converted (2026-11-13), each keeping its Classic drawing behind `classicLook()`: Shikaku (each rectangle one sticker in its
@@ -18,6 +19,13 @@ the pieces apart colour-blind included), Lamps (`LampsInks`), Dominoes (`DominoI
 (`Mosaic.arcadePalette`, solid, since the colours are the game) and Sets (`Sets.arcadePalette`). Mosaic's and Sets' palette tests
 hold the Arcade palettes to Classic's floors. Lits', Sets' and Mosaic's Classic colours were already `BoardHues` steps, not the old
 accents the TODO's colour audit describes.
+
+**The line boards (2026-11-13): Atoms, Pearls, Loop, Links, Pipes, Arrows, Trail.** A grid of squares takes Tents' tiles
+(`ui/ArcadeTiles.kt`, `drawArcadeTiles`: the frame under plain squares, showing between them); Loop is a plain framed board
+whose numbered squares are given tiles; Atoms and Arrows a plain framed board. The loop line (Loop, Pearls) is `LoopLine`'s
+pink; Trail's line, Pipes' water and a full atom are the control gradient; Trail's numbers are amber stickers (`selected`);
+bonds, walls and dots are the square's ink. Links keeps its pinned pair palette and Arrows its four hues. All measured in
+`ArcadeLinesTest`; each board's Classic drawing is behind `classicLook()`, unchanged.
 
 Why this exists: the old theme was deliberately quiet, ink and parchment with moss. A board that
 draws only with `colorScheme` plus its one `accent` comes out beige and one-note (one board shipped that way: surface

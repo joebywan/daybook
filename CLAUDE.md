@@ -958,7 +958,8 @@ bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, 
   `lastResort` is seed 424242's board per tier, accepted by a test; a year never reaches it (`FallbackTest`).
 - **`solved` checks the rules**; a mistake is a line off the one loop or a cross on it, sound because the loop is unique.
   Red after a 1 s settle, from the lines alone: a number with too many lines, a dot with three, a closed loop that is not the
-  whole answer. A number with all its lines drawn steps back (lighter, smaller), so colour is never the only signal.
+  whole answer. A number with all its lines drawn steps back (lighter, smaller), so colour is never the only signal; a 0, which
+  draws none, steps back once every side is crossed or the board is solved (`Loop.stepsBack`).
 - **Hints never fall back** (the ladder is the generator's). Over 200 boards a tier: 31 / 59 / 122 steps a board, small loop
   0 / 1.8 / 2.9 and what-if 0 / 0 / 10.2 a board; Expert hint median 0.03 ms, max 4 ms. A dot with two lines has its other
   edges read as crossed (`LoopEdges.view`). Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`, dot `d` is
@@ -1020,8 +1021,8 @@ ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Link
   86.9 steps a board; a cut 0 / 6.4 / 6.1 a board, a what-if 0 / 0 / 0.57; two ways in is rare on Standard (0.05 a board: one
   way on does nearly everything there). Expert hints: max 8 ms on the JVM. The walkthrough is a hand-built 5x5 with one
   answer (by the oracle), finished by the local rules; it teaches drawing from an end, carrying a line on, a line from an empty
-  square, a slip that cuts a pair off, and rubbing out. Training: `core/training/LinksTraining.kt`, four techniques (no list of
-  every instance yet, so a practice passes on the hint's own lines).
+  square, a slip that cuts a pair off, and rubbing out. Training: `core/training/LinksTraining.kt`, four techniques; any
+  instance of the technique passes (`LinksTeacher.steps`).
 - **Colour:** twelve pair colours from the hue family's three fixed steps, greedy by CIEDE2000 with deuteranopia and
   protanopia (`LinksPaletteTest`: closest 14.6 / 13.9 / 8.3 for 7 / 9 / 12), the same in both schemes; Coral and Green are free
   (no right or wrong is shown). Every end carries its number; squares on a pair's line take a wash of its colour.

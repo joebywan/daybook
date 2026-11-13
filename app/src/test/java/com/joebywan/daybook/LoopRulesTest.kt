@@ -19,6 +19,21 @@ class LoopRulesTest {
     private fun drawn(loop: String) = loop.map { if (it == '1') '-' else '.' }.joinToString("")
 
     @Test
+    fun `a number steps back when nothing is left to do, a 0 once crossed round or solved`() {
+        // The 3x3 border: the middle square is a 0, the rest 1s and 2s.
+        val border = around(3, "111111111")
+        val clues = LoopLogic.cluesOf(3, border)
+        val blank = LoopState(3, clues, border)
+        assertTrue("nothing steps back on a blank board", (0 until 9).none { Loop.stepsBack(blank, it) })
+        val solved = blank.copy(edges = drawn(border))
+        assertTrue("everything steps back once solved, the 0 too", (0 until 9).all { Loop.stepsBack(solved, it) })
+        // The 0 alone, every side crossed.
+        val crossed = blank.copy(edges = blank.edges.toCharArray().also { e -> LoopLogic.sides(3, 4).forEach { e[it] = 'x' } }.concatToString())
+        assertTrue(Loop.stepsBack(crossed, 4))
+        assertFalse("three crosses are not enough", Loop.stepsBack(crossed.copy(edges = crossed.edges.toCharArray().also { it[LoopLogic.sides(3, 4)[0]] = '.' }.concatToString()), 4))
+    }
+
+    @Test
     fun `each rule on its own refuses a loop`() {
         // The 3x3 board's border: every edge square has its outer sides, the middle none.
         val border = around(3, "111111111")
