@@ -60,15 +60,16 @@ object EquationLogic {
     class Shape(val length: Int, val guesses: Int)
 
     /**
-     * Six, seven and eight symbols, six guesses each. Measured by `EquationBalanceTest`: a careful player needs about three
-     * guesses at every length (the marks split any list fast), so the tiers are not told apart by guesses. What length
-     * does is leave more to work out by hand: more answers (206 / 5,431 / 15,963) and more of them still fitting after the
-     * opener. Expert with five guesses was tried and dropped: a player following the hints lost 2 of a year's 365 boards.
+     * Six, seven and eight symbols; six, six and five guesses. Measured by `EquationBalanceTest`: the marks split any list
+     * fast, so a careful player needs about three guesses at every length and length alone barely tells the tiers apart.
+     * The guesses to spare do: about 3.3 / 2.9 / 1.9. Length still leaves more to work out by hand: more answers
+     * (206 / 5,431 / 15,963) and more of them still fitting after the opener. Five guesses on Expert once lost a player
+     * following the hints 2 boards a year; [newBoard] now picks an opener the hints win from.
      */
     fun shape(difficulty: Difficulty): Shape = when (difficulty) {
         Difficulty.STANDARD -> Shape(6, 6)
         Difficulty.HARD -> Shape(7, 6)
-        Difficulty.EXPERT -> Shape(8, 6)
+        Difficulty.EXPERT -> Shape(8, 5)
     }
 
     /** Lengths [valid] can enumerate. */
@@ -276,13 +277,19 @@ object EquationLogic {
     /**
      * The board for [seed]: the answer is one index into the tier's [answers]. A daily seed carries its day
      * ([SeedHash.cycleDay]) and walks [cycle]; any other seed (Random, Levels) draws the index.
+     *
+     * The opener is drawn apart from the answer, then stepped on to the next from which a player doing exactly what the
+     * hints say finds the sum inside the tier's guesses ([EquationTeacher.wins]): the drawn one on almost every board.
+     * Every answer of every tier has such an opener (measured over every answer; `EquationTeachingTest` samples them).
      */
     fun newBoard(seed: Long, difficulty: Difficulty): EquationState {
         val shape = shape(difficulty)
         val answers = answers(shape.length)
         val day = SeedHash.cycleDay(seed, Equation.id)
         val index = if (day == null) Rng(seed).nextInt(answers.size) else cycle(day, difficulty)
-        val opener = Rng(seed xor OPENER_SALT).nextInt(EquationTeacher.openers(shape.length).size)
+        val n = EquationTeacher.openers(shape.length).size
+        val drawn = Rng(seed xor OPENER_SALT).nextInt(n)
+        val opener = (drawn until drawn + n).firstOrNull { EquationTeacher.wins(answers[index], it % n, shape.guesses) }?.rem(n) ?: drawn
         return EquationState(shape.length, shape.guesses, answers[index], opener = opener)
     }
 

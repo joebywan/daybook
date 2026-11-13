@@ -71,10 +71,11 @@ class EquationBalanceTest {
             assertTrue("${tier.name}: a hint follower won only $followerWon of $days", followerWon >= days * 95 / 100)
             assertTrue("${tier.name}: a prober won only $proberWon of $days", proberWon >= days * 97 / 100)
         }
-        // A careful player needs about three guesses at every length, so the tiers are not told apart by guesses (seven and
-        // eight symbols take the same); what grows is the equations still to work out after the opener (on average: the
-        // medians of seven and eight are close, the long tail is eight's).
+        // A careful player needs about three guesses at every length (seven and eight symbols take the same), so what tells
+        // the tiers apart is the guesses to spare, Expert's a whole guess fewer; and the equations still to work out after
+        // the opener grow (on average: the medians of seven and eight are close, the long tail is eight's).
         assertTrue("$slack", slack[Difficulty.STANDARD]!! > slack[Difficulty.HARD]!! + 0.2)
+        assertTrue("$slack", slack[Difficulty.HARD]!! > slack[Difficulty.EXPERT]!! + 0.7)
         assertTrue("$left", left[Difficulty.STANDARD]!! < left[Difficulty.HARD]!! && left[Difficulty.HARD]!! < left[Difficulty.EXPERT]!!)
     }
 }

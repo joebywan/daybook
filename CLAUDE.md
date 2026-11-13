@@ -157,15 +157,23 @@ each symbol is marked as Lexicon's letters are. Never "Nerdle" where a player se
 - **The lists are enumerated on the device, not stored** (`EquationLogic.valid`, sorted, cached per length): left sides
   built number by number with the running total and term, the last number solved for (a range for `+ - *`, the term's
   divisors for `/`). 476 / 11,705 / 65,704 true equations of 6 / 7 / 8 symbols, 206 / 5,431 / 15,963 answers (pinned).
-  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser; once enumerated, a board takes under 1 ms in Chromium and WebKit on every tier). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
+  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser; a board now also walks the hints once, so a year of daily boards on all three tiers, 1,095, takes 12 s in Chromium and 23 s in WebKit, page load included: about 11 and 21 ms a board). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
   of a token list: the lists agree exactly, and `problem` agrees with it on every true row, every one-symbol change of a
   sample and random rows. Changing a rule or the enumeration moves every board (`BoardPinTest`).
-- **Tiers: 6 / 7 / 8 symbols, six guesses each** (`EquationLogic.shape`). Measured (`EquationBalanceTest`, 100 days a tier):
-  a careful player (the hints) needs 2.7 / 3.1 / 3.0 guesses on average and never more than 4 / 6 / 5; a prober that also
-  spends guesses on equations that cannot win, 2.7 / 3.1 / 3.0. So length does not make a tier take more guesses; it
-  leaves more to work out by hand: 206 / 5,431 / 15,963 answers, and 4.8 / 24.0 / 27.6 still fitting after the opener on
-  average (medians 4 / 20 / 22, p90 10 / 49 / 59). Expert with five guesses was tried and dropped: the hints lost 2 of a
-  year's 365 boards.
+- **Tiers: 6 / 7 / 8 symbols, 6 / 6 / 5 guesses** (`EquationLogic.shape`; 2026-11-13, Expert was six). Measured
+  (`EquationBalanceTest`, 100 days a tier): a careful player (the hints) needs 2.7 / 3.1 / 3.0 guesses on average and never
+  more than 4 / 6 / 5; a prober that also spends guesses on equations that cannot win, 2.7 / 3.1 / 3.0. No answer list
+  separates the tiers by guesses: over every answer, the hints need 2.65 / 3.06 / 3.07 for all of them, and restricting
+  answers by their signs (one sign, two, × or ÷ with + or −) moves that by 0.1-0.4 and the answers left after the opener
+  *down* (Expert two signs with × or ÷: 12.8, below Hard's 22). So the tiers differ in **guesses to spare** (3.3 / 2.9 / 2.0)
+  and in what length leaves to work out by hand: 206 / 5,431 / 15,963 answers, 4.8 / 24.0 / 27.6 still fitting after the
+  opener on average (medians 4 / 20 / 22, p90 10 / 49 / 59).
+- **A board's opener is one the hints win from** (`EquationTeacher.wins`, in `newBoard`): the drawn opener, else the next
+  of the seven from which a player doing what the hints say finds the sum inside the tier's guesses. Over every answer the
+  hints from one opener lose about 1 board in 1,000 (8 symbols in 5 guesses, 7 in 6: a hint follower needs up to 8 from
+  an unlucky opener; this is what lost five-guess Expert 2 days a year), and no answer of any tier loses from all seven,
+  so every board is winnable by hints. Answers and the cycle are untouched; only the opener of those rare boards moved. A
+  board walks the hints once (JVM median / p95 / max 0.1 / 0.3 / 3, 1.7 / 3.2 / 7, 7 / 13 / 52 ms).
 - **Daily answers go round Lexicon's cycle from the first day** (`SeedHash.EQUATION_CYCLE_FROM` = 2026-01-01; it never had
   hashed daily seeds): no answer recurs within 206 / 5,431 / 15,963 days. Random and Levels draw an index.
 - **The teacher is Lexicon's**: mistake (a row that is not a true equation, with the reason; a probe is never a mistake),
@@ -173,7 +181,7 @@ each symbol is marked as Lexicon's letters are. Never "Nerdle" where a player se
   (a fact about the marks, checked against every true equation that fits, lone zeros included), submit, then one left /
   best guess, which read the answer list, say so, and give the equation's **shape** (signs and right side, `??+??=47`),
   never its left-hand digits; only "Show me" types it. Measured (`EquationTeachingTest`, a year of daily boards a tier):
-  every board of a year solved on every tier, in 2.67 / 3.08 / 3.06 guesses; the fallback (one left, best guess) is
+  every board of a year solved on every tier, in 2.67 / 3.08 / 3.05 guesses; the fallback (one left, best guess) is
   52 / 58 / 59% of steps and on almost every board, as Lexicon's is: choosing a guess is most of the game. Pins are
   98 / 98 / 85 steps a year. The worst Expert hint (the first after the opener) takes about 4 ms. No Training course: its one praised rung is the pin (the rest point at a guess), and a one-rung ladder is
   excluded (`docs/TRAINING_SPEC.md`, classification).

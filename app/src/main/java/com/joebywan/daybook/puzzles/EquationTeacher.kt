@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.GuessMarks
+
 /**
  * Equation, reasoned from the marks already on the board: Lexicon's ladder ([GuessTeacher]) with Equation's words.
  *
@@ -108,6 +110,27 @@ internal object EquationTeacher {
 
     fun teach(length: Int, guesses: List<String>, marks: List<List<Int>>, current: String, opener: Int = 0): GuessTeacher.Step? =
         engine.teach(length, guesses, marks, current, opener)
+
+    /**
+     * Whether a player who does exactly what the hints say, opening with opener [opener], finds [answer] within [budget]
+     * guesses. The answer only marks the rows, as the board does; the teacher still sees nothing but the marks.
+     */
+    fun wins(answer: String, opener: Int, budget: Int): Boolean {
+        val guesses = ArrayList<String>()
+        val marks = ArrayList<List<Int>>()
+        while (guesses.size < budget) {
+            val word = when (val m = teach(answer.length, guesses, marks, "", opener)?.move) {
+                is GuessTeacher.Move.Open -> m.word
+                is GuessTeacher.Move.Fill -> m.word
+                is GuessTeacher.Move.Pin -> m.word
+                else -> return false
+            }
+            if (word == answer) return true
+            guesses += word
+            marks += GuessMarks.mark(word, answer)
+        }
+        return false
+    }
 
     fun deduction(s: EquationState) = engine.deduction(s, FALLBACKS, s.opener)
 }

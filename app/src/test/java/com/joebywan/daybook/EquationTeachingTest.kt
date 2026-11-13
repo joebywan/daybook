@@ -164,6 +164,23 @@ class EquationTeachingTest {
     }
 
     @Test
+    fun `every answer has an opener the hints win from inside its tier's guesses, and a board takes one`() {
+        // Measured over every answer (2026-11-13): none of any tier needs another opener than the seven; a sample here.
+        for (tier in Difficulty.entries) {
+            val shape = EquationLogic.shape(tier)
+            val answers = EquationLogic.answers(shape.length)
+            for (answer in answers.filterIndexed { i, _ -> i % maxOf(1, answers.size / 150) == 0 }) {
+                assertTrue("${tier.name} $answer", EquationTeacher.openers(shape.length).indices.any { EquationTeacher.wins(answer, it, shape.guesses) })
+            }
+            // Random boards too, not only the daily year the coverage test walks.
+            for (seed in 1L..60L) {
+                val s = EquationLogic.newBoard(seed * 7919, tier)
+                assertTrue("${tier.name} seed $seed ${s.answer}", EquationSupport.walkByHints(s).solved)
+            }
+        }
+    }
+
+    @Test
     fun `a legal board never leaves the teacher with nothing to say`() {
         for (tier in Difficulty.entries) {
             val length = EquationLogic.shape(tier).length
