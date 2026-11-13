@@ -30,7 +30,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
     "lits" to listOf("6x6 grid", "7x7 grid", "8x8 grid"),
     "tower" to listOf("4 pegs, 5 colours, 10 guesses", "5 pegs, 6 colours, 12 guesses", "5 pegs, 8 colours, 14 guesses"),
     "words" to listOf("Five-letter words, six guesses", "Five-letter words, five guesses", "Four-letter words, seven guesses"),
-    "equation" to listOf("Six symbols, six guesses", "Seven symbols, six guesses", "Eight symbols, six guesses"),
+    "equation" to listOf("Six symbols, six guesses", "Seven symbols, six guesses", "Eight symbols, five guesses"),
     "nonogram" to listOf("5x5 grid", "10x10 grid", "15x15 grid"),
     "inequality" to listOf("4x4 grid, digits 1 to 4", "5x5 grid, digits 1 to 5", "6x6 grid, digits 1 to 6"),
     "chess" to listOf("Mate in 2", "Mate in 3", "Mate in 4"),

@@ -26,7 +26,7 @@ Stuck? The first tap on Hint says where to look, and the second explains why. A 
 
 - Standard: Six symbols, six guesses.
 - Hard: Seven symbols, six guesses.
-- Expert: Eight symbols, six guesses. Far more equations fit eight symbols, so there is more to work out after each guess.
+- Expert: Eight symbols, five guesses. Far more equations fit eight symbols, so there is more to work out after each guess, and one guess fewer to do it in.
 
 ## Techniques
 
