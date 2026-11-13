@@ -1135,7 +1135,7 @@ text), `WhosWhoGraphRules.kt` (`WhosWhoGraphState`, `WhosWhoGraphLogic`: the mar
   (`WhosWhoGraphState.fromTable`); every table mark is a person-item fact, so all of them map and nothing starts fresh.
   `WhosWhoState` stays serialisable for that and as the dealt board inside the graph state. Lab saves under `test-whoswho`
   are not migrated (other seeds, nothing recorded): a route under that id goes home and its games are never read. The table's
-  board, keys (`WhosWhoKeys.kt`) and walkthrough are gone; the graph has no keyboard and no move feel yet.
+  board, keys and walkthrough are gone; the graph has no move feel yet.
 - **The word lists are a contract** (indices are stored and drawn by index): append-only, with a re-pin.
 - **Tiers: 4 people, house + 1 category, every clue naming a person / 4 people, house + 2, plus links and next to / left of /
   5 people, house + 2, plus either-or**, gated by the deepest ladder level the walk needs (direct / link or house / what-if).
@@ -1155,8 +1155,13 @@ text), `WhosWhoGraphRules.kt` (`WhosWhoGraphState`, `WhosWhoGraphLogic`: the mar
   after a build that demanded every link be drawn "wasn't fun"). When a solve left some person-item link implied
   (`WhosWhoGraphLogic.leftImplied`), the finished frame says so with one of `WhosWho.ELIMINATION_NOTES` (`kotlin.random`,
   `PuzzleType.finishNote`, saved with the praise); a solve turns the board to the people's table (view 0, once per board).
-- **The chosen pill is `remember`, tied to the state it was chosen on**: a board that arrives from elsewhere (undo, "Show me",
-  the walkthrough's next frame) starts with nothing chosen.
+- **The chosen pill is the screen's, tied to the state it was chosen on**: a board that arrives from elsewhere (undo, "Show me",
+  the walkthrough's next frame) starts with nothing chosen. It is `rememberSaveable` (the item and that board's hash), so a
+  rotation, which hands back an equal board rather than the same one, keeps it.
+- **Keys** (`WhosWhoKeys.kt`, pure, `WhosWhoKeysTest`): arrows move a cursor (`remember`, an item, drawn as a ring outside the
+  pill) to the nearest pill that way as drawn (`nearestPiece` over `rows`, so Group's layout too); Enter or Space is a tap
+  through the same `WhosWhoGraphState.tap` a finger uses; Escape lets go of the chosen item. No letters, so H still hints; the
+  table views take no keys, as they take no taps. Clues cannot be struck from the keyboard.
 - **Hints are the ladder asked of the table the closure makes** (`WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s))`, mapped to
   nodes: a tick drawn from both ends, stray lines either end drew there ruled out), worded for the graph ("draw Ann's line to",
   "rule ... out for"; never row, column, tick, cross or table: `WhosWhoGraphTeachingTest` fails on them). Ladder: clue, only,
