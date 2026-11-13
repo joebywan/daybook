@@ -157,7 +157,7 @@ each symbol is marked as Lexicon's letters are. Never "Nerdle" where a player se
 - **The lists are enumerated on the device, not stored** (`EquationLogic.valid`, sorted, cached per length): left sides
   built number by number with the running total and term, the last number solved for (a range for `+ - *`, the term's
   divisors for `/`). 476 / 11,705 / 65,704 true equations of 6 / 7 / 8 symbols, 206 / 5,431 / 15,963 answers (pinned).
-  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser; once enumerated, a board takes under 1 ms in Chromium and WebKit on every tier). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
+  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser; a board now also walks the hints once, so a year of daily boards on all three tiers, 1,095, takes 12 s in Chromium and 23 s in WebKit, page load included: about 11 and 21 ms a board). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
   of a token list: the lists agree exactly, and `problem` agrees with it on every true row, every one-symbol change of a
   sample and random rows. Changing a rule or the enumeration moves every board (`BoardPinTest`).
 - **Tiers: 6 / 7 / 8 symbols, 6 / 6 / 5 guesses** (`EquationLogic.shape`; 2026-11-13, Expert was six). Measured
