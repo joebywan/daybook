@@ -237,10 +237,11 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Before drawing a long way round, ask what it would cut off.",
     ),
     "whoswho" to listOf(
-        "A tick rules that item out for everyone else in its column.",
+        "Two lines from one pill mean one of those two, and no other.",
         "If the baker has the cat, whoever can't own it isn't the baker.",
         "Left of means the last house can't be the one on the left.",
         "Strike a clue once it can tell you nothing more.",
+        "A faint line is a link your marks imply: no need to draw it.",
     ),
 )
 

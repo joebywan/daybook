@@ -58,6 +58,10 @@ internal object WhosWhoTeacher {
         override val explanation: String,
     ) : TeachStep
 
+    /**
+     * The next step on [s], the table the graph's marks imply ([WhosWhoGraphLogic.table]). It is worded for the graph the
+     * player sees: lines and ruling out, never rows, columns, ticks or crosses.
+     */
     fun teach(s: WhosWhoState): Lesson? {
         if (s.solved) return null
         mistake(s)?.let { return it }
@@ -88,9 +92,9 @@ internal object WhosWhoTeacher {
                 targets = setOf(cell),
                 nudge = "One of your marks doesn't fit the clues.",
                 explanation = if (mark == WhosWhoLogic.TICK) {
-                    "$who can't ${WhosWhoLogic.base(s, ref)}: no way of keeping every clue does. Take the tick off."
+                    "$who can't ${WhosWhoLogic.base(s, ref)}: no way of keeping every clue does. Take that line away."
                 } else {
-                    "$who has to ${WhosWhoLogic.base(s, ref)}: every way of keeping the clues needs it. Take the cross off."
+                    "$who has to ${WhosWhoLogic.base(s, ref)}: every way of keeping the clues needs it. Clear that dashed line."
                 },
             )
         }
@@ -145,9 +149,9 @@ internal object WhosWhoTeacher {
         val clue = if (step.clue >= 0) setOf(CLUE_BASE + step.clue) else emptySet()
         val cited = clue + citedCells(s, grid, step)
         val nudge = when (step.technique) {
-            WhosWhoLogic.ONLY -> if (step.person >= 0) "Look at ${s.names[step.person]}'s row." else "Look down one column."
-            WhosWhoLogic.WHAT_IF -> "Try supposing something in ${s.names[cellOf(s, step.supposed) / s.columns]}'s row."
-            else -> "Read clue ${step.clue + 1} against the table."
+            WhosWhoLogic.ONLY -> if (step.person >= 0) "Look at what ${s.names[step.person]} can still have." else "Look for a thing only one person can still have."
+            WhosWhoLogic.WHAT_IF -> "Try supposing something about ${s.names[cellOf(s, step.supposed) / s.columns]}."
+            else -> "Read clue ${step.clue + 1} against your lines."
         }
         return Lesson(
             technique = technique,
@@ -157,7 +161,7 @@ internal object WhosWhoTeacher {
             cited = cited - targets,
             targets = targets,
             nudge = nudge,
-            explanation = explain(s, grid, step),
+            explanation = explain(s, step),
         )
     }
 
@@ -178,11 +182,11 @@ internal object WhosWhoTeacher {
 
     private fun clueLine(s: WhosWhoState, k: Int) = "Clue ${k + 1}: ${WhosWhoLogic.clueText(s, k)}"
 
-    /** "cross the cat off for Ann", "cross the fish and the bird off for Ann", "cross the baker off for Ben and Dev". */
+    /** "rule the cat out for Ann", "rule the fish and the bird out for Ann", "rule the baker out for Ben and Dev". */
     private fun crossOff(s: WhosWhoState, crosses: List<Int>): String {
         val people = crosses.map { person(s, it) }.distinct()
         val things = crosses.map { WhosWhoLogic.thing(s, itemOf(s, it)) }.distinct()
-        return "cross ${listed(things)} off for ${listed(people)}"
+        return "rule ${listed(things)} out for ${listed(people)}"
     }
 
     /** What a NEXT / LEFT clue asks of the partner of the side that holds [item]: "next to", "somewhere right of". */
@@ -192,15 +196,13 @@ internal object WhosWhoTeacher {
         else -> "somewhere left of"
     }
 
-    private fun explain(s: WhosWhoState, grid: WhosWhoLogic.Grid, step: Step): String {
+    private fun explain(s: WhosWhoState, step: Step): String {
         val n = s.n
+        fun crossOff(crosses: List<Int>) = crossOff(s, crosses)
         return when (step.technique) {
             WhosWhoLogic.CLUE -> {
-                val action = if (step.ticks.isNotEmpty()) {
-                    "Tick ${WhosWhoLogic.thing(s, itemOf(s, step.ticks[0]))} for ${person(s, step.ticks[0])}."
-                } else {
-                    crossOff(s, step.crosses).cap() + "."
-                }
+                val action = if (step.ticks.isEmpty()) crossOff(step.crosses).cap() + "."
+                else "Draw ${person(s, step.ticks[0])}'s line to ${WhosWhoLogic.thing(s, itemOf(s, step.ticks[0]))}."
                 "${clueLine(s, step.clue)} $action"
             }
             WhosWhoLogic.ONLY -> {
@@ -224,19 +226,19 @@ internal object WhosWhoTeacher {
                     }
                     step.person >= 0 && clue.kind == WhosWhoLogic.NOT -> {
                         val who = s.names[step.person]
-                        "$line $who ${WhosWhoLogic.has(s, step.partner)}, so ${crossOff(s, step.crosses)}."
+                        "$line $who ${WhosWhoLogic.has(s, step.partner)}, so ${crossOff(step.crosses)}."
                     }
                     step.person >= 0 -> {
                         val who = s.names[step.person]
-                        "$line $who ${WhosWhoLogic.has(s, clue.a)}, so ${crossOff(s, step.crosses)}."
+                        "$line $who ${WhosWhoLogic.has(s, clue.a)}, so ${crossOff(step.crosses)}."
                     }
                     clue.kind == WhosWhoLogic.SAME -> {
                         val people = listed(step.crosses.map { person(s, it) })
-                        "$line ${WhosWhoLogic.thing(s, step.partner).cap()} is ruled out for $people, so ${crossOff(s, step.crosses)}."
+                        "$line ${WhosWhoLogic.thing(s, step.partner).cap()} is ruled out for $people, so ${crossOff(step.crosses)}."
                     }
                     else -> {
                         val people = listed(step.crosses.map { person(s, it) })
-                        "$line ${WhosWhoLogic.thing(s, clue.b).cap()} and ${WhosWhoLogic.thing(s, clue.c)} are both ruled out for $people, so ${crossOff(s, step.crosses)}."
+                        "$line ${WhosWhoLogic.thing(s, clue.b).cap()} and ${WhosWhoLogic.thing(s, clue.c)} are both ruled out for $people, so ${crossOff(step.crosses)}."
                     }
                 }
             }
@@ -249,12 +251,12 @@ internal object WhosWhoTeacher {
                     val who = s.names[step.person]
                     val houses = listed(step.crosses.map { "house ${it % n + 1}" }, "or")
                     val known = if (step.item / n == 0) "" else "$who ${WhosWhoLogic.has(s, step.item)}, and "
-                    "$line " + "${known}nobody who could $partner can live $rel $houses, so ${crossOff(s, step.crosses)}.".cap()
+                    "$line " + "${known}nobody who could $partner can live $rel $houses, so ${crossOff(step.crosses)}.".cap()
                 } else {
                     val people = step.crosses.map { person(s, it) }
                     val them = if (people.size == 1) people[0] else "any of them"
                     "$line Wherever ${listed(people)} can live, nobody who could $partner can live $rel $them, " +
-                        "so ${crossOff(s, step.crosses)}."
+                        "so ${crossOff(step.crosses)}."
                 }
             }
             else -> {
@@ -271,7 +273,7 @@ internal object WhosWhoTeacher {
                     null -> "nothing fits"
                 }
                 val steps = listed(chain + end, oxford = true)
-                "Suppose $who ${WhosWhoLogic.has(s, itemOf(s, supposed))}: then $steps. So ${crossOff(s, step.crosses)}."
+                "Suppose $who ${WhosWhoLogic.has(s, itemOf(s, supposed))}: then $steps. So ${crossOff(step.crosses)}."
             }
         }
     }

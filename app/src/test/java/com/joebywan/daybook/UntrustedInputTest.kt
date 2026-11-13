@@ -11,6 +11,7 @@ import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.data.StoredGame
 import com.joebywan.daybook.data.fits
+import com.joebywan.daybook.data.restoredFor
 import com.joebywan.daybook.data.replaceEntries
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -122,8 +123,10 @@ class UntrustedInputTest {
             for (raw in Json.parseToJsonElement(file.readText()).jsonArray) {
                 val stored = StoredGame.decode(raw.toString())!!
                 val (id, tier, seed) = stored.key.split("|")
-                val initial = PuzzleRegistry.byId(id)!!.generate(seed.toLong(), Difficulty.valueOf(tier))
-                assertTrue("${file.name} ${(raw as JsonObject)["key"]}", stored.game.fits(initial))
+                val puzzle = PuzzleRegistry.byId(id)!!
+                val initial = puzzle.generate(seed.toLong(), Difficulty.valueOf(tier))
+                // As the play screen reads it: in the shape the puzzle plays now (Who's Who's table turned into its graph).
+                assertTrue("${file.name} ${(raw as JsonObject)["key"]}", stored.game.restoredFor(puzzle).fits(initial))
             }
         }
     }

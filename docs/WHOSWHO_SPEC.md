@@ -5,6 +5,10 @@ numbered list of clues that fix exactly one way to match them up. Read `docs/PUZ
 records only what is specific to this puzzle and where it departs from the recipe. Where the two disagree on a point not
 listed here, the standards win.
 
+**Since 2026-11-13 the board is a graph** (the owner: the lab's `test-whoswho` replaced the table; `CLAUDE.md`, Who's Who). The
+generator, tiers, clues and ladder below still hold; what this file says of the table board, its pad, keyboard and walkthrough is
+history, and table saves load as the graph.
+
 ## Decisions
 
 | | |

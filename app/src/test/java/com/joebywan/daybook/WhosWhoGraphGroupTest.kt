@@ -2,7 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
-import com.joebywan.daybook.puzzles.WhosWhoGraph
+import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
 import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import org.junit.Assert.assertEquals
@@ -13,7 +13,7 @@ import org.junit.Test
 class WhosWhoGraphGroupTest {
 
     private fun assertLaidOut(s: WhosWhoGraphState) {
-        val (row, _) = WhosWhoGraph.rows(s, WhosWhoGraphLogic.close(s), grouped = true)
+        val (row, _) = WhosWho.rows(s, WhosWhoGraphLogic.close(s), grouped = true)
         val n = s.n
         for (c in 0..s.board.columns) {
             val rows = (c * n until c * n + n).map { row[it] }
@@ -25,7 +25,7 @@ class WhosWhoGraphGroupTest {
     @Test
     fun `an item linked to two people does not crash the grouping`() {
         // The reported board: Expert, house 3 linked to both Eve and Uma, with harp too, and piano to house 4.
-        val s0 = WhosWhoGraph.generate(1L, Difficulty.EXPERT) as WhosWhoGraphState
+        val s0 = WhosWho.generate(1L, Difficulty.EXPERT) as WhosWhoGraphState
         val n = s0.n
         val house = { slot: Int -> n + slot }
         val music = { slot: Int -> 2 * n + slot }
@@ -41,7 +41,7 @@ class WhosWhoGraphGroupTest {
     @Test
     fun `random marks always lay out`() {
         for (d in Difficulty.entries) for (seed in 1L..20L) {
-            var s = WhosWhoGraph.generate(seed, d) as WhosWhoGraphState
+            var s = WhosWho.generate(seed, d) as WhosWhoGraphState
             val rng = Rng(seed * 31 + d.ordinal)
             repeat(12) {
                 val a = rng.nextInt(s.size)

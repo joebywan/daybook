@@ -82,6 +82,9 @@ import com.joebywan.daybook.puzzles.ThermometersTeacher
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
+import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.WhosWhoTeacher
@@ -425,8 +428,14 @@ class GuideTest {
         "what-if" to whosWhoExpert.copy(marks = "x........x.....o...xxxoxx...o..o...ox.xx.x.x.x.....x.xo..o..x...x........x."),
     )
 
+    /**
+     * Who's Who's boards are the people's table its Person button shows, for a graph marked as the position's table says:
+     * each tick a line drawn from both ends, each cross an anti-link ([WhosWhoGraphState.fromTable]). The board draws what
+     * those marks imply (the closure's table), and the step is the one the graph's hint gives there.
+     */
     private fun whosWhoStep(b: Board): TeachStep? {
-        val s = whosWhoBoards.getValue(b.technique)
+        val g = WhosWhoGraphState.fromTable(whosWhoBoards.getValue(b.technique))
+        val s = WhosWhoGraphLogic.table(g)
         assertEquals(s.groups.joinToString(" ") { WhosWhoWords.HEADERS[it] }, b.fields["top"])
         assertEquals(s.names.joinToString(" "), b.fields["left"])
         val text = pages.first { it.id == "whoswho" }.text
@@ -437,6 +446,8 @@ class GuideTest {
         // Every square but the move's shows what the marks leave it: its ticked word, or the items still possible.
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
         val step = WhosWhoTeacher.deduce(s, s.marks) ?: return null
+        val d = WhosWho.teach(g) ?: return null
+        assertEquals("${b.technique}: the graph's hint is this step", step.technique to step.explanation, d.technique to d.explanation)
         for (c in 0 until s.n * s.columns) {
             if (c in step.targets) continue
             val column = c % s.columns

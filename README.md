@@ -96,7 +96,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
 | Loop | Slitherlink (loop through the dots) | One closed loop along the squares' sides, from dot to dot: each number says how many of its square's four sides the loop uses |
 | Links | Numberlink (pair-joining paths) | Join each pair of matching numbers with one path through side-touching squares; paths never cross and every square is used |
-| Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
+| Who's Who | Logic grid, drawn as a graph | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house", by drawing lines between them |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
 Three difficulties each, which generally means a larger grid and fewer clues.

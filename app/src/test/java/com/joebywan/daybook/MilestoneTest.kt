@@ -61,26 +61,6 @@ class MilestoneTest {
     }
 
     @Test
-    fun `a Who's Who line is settled when every cell has one tick and none clash`() {
-        val s0 = WhosWhoLogic.generate(7L, Difficulty.HARD)
-        val units = lineUnits(s0.columns, s0.n)
-        fun ticked(people: Iterable<Int>, slotOf: (Int, Int) -> Int): String {
-            val m = s0.marks.toCharArray()
-            for (p in people) for (c in 0 until s0.columns) m[s0.markIndex(p, c, slotOf(p, c))] = WhosWhoLogic.TICK
-            return m.concatToString()
-        }
-        val one = WhosWho.settledLines(s0.copy(marks = ticked(listOf(0)) { p, c -> s0.answer[c][p] }), units)
-        assertTrue(one[0])
-        assertFalse(one[1])
-        assertFalse("a column needs every person", one[s0.n])
-        assertTrue(WhosWho.settledLines(s0.copy(marks = ticked(0 until s0.n) { p, c -> s0.answer[c][p] }), units).all { it })
-        // Two people ticked to one item clash: neither row is settled.
-        val clash = WhosWho.settledLines(s0.copy(marks = ticked(0..1) { _, c -> s0.answer[c][0] }), units)
-        assertFalse(clash[0])
-        assertFalse(clash[1])
-    }
-
-    @Test
     fun `a pipe tile is joined when every opening meets one that opens back`() {
         // 1 up, 2 right, 4 down, 8 left.
         val joined = PipesState(2, 1, listOf(2, 8), 0)

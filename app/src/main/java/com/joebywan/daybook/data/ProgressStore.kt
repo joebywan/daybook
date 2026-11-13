@@ -3,6 +3,7 @@ package com.joebywan.daybook.data
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LevelBoard
+import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.Streak
@@ -234,6 +235,9 @@ private fun PuzzleState.wellFormed(): Boolean = when (this) {
     is SudokuState -> listOf(givens, cells, solution, notes).all { it.size == 81 } && (selected ?: 0) in 0..80
     else -> true
 }
+
+/** This save with every state in the shape [puzzle] plays now ([PuzzleType.restored]). */
+fun SavedGame.restoredFor(puzzle: PuzzleType): SavedGame = copy(state = puzzle.restored(state), history = history.map(puzzle::restored))
 
 /** A [SavedGame] tagged with the board it belongs to, as it is held on disk. */
 @Serializable
