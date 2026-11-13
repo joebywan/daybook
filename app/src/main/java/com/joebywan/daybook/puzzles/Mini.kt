@@ -54,7 +54,12 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.ui.graphics.SolidColor
 import kotlinx.serialization.Serializable
 
 /**
@@ -231,7 +236,7 @@ object Mini : PuzzleType {
         size: Int,
         letters: String,
         square: Dp,
-        tint: (Int) -> Color,
+        tint: (Int) -> ArcadeFill,
         letterColour: (Int) -> Color,
         modifier: Modifier = Modifier,
         feel: MoveFeel = MoveFeel.Still,
@@ -239,7 +244,7 @@ object Mini : PuzzleType {
     ) {
         val numbers = remember(size, letters.map { it == BLACK }) { MiniLogic.numbers(size, letters) }
         CrosswordGrid(
-            size, square, TEXT, vivid(accent),
+            size, square, TEXT, if (classicLook()) vivid(accent) else ArcadeBoard.current.selected.from,
             black = { letters[it] == BLACK },
             number = { numbers[it] },
             letter = { i -> letters[i].takeIf { it != OPEN }?.uppercase() },
@@ -263,10 +268,15 @@ object Mini : PuzzleType {
             val dark = BoardHues.isDark(scheme)
             val (hueA, hueB) = BoardHues.HUE_PAIRS[2]
             val slot = MiniLogic.slots(s.size, s.letters)[0].squares
-            Grid(
+            val a = ArcadeBoard.current
+            if (classicLook()) Grid(
                 s.size, s.letters, square,
-                tint = { i -> if (i in slot) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f).compositeOver(scheme.surfaceVariant) else scheme.surfaceVariant },
+                tint = { i -> flat(if (i in slot) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f).compositeOver(scheme.surfaceVariant) else scheme.surfaceVariant) },
                 letterColour = { BoardHues.ink(hueB, dark) },
+            ) else Grid(
+                s.size, s.letters, square,
+                tint = { i -> arcadeSquare(a, i, slot.first(), slot.toSet(), emptySet()) },
+                letterColour = { i -> arcadeSquare(a, i, slot.first(), slot.toSet(), emptySet()).ink },
             )
         }
     }
@@ -275,16 +285,29 @@ object Mini : PuzzleType {
 
     private val keyRows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
 
+    /** A flat [ArcadeFill]: Classic's squares, and Arcade's plain ones. */
+    private fun flat(c: Color, ink: Color = Color.Unspecified) = ArcadeFill(c, c, ink)
+
+    /** Arcade's square [i]: a dead word red, the cursor amber, the rest of its word lavender, the others plain. */
+    private fun arcadeSquare(a: ArcadeBoard, i: Int, cursor: Int?, inWord: Set<Int>, red: Set<Int>): ArcadeFill = when {
+        i in red -> flat(a.error, a.errorInk)
+        i == cursor -> a.selected
+        i in inWord -> flat(a.given, a.givenInk)
+        else -> flat(a.square, a.squareInk)
+    }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MiniState
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.pair(s.answer.hashCode())
         val word = BoardHues.mark(hueA).copy(alpha = if (dark) 0.3f else 0.22f).compositeOver(scheme.surface)
         val here = BoardHues.mark(hueA).copy(alpha = if (dark) 0.7f else 0.55f).compositeOver(scheme.surface)
         val ink = BoardHues.ink(hueB, dark)
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
 
         val slots = remember(s.size, s.answer) { MiniLogic.slots(s.size, s.answer) }
         val units = remember(slots) { slots.map { it.squares } }
@@ -327,19 +350,33 @@ object Mini : PuzzleType {
                     modifier = Modifier.highlightGrid(s.size, s.size),
                     feel = feel,
                     tint = { i ->
-                        when {
-                            i == s.cursor -> here
-                            i in inWord -> word
-                            else -> scheme.surface
-                        }
+                        if (!classic) arcadeSquare(a, i, s.cursor, inWord, red)
+                        else flat(
+                            when {
+                                i == s.cursor -> here
+                                i in inWord -> word
+                                else -> scheme.surface
+                            },
+                        )
                     },
-                    letterColour = { i -> if (i in red) scheme.error else if (i == s.cursor || i in inWord) scheme.onSurface else ink },
+                    letterColour = { i ->
+                        if (!classic) arcadeSquare(a, i, s.cursor, inWord, red).ink
+                        else if (i in red) scheme.error else if (i == s.cursor || i in inWord) scheme.onSurface else ink
+                    },
                     squareModifier = { i ->
                         val look = highlight.look(i)
                         Modifier
                             .dimmed(look)
                             .ring(look, glow, pulse, corner = 4.dp)
-                            .then(if (i in red) Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp)) else Modifier)
+                            .then(
+                                when {
+                                    i !in red -> Modifier
+                                    classic -> Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp))
+                                    // Red, and an edge in its ink, so it is not the colour alone.
+                                    else -> Modifier.border(2.dp, a.errorInk, RoundedCornerShape(6.dp))
+                                }
+                            )
+                            .then(if (!classic && i == s.cursor && i !in red) Modifier.border(2.dp, a.selectedEdge, RoundedCornerShape(6.dp)) else Modifier)
                             .clickable(enabled = interactive) { onState(s.select(i)) }
                     },
                 )
@@ -365,7 +402,7 @@ object Mini : PuzzleType {
                         .keepClear()
                         .ring(clueLook, glow, pulse, corner = 8.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(word),
+                        .background(if (classic) word else a.given),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ClueArrow("‹", interactive) { onState(s.selectSlot(((current ?: 0) - 1 + slots.size) % slots.size)) }
@@ -376,7 +413,7 @@ object Mini : PuzzleType {
                         Text(
                             if (current == null) "Tap a square to start." else "${slots[current].number}${if (slots[current].across) "A" else "D"}  ${s.clues[current]}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = scheme.onSurface,
+                            color = if (classic) scheme.onSurface else a.givenInk,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -411,22 +448,25 @@ object Mini : PuzzleType {
     @Composable
     private fun ClueArrow(label: String, enabled: Boolean, onClick: () -> Unit) {
         Box(Modifier.width(36.dp).fillMaxHeight().clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
-            Text(label, fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            Text(label, fontSize = 22.sp, color = if (classicLook()) MaterialTheme.colorScheme.onSurfaceVariant else ArcadeBoard.current.givenInk, textAlign = TextAlign.Center)
         }
     }
 
     @Composable
     private fun Key(label: String, modifier: Modifier, enabled: Boolean, small: Boolean = false, onClick: () -> Unit) {
         val scheme = MaterialTheme.colorScheme
+        // Arcade's keys are Lexicon's: the control's gradient, lifted off the page.
+        val key = if (classicLook()) null else ArcadeBoard.current.control
         Box(
             modifier
                 .height(KEY_HEIGHT)
+                .then(if (key != null) Modifier.arcadeLift(key, 6.dp) else Modifier)
                 .clip(RoundedCornerShape(6.dp))
-                .background(scheme.surfaceVariant)
+                .background(key?.brush ?: SolidColor(scheme.surfaceVariant))
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(label, fontSize = if (small) 12.sp else 16.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, maxLines = 1)
+            Text(label, fontSize = if (small) 12.sp else 16.sp, fontWeight = if (key != null) FontWeight.Bold else FontWeight.SemiBold, color = key?.ink ?: scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 

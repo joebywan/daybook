@@ -48,7 +48,13 @@ import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
 import kotlinx.serialization.Serializable
 
 /**
@@ -156,13 +162,13 @@ object Codeword : PuzzleType {
     private fun Grid(
         s: CodewordState,
         square: Dp,
-        tint: (Int) -> Color,
+        tint: (Int) -> ArcadeFill,
         letterColour: (number: Int) -> Color,
         modifier: Modifier = Modifier,
         feel: MoveFeel = MoveFeel.Still,
         squareModifier: @Composable (index: Int, number: Int) -> Modifier = { _, _ -> Modifier },
     ) = CrosswordGrid(
-        s.size, square, TEXT, vivid(accent),
+        s.size, square, TEXT, if (classicLook()) vivid(accent) else ArcadeBoard.current.selected.from,
         black = { s.numbers[it] == 0 },
         number = { s.numbers[it] },
         letter = { i -> s.letters[s.numbers[i] - 1].takeIf { it != EMPTY }?.let(::up) },
@@ -185,12 +191,28 @@ object Codeword : PuzzleType {
             val square = minOf(maxWidth, maxHeight) / s.size
             val dark = BoardHues.isDark(scheme)
             val (hueA, hueB) = BoardHues.HUE_PAIRS[1]
-            Grid(
+            val a = ArcadeBoard.current
+            if (classicLook()) Grid(
                 s, square,
-                tint = { i -> if (s.numbers[i] == PREVIEW_PICK) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f).compositeOver(scheme.surfaceVariant) else scheme.surfaceVariant },
+                tint = { i -> flat(if (s.numbers[i] == PREVIEW_PICK) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f).compositeOver(scheme.surfaceVariant) else scheme.surfaceVariant) },
                 letterColour = { n -> if (n in s.given) scheme.onSurface else BoardHues.ink(hueB, dark) },
+            ) else Grid(
+                s, square,
+                tint = { i -> arcadeSquare(a, s.numbers[i], s.given, PREVIEW_PICK, emptySet()) },
+                letterColour = { n -> arcadeSquare(a, n, s.given, PREVIEW_PICK, emptySet()).ink },
             )
         }
+    }
+
+    /** A flat [ArcadeFill]: Classic's squares, and Arcade's plain ones. */
+    private fun flat(c: Color, ink: Color = Color.Unspecified) = ArcadeFill(c, c, ink)
+
+    /** Arcade's square for number [n]: a clash red, the picked number amber, a given lavender, the rest plain. */
+    private fun arcadeSquare(a: ArcadeBoard, n: Int, given: List<Int>, selected: Int?, wrong: Set<Int>): ArcadeFill = when {
+        n in wrong -> flat(a.error, a.errorInk)
+        n == selected -> a.selected
+        n in given -> flat(a.given, a.givenInk)
+        else -> flat(a.square, a.squareInk)
     }
 
     // ---- the board ---------------------------------------------------------------------------
@@ -199,11 +221,13 @@ object Codeword : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as CodewordState
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
         val pick = BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f)
         val ink = BoardHues.ink(hueB, dark)
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
         val k = s.letters.size
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
@@ -243,9 +267,13 @@ object Codeword : PuzzleType {
                     s, square,
                     modifier = Modifier.highlightGrid(s.size, s.size),
                     feel = feel,
-                    tint = { i -> if (s.numbers[i] == s.selected) pick.compositeOver(scheme.surface) else scheme.surface },
+                    tint = { i ->
+                        if (classic) flat(if (s.numbers[i] == s.selected) pick.compositeOver(scheme.surface) else scheme.surface)
+                        else arcadeSquare(a, s.numbers[i], s.given, s.selected, shown.numbers)
+                    },
                     letterColour = { n ->
                         when {
+                            !classic -> arcadeSquare(a, n, s.given, s.selected, shown.numbers).ink
                             n in shown.numbers -> scheme.error
                             n in s.given || n == s.selected -> scheme.onSurface
                             else -> ink
@@ -256,7 +284,14 @@ object Codeword : PuzzleType {
                         Modifier
                             .dimmed(look)
                             .ring(look, glow, pulse, corner = 4.dp)
-                            .then(if (i in red) Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp)) else Modifier)
+                            .then(
+                                when {
+                                    i !in red -> Modifier
+                                    classic -> Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp))
+                                    // On a square already red, its ink parts the edge from the fill.
+                                    else -> Modifier.border(2.dp, if (n in shown.numbers) a.errorInk else a.error, RoundedCornerShape(6.dp))
+                                }
+                            )
                             .clickable(enabled = interactive && n !in s.given) { onState(s.select(n)) }
                     },
                 )
@@ -272,31 +307,41 @@ object Codeword : PuzzleType {
                             if (n > k) { Spacer(Modifier.weight(1f)); continue }
                             val l = s.letters[n - 1]
                             val given = n in s.given
+                            val keyShape = RoundedCornerShape(6.dp)
+                            val key = if (classic) null else arcadeSquare(a, n, s.given, s.selected, shown.numbers)
                             Column(
                                 Modifier
                                     .weight(1f)
                                     .height(NUMBER_KEY_HEIGHT)
                                     .highlightAnchor(CodewordLogic.key(n))
                                     .ring(highlight.look(CodewordLogic.key(n), dims = false), glow, pulse, corner = 6.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(
+                                    .then(if (n == s.selected && key != null) Modifier.arcadeLift(key, 6.dp) else Modifier)
+                                    .clip(keyShape)
+                                    .then(
                                         when {
-                                            s.selected == n -> pick.compositeOver(scheme.surface)
-                                            given -> scheme.surfaceVariant
-                                            else -> scheme.surface
-                                        },
+                                            key == null -> Modifier.background(
+                                                when {
+                                                    s.selected == n -> pick.compositeOver(scheme.surface)
+                                                    given -> scheme.surfaceVariant
+                                                    else -> scheme.surface
+                                                },
+                                            )
+                                            n == s.selected -> Modifier.background(key.brush).border(2.dp, a.selectedEdge, keyShape)
+                                            else -> Modifier.background(key.brush)
+                                        }
                                     )
                                     .clickable(enabled = interactive && !given) { onState(s.select(n)) },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text(n.toString(), fontSize = 9.sp, lineHeight = 10.sp, color = scheme.onSurfaceVariant)
+                                Text(n.toString(), fontSize = 9.sp, lineHeight = 10.sp, color = key?.ink?.copy(alpha = 0.75f) ?: scheme.onSurfaceVariant)
+                                // The digit scale's clue size for the key's height, its line held to the key's room under the number.
                                 Text(
                                     if (l == EMPTY) "·" else up(l),
-                                    fontSize = 14.sp,
-                                    lineHeight = 16.sp,
+                                    style = BoardGlyph.CLUE.style(NUMBER_KEY_HEIGHT).copy(lineHeight = 16.sp),
                                     fontWeight = if (given) FontWeight.Bold else FontWeight.Medium,
                                     color = when {
+                                        key != null -> if (l == EMPTY) key.ink.copy(alpha = 0.45f) else key.ink
                                         n in shown.numbers -> scheme.error
                                         l == EMPTY -> scheme.outline
                                         given || n == s.selected -> scheme.onSurface
@@ -317,19 +362,36 @@ object Codeword : PuzzleType {
                             val l = row * LETTERS_A_ROW + slot
                             val owner = holder[l].takeIf { it != 0 && it != s.selected }
                             val at = s.selected
+                            val chosen = at != null && s.letters[at - 1] == l
+                            val keyShape = RoundedCornerShape(6.dp)
+                            // Arcade, as Sudoku's pad: the control's gradient, lifted; the picked number's letter amber; one
+                            // another number holds lies flat.
+                            val key = when {
+                                classic -> null
+                                chosen -> a.selected
+                                owner != null -> flat(a.given, a.givenInk.copy(alpha = 0.6f))
+                                else -> a.control
+                            }
                             Box(
                                 Modifier
                                     .weight(1f)
                                     .height(LETTER_KEY_HEIGHT)
                                     .highlightAnchor(CodewordLogic.letterKey(l))
                                     .ring(highlight.look(CodewordLogic.letterKey(l), dims = false), glow, pulse, corner = 6.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(
+                                    .then(if (key != null && owner == null) Modifier.arcadeLift(key, 6.dp) else Modifier)
+                                    .clip(keyShape)
+                                    .then(
                                         when {
-                                            at != null && s.letters[at - 1] == l -> pick.compositeOver(scheme.surface)
-                                            owner != null -> scheme.surfaceVariant
-                                            else -> scheme.surface
-                                        },
+                                            key == null -> Modifier.background(
+                                                when {
+                                                    chosen -> pick.compositeOver(scheme.surface)
+                                                    owner != null -> scheme.surfaceVariant
+                                                    else -> scheme.surface
+                                                },
+                                            )
+                                            chosen -> Modifier.background(key.brush).border(2.dp, a.selectedEdge, keyShape)
+                                            else -> Modifier.background(key.brush)
+                                        }
                                     )
                                     .clickable(enabled = interactive && at != null) {
                                         val next = s.enter(at ?: return@clickable, l)
@@ -337,13 +399,13 @@ object Codeword : PuzzleType {
                                     },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(up(l), fontSize = 16.sp, color = if (owner != null) scheme.outline else scheme.onSurface)
+                                Text(up(l), fontSize = 16.sp, color = key?.ink ?: if (owner != null) scheme.outline else scheme.onSurface)
                                 if (owner != null) Text(
                                     owner.toString(),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp),
                                     fontSize = 9.sp,
                                     lineHeight = 10.sp,
-                                    color = scheme.outline,
+                                    color = key?.ink ?: scheme.outline,
                                 )
                             }
                         }

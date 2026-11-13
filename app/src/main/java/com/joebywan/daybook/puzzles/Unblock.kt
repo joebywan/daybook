@@ -49,7 +49,12 @@ import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import com.joebywan.daybook.ui.wall
 import kotlin.math.roundToInt
 
@@ -127,7 +132,11 @@ object Unblock : PuzzleType {
         val body = BoardHues.mark(hue).copy(alpha = alpha)
         val rim = BoardHues.deep(hue).copy(alpha = alpha)
         val r = CornerRadius(unit * 0.22f)
-        drawRoundRect(body, Offset(x, y), Size(cw, ch), r)
+        // Arcade's body runs from the hue's mark towards its deep step, so a car reads as a sticker; Classic's is flat.
+        if (classicLook()) drawRoundRect(body, Offset(x, y), Size(cw, ch), r)
+        else drawRoundRect(
+            Brush.linearGradient(listOf(body, lerp(body, rim, 0.45f)), Offset(x, y), Offset(x + cw, y + ch)), Offset(x, y), Size(cw, ch), r,
+        )
         drawRoundRect(rim, Offset(x, y), Size(cw, ch), r, style = Stroke(unit * 0.06f))
         // A windscreen across the front end (the right or bottom), a little in from it.
         val glass = Color.White.copy(alpha = 0.55f * alpha)
@@ -144,6 +153,38 @@ object Unblock : PuzzleType {
                 style = Stroke(unit * 0.08f, cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
         }
+    }
+
+    /**
+     * Arcade's yard: the board's frame showing between plain squares, the exit row's last square open to the edge, and the
+     * exit's chevron outside it in [ink].
+     */
+    private fun DrawScope.drawArcadeYard(unit: Float, a: ArcadeBoard, ink: Color) {
+        val n = UnblockLogic.SIZE
+        val e = n * unit
+        val gap = maxOf(2f, unit * 0.06f)
+        drawRoundRect(a.frame, Offset.Zero, Size(e, e), CornerRadius(unit * 0.18f))
+        val corner = CornerRadius(unit * 0.12f)
+        for (q in 0 until n * n) {
+            val c = q % n
+            val r = q / n
+            val exit = r == UnblockLogic.EXIT_ROW && c == n - 1
+            drawRoundRect(a.square, Offset(c * unit + gap / 2, r * unit + gap / 2), Size(unit - gap + if (exit) gap / 2 else 0f, unit - gap), corner)
+        }
+        val w = maxOf(2f, unit * 0.07f)
+        val cy = (UnblockLogic.EXIT_ROW + 0.5f) * unit
+        val d = minOf(unit * 0.18f, 8.dp.toPx())
+        val cx = e + d * 1.1f
+        drawPath(
+            Path().apply { moveTo(cx - d * 0.5f, cy - d); lineTo(cx + d * 0.5f, cy); lineTo(cx - d * 0.5f, cy + d) },
+            ink, style = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+    }
+
+    /** The yard in the look showing: Arcade's ([drawArcadeYard]) or Classic's ([drawYard]). */
+    private fun DrawScope.drawYardFor(unit: Float, scheme: ColorScheme) {
+        if (classicLook()) drawYard(unit, scheme.surface, scheme.wall, scheme.onSurfaceVariant.copy(alpha = 0.25f))
+        else ArcadeBoard.of(scheme).let { drawArcadeYard(unit, it, it.squareInk) }
     }
 
     /** The yard: a page, a faint dot in every square, and a frame open at the exit. */
@@ -208,7 +249,7 @@ object Unblock : PuzzleType {
             val n = UnblockLogic.SIZE
             val unit = minOf(size.width / (n + 0.6f), size.height / (n + 0.2f))
             translate((size.width - n * unit) / 2 - unit * 0.15f, (size.height - n * unit) / 2) {
-                drawYard(unit, scheme.surface, scheme.wall, scheme.onSurfaceVariant.copy(alpha = 0.25f))
+                drawYardFor(unit, scheme)
                 drawCars(motif, unit, -1, 0f, null)
             }
         }
@@ -229,7 +270,9 @@ object Unblock : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as UnblockState
         val scheme = MaterialTheme.colorScheme
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
         val n = UnblockLogic.SIZE
         val live = interactive && !s.solved
         val owners = remember(s.cars) { UnblockLogic.owners(s.cars) }
@@ -284,7 +327,7 @@ object Unblock : PuzzleType {
                 Modifier
                     .size(step * n)
                     .highlightGrid(n, n)
-                    .gridCursor(cursor.takeIf { live }, n, n, scheme.primary)
+                    .gridCursor(cursor.takeIf { live }, n, n, if (classic) scheme.primary else a.selectedEdge)
                     .pointerInput(s, live) {
                         if (!live) return@pointerInput
                         awaitEachGesture {
@@ -311,7 +354,7 @@ object Unblock : PuzzleType {
                     },
             ) {
                 val unit = size.width / n
-                drawYard(unit, scheme.surface, scheme.wall, scheme.onSurfaceVariant.copy(alpha = 0.25f))
+                drawYardFor(unit, scheme)
                 val d = drag
                 drawCars(s.cars, unit, d?.car ?: -1, d?.by ?: 0f, feel)
                 drawHintDim(highlight, n, n, unit, scheme.background)

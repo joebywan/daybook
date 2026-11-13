@@ -54,10 +54,10 @@ private val SHAPES: Map<Char, Shapes> by lazy {
     ART.mapValues { (_, a) -> Shapes(a.body.map(::parse), a.detail.map(::parse)) }
 }
 
-private val WHITE_FILL = Color(0xFFF6F2E8)
-private val WHITE_LINE = Color(0xFF1C1B1F)
-private val BLACK_FILL = Color(0xFF2B2A30)
-private val BLACK_LINE = Color(0xFFF6F2E8)
+internal val WHITE_FILL = Color(0xFFF6F2E8)
+internal val WHITE_LINE = Color(0xFF1C1B1F)
+internal val BLACK_FILL = Color(0xFF2B2A30)
+internal val BLACK_LINE = Color(0xFFF6F2E8)
 
 /** The outline, in 100ths of the piece, so it thickens with the cell. */
 private const val OUTLINE = 6f

@@ -144,10 +144,11 @@ class EquationRulesTest {
             val rounds = if (n < 1000) 2 else 1
             for (round in 0 until rounds) {
                 val days = (0 until n).map { from + round.toLong() * n + it }
-                val seen = days.map { d ->
+                // The index alone for the whole round (a board also walks the hints to pick its opener); boards for a few days.
+                val seen = days.mapIndexed { i, d ->
                     val seed = SeedHash.daily(d, "equation", tier)
                     assertEquals(d - from, SeedHash.cycleDay(seed, "equation"))
-                    EquationLogic.newBoard(seed, tier).answer
+                    answers[EquationLogic.cycle(d - from, tier)].also { if (i < 20) assertEquals(it, EquationLogic.newBoard(seed, tier).answer) }
                 }
                 assertEquals("${tier.name} round $round", answers.toSet(), seen.toSet())
             }
@@ -170,6 +171,16 @@ class EquationRulesTest {
         }
         println("enumeration ms, 6 / 7 / 8 symbols: $times")
         assertTrue("$times", times.all { it < 1000 })
+        // A board walks the hints from its opener (again from the next on the rare board they lose): the JVM's figure.
+        for (tier in Difficulty.entries) {
+            val ms = (0 until 200).map { day ->
+                val t = TimeSource.Monotonic.markNow()
+                EquationSupport.board(day, tier)
+                t.elapsedNow().inWholeMicroseconds / 1000.0
+            }.sorted()
+            println("${tier.name} board ms median / p95 / max: ${ms[100]} / ${ms[190]} / ${ms.last()}")
+            assertTrue("$ms", ms.last() < 500)
+        }
     }
 
     @Test

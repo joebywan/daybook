@@ -1,6 +1,12 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -251,7 +257,10 @@ object Cipher : PuzzleType {
     private fun tileOrigin(sum: CipherSum, row: Int, col: Int, slot: Float): Offset =
         Offset((sum.width - col) * slot, (row + if (row == sum.rows - 1) RULE else 0f) * slot)
 
-    /** The sum: a column for the plus sign, then right-aligned tiles, a rule, and the total. */
+    /**
+     * The sum: a column for the plus sign, then right-aligned tiles, a rule, and the total. A tile's [tileFill] lifts it off
+     * the page in Arcade (its glow or hard shadow; Classic draws neither).
+     */
     @Composable
     private fun SumTiles(
         sum: CipherSum,
@@ -259,12 +268,13 @@ object Cipher : PuzzleType {
         selected: Int?,
         slot: Dp,
         ruleInk: Color,
-        tileColour: (letter: Int) -> Color,
+        tileFill: (letter: Int) -> ArcadeFill,
         textColour: (letter: Int, placed: Boolean) -> Color,
         modifier: Modifier = Modifier,
         tileModifier: @Composable (row: Int, col: Int, letter: Int) -> Modifier = { _, _, _ -> Modifier },
     ) {
         val scheme = MaterialTheme.colorScheme
+        val edge = if (classicLook()) scheme.onBackground else ArcadeBoard.current.selectedEdge
         val tile = slot * TILE
         Box(modifier.size(slot * (sum.width + 1), slot * (sum.rows + RULE))) {
             Canvas(Modifier.fillMaxSize()) {
@@ -283,14 +293,17 @@ object Cipher : PuzzleType {
                 val l = sum.letterAt(r, c)
                 val at = tileOrigin(sum, r, c, slot.value)
                 val placed = digits[l] != EMPTY
+                val fill = tileFill(l)
+                val corner = minOf(8.dp, tile * 0.16f)
                 Box(
                     Modifier
                         .padding(start = at.x.dp, top = at.y.dp)
                         .size(tile)
                         .then(tileModifier(r, c, l))
-                        .clip(RoundedCornerShape(minOf(8.dp, tile * 0.16f)))
-                        .background(tileColour(l))
-                        .then(if (selected == l) Modifier.border(2.5.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier),
+                        .arcadeLift(fill, corner)
+                        .clip(RoundedCornerShape(corner))
+                        .background(fill.brush)
+                        .then(if (selected == l) Modifier.border(2.5.dp, edge, RoundedCornerShape(8.dp)) else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     val letter = sum.name(l)
@@ -299,17 +312,20 @@ object Cipher : PuzzleType {
                         if (tile >= 28.dp) Text(
                             letter,
                             Modifier.align(Alignment.TopStart).padding(start = tile * 0.08f, top = tile * 0.02f),
-                            fontSize = (tile * 0.24f).boardSp(), lineHeight = (tile * 0.24f).boardSp() * 1.2f,
+                            style = BoardGlyph.CORNER.style(tile),
                             color = textColour(l, false).copy(alpha = 0.75f),
                         )
-                        Text(digits[l].toString(), fontSize = (tile * 0.56f).boardSp(), lineHeight = (tile * 0.56f).boardSp() * 1.2f, fontWeight = FontWeight.Medium, color = textColour(l, true))
+                        Text(digits[l].toString(), style = BoardGlyph.ENTERED.style(tile), color = textColour(l, true))
                     } else {
-                        Text(letter, fontSize = (tile * 0.5f).boardSp(), lineHeight = (tile * 0.5f).boardSp() * 1.2f, fontWeight = FontWeight.Bold, color = textColour(l, false))
+                        Text(letter, style = BoardGlyph.GIVEN.style(tile), color = textColour(l, false))
                     }
                 }
             }
         }
     }
+
+    /** A flat [ArcadeFill]: Classic's tiles, and Arcade's plain ones. */
+    private fun flat(c: Color, ink: Color = Color.Unspecified) = ArcadeFill(c, c, ink)
 
     // ---- home-grid motif -------------------------------------------------------------------
 
@@ -320,13 +336,23 @@ object Cipher : PuzzleType {
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val sum = CipherSum(TUTORIAL_WORDS)
             val slot = minOf(maxWidth / (sum.width + 1), maxHeight / (sum.rows + RULE))
-            val dark = BoardHues.isDark(scheme)
-            val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
-            SumTiles(
-                sum, digits = listOf(EMPTY, 1, 2, EMPTY), selected = null, slot = slot, ruleInk = BoardHues.ink(hueA, dark),
-                tileColour = { if (it == T) BoardHues.fill(hueB, dark) else scheme.surfaceVariant },
-                textColour = { _, placed -> if (placed) BoardHues.ink(hueB, dark) else scheme.onSurface },
-            )
+            val digits = listOf(EMPTY, 1, 2, EMPTY)
+            if (classicLook()) {
+                val dark = BoardHues.isDark(scheme)
+                val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
+                SumTiles(
+                    sum, digits, selected = null, slot = slot, ruleInk = BoardHues.ink(hueA, dark),
+                    tileFill = { flat(if (it == T) BoardHues.fill(hueB, dark) else scheme.surfaceVariant) },
+                    textColour = { _, placed -> if (placed) BoardHues.ink(hueB, dark) else scheme.onSurface },
+                )
+            } else {
+                val a = ArcadeBoard.current
+                SumTiles(
+                    sum, digits, selected = null, slot = slot, ruleInk = a.squareInk,
+                    tileFill = { if (digits[it] != EMPTY) a.control else flat(a.given, a.givenInk) },
+                    textColour = { l, _ -> if (digits[l] != EMPTY) a.control.ink else a.givenInk },
+                )
+            }
         }
     }
 
@@ -337,11 +363,13 @@ object Cipher : PuzzleType {
         val s = state as CipherState
         val sum = s.sum
         val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
         val mark = BoardHues.mark(hueA)
         val ink = BoardHues.ink(hueB, dark)
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(ink = a.selected.from)
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
         val live = remember(s.digits) { CipherLogic.conflicts(sum, s.digits) }
@@ -362,6 +390,15 @@ object Cipher : PuzzleType {
             columns,
         ) { CipherLogic.columnAddsUp(sum, s.digits, it) }
 
+        // Arcade: a letter is a given (lavender) until the player gives it a digit (the control's gradient, as Sudoku's), the
+        // selected letter amber with an edge, a clash red. A column that does not add up keeps its red edge, so not colour alone.
+        fun arcadeFill(l: Int): ArcadeFill = when {
+            l in shown.letters -> flat(a.error, a.errorInk)
+            s.selected == l -> a.selected
+            s.digits[l] != EMPTY -> a.control
+            else -> flat(a.given, a.givenInk)
+        }
+
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
@@ -380,7 +417,7 @@ object Cipher : PuzzleType {
             val slot = minOf(maxWidth / (sum.width + 1), room / (sum.rows + RULE), MAX_SLOT)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 SumTiles(
-                    sum, s.digits, s.selected, slot, ruleInk = BoardHues.ink(hueA, dark),
+                    sum, s.digits, s.selected, slot, ruleInk = if (classic) BoardHues.ink(hueA, dark) else a.squareInk,
                     modifier = Modifier.reportHighlight { size, h ->
                         val px = size.width / (sum.width + 1f)
                         var out: Rect? = null
@@ -392,9 +429,13 @@ object Cipher : PuzzleType {
                         }
                         out
                     },
-                    tileColour = { l -> if (s.selected == l) mark.copy(alpha = if (dark) 0.55f else 0.4f) else scheme.surfaceVariant },
+                    tileFill = { l ->
+                        if (classic) flat(if (s.selected == l) mark.copy(alpha = if (dark) 0.55f else 0.4f) else scheme.surfaceVariant)
+                        else arcadeFill(l)
+                    },
                     textColour = { l, placed ->
                         when {
+                            !classic -> arcadeFill(l).ink
                             l in shown.letters -> scheme.error
                             // On the selection's tint the player's hue would be faint.
                             placed && s.selected == l -> scheme.onSurface
@@ -405,10 +446,10 @@ object Cipher : PuzzleType {
                     tileModifier = { r, c, l ->
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
-                            .moveFeel(feel, r * sum.width + c, vivid(accent))
+                            .moveFeel(feel, r * sum.width + c, if (classic) vivid(accent) else a.selected.from)
                             .dimmed(look)
                             .ring(look, glow, pulse, corner = 8.dp)
-                            .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)
+                            .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, if (classic) scheme.error else a.error, RoundedCornerShape(8.dp)) else Modifier)
                             .clickable(enabled = interactive) { onState(s.select(l)) }
                     },
                 )
@@ -419,23 +460,36 @@ object Cipher : PuzzleType {
                 Row(Modifier.fillMaxWidth().keepClear(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     sum.letters.indices.forEach { l ->
                         val look = highlight.look(CipherLogic.key(l), dims = false)
+                        val picked = s.selected == l
+                        val keyShape = RoundedCornerShape(8.dp)
                         Column(
                             Modifier
                                 .weight(1f)
                                 .height(KEY_HEIGHT)
                                 .highlightAnchor(CipherLogic.key(l))
                                 .ring(look, glow, pulse, corner = 8.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (s.selected == l) mark.copy(alpha = if (dark) 0.55f else 0.4f) else scheme.surface)
+                                .then(
+                                    when {
+                                        classic -> Modifier.clip(keyShape).background(if (picked) mark.copy(alpha = if (dark) 0.55f else 0.4f) else scheme.surface)
+                                        picked -> Modifier.arcadeLift(a.selected, 8.dp).clip(keyShape).background(a.selected.brush).border(2.dp, a.selectedEdge, keyShape)
+                                        else -> Modifier.clip(keyShape).background(a.square)
+                                    }
+                                )
                                 .clickable(enabled = interactive) { onState(s.select(l)) },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Text(sum.name(l), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+                            Text(sum.name(l), style = MaterialTheme.typography.labelMedium, color = if (classic) scheme.onSurfaceVariant else if (picked) a.selected.ink else a.givenInk)
                             Text(
                                 if (s.digits[l] == EMPTY) "·" else s.digits[l].toString(),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (l in shown.letters) scheme.error else if (s.digits[l] == EMPTY) scheme.outline else ink,
+                                color = when {
+                                    classic -> if (l in shown.letters) scheme.error else if (s.digits[l] == EMPTY) scheme.outline else ink
+                                    picked -> a.selected.ink
+                                    l in shown.letters -> a.error
+                                    s.digits[l] == EMPTY -> a.squareInk.copy(alpha = 0.45f)
+                                    else -> a.squareInk
+                                },
                             )
                         }
                     }
@@ -447,23 +501,39 @@ object Cipher : PuzzleType {
                     (0..9).forEach { digit ->
                         val at = s.selected
                         val owner = s.digits.indices.firstOrNull { s.digits[it] == digit && it != at }
+                        val keyShape = RoundedCornerShape(8.dp)
                         PadKey(
                             CipherLogic.pad(digit), highlight, glow, pulse,
-                            fill = if (owner != null) scheme.surfaceVariant else scheme.surface,
+                            fill = when {
+                                !classic -> Color.Transparent
+                                owner != null -> scheme.surfaceVariant
+                                else -> scheme.surface
+                            },
                             enabled = interactive && at != null,
                             onClick = {
                                 val next = s.enter(at ?: return@PadKey, digit)
                                 if (next !== s) onState(next)
                             },
+                            // Arcade, as Sudoku's pad: the control's gradient, lifted; a digit another letter holds lies flat.
+                            modifier = when {
+                                classic -> Modifier
+                                owner != null -> Modifier.background(a.given, keyShape)
+                                else -> Modifier.arcadeLift(a.control, 8.dp).background(a.control.brush, keyShape)
+                            },
                             corner = 8.dp,
                         ) {
-                            Text(digit.toString(), style = MaterialTheme.typography.titleMedium, color = if (owner != null) scheme.outline else scheme.onSurface)
+                            val used = if (classic) scheme.outline else a.givenInk.copy(alpha = 0.6f)
+                            Text(
+                                digit.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (owner != null) used else if (classic) scheme.onSurface else a.control.ink,
+                            )
                             if (owner != null) {
                                 Text(
                                     sum.name(owner),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
                                     fontSize = 10.dp.boardSp(), lineHeight = 10.dp.boardSp() * 1.2f,
-                                    color = scheme.outline,
+                                    color = used,
                                 )
                             }
                         }
