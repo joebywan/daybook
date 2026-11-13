@@ -958,7 +958,8 @@ bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, 
   `lastResort` is seed 424242's board per tier, accepted by a test; a year never reaches it (`FallbackTest`).
 - **`solved` checks the rules**; a mistake is a line off the one loop or a cross on it, sound because the loop is unique.
   Red after a 1 s settle, from the lines alone: a number with too many lines, a dot with three, a closed loop that is not the
-  whole answer. A number with all its lines drawn steps back (lighter, smaller), so colour is never the only signal.
+  whole answer. A number with all its lines drawn steps back (lighter, smaller), so colour is never the only signal; a 0, which
+  draws none, steps back once every side is crossed or the board is solved (`Loop.stepsBack`).
 - **Hints never fall back** (the ladder is the generator's). Over 200 boards a tier: 31 / 59 / 122 steps a board, small loop
   0 / 1.8 / 2.9 and what-if 0 / 0 / 10.2 a board; Expert hint median 0.03 ms, max 4 ms. A dot with two lines has its other
   edges read as crossed (`LoopEdges.view`). Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`, dot `d` is

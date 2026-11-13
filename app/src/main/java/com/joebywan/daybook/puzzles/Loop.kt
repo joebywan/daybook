@@ -54,8 +54,24 @@ import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.theme.vivid
+
+/**
+ * The Arcade look's loop line, Loop's and Pearls': a hot pink that reads on a plain square and on a numbered one in either
+ * scheme (`ArcadeLinesTest`). Classic draws its board pair's ink instead, as it always did.
+ */
+internal object LoopLine {
+    val Light = Color(0xFFC2177E)
+    val Dark = Color(0xFFFF6AD5)
+
+    fun of(dark: Boolean) = if (dark) Dark else Light
+
+    /** A cross (a note, no line here) in Arcade: the square's ink at this much. */
+    const val CROSS = 0.6f
+}
 
 /**
  * Loop: draw one closed loop along the sides of the squares, from dot to dot, so that every number has exactly that many
@@ -286,8 +302,17 @@ object Loop : PuzzleType {
         val lit = !highlight.isEmpty
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = hues
+        // Arcade draws from ArcadeBoard (numbers are its givens, on its given tiles) and LoopLine; Classic (classicLook)
+        // draws exactly what it drew before.
+        val arcade = !classicLook()
+        val a = ArcadeBoard.of(scheme)
         val tint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.40f else 0.24f)
-        val ink = BoardHues.ink(hueB, dark)
+        val ink = if (arcade) LoopLine.of(dark) else BoardHues.ink(hueB, dark)
+        val error = if (arcade) a.error else scheme.error
+        val numberInk = if (arcade) a.givenInk else scheme.onSurface
+        val metInk = if (arcade) a.givenInk.copy(alpha = 0.5f) else scheme.onSurfaceVariant.copy(alpha = 0.55f)
+        val crossInk = if (arcade) a.squareInk.copy(alpha = LoopLine.CROSS) else scheme.onSurfaceVariant
+        val dotInk = if (arcade) a.squareInk else scheme.onSurface
         val lineW = u * 0.13f
         val half = u * 0.5f
         fun dotAt(d: Int) = Offset((d % (n + 1)) * u + half, (d / (n + 1)) * u + half)
@@ -297,25 +322,34 @@ object Loop : PuzzleType {
         val dotBase = n * n + g.edgeCount
         val solved = s.solved
 
-        // The squares, each a light hue-A tint, with its number.
+        if (arcade) {
+            // A plain board round the dots, framed; a numbered square is a given tile on it.
+            val pad = u * 0.24f
+            val panel = Size(n * u + 2 * pad, n * u + 2 * pad)
+            drawRoundRect(a.square, Offset(half - pad, half - pad), panel, CornerRadius(u * 0.26f))
+            drawRoundRect(a.frame, Offset(half - pad, half - pad), panel, CornerRadius(u * 0.26f), style = Stroke(maxOf(u * 0.05f, 1.5f)))
+        }
+
+        // The squares, each a light hue-A tint (Arcade: a given tile under a number, nothing elsewhere), with its number.
         for (q in 0 until n * n) {
             val topLeft = Offset((q % n) * u + half, (q / n) * u + half)
             feelSquare(feel, q, topLeft, Size(u, u), accent) {
-                drawRect(tint, topLeft + Offset(u * 0.05f, u * 0.05f), Size(u * 0.9f, u * 0.9f))
+                if (!arcade) drawRect(tint, topLeft + Offset(u * 0.05f, u * 0.05f), Size(u * 0.9f, u * 0.9f))
+                else if (s.clues[q] != '.') drawRoundRect(a.given, topLeft + Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.14f))
                 val clue = s.clues[q]
                 if (clue != '.') {
                     val k = clue - '0'
                     val met = stepsBack(s, q, solved)
                     val colour = when {
-                        q in broken.squares -> scheme.error
+                        q in broken.squares -> error
                         // A number with nothing left to do steps back (lighter and smaller), so what is left stands out.
-                        met -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
-                        else -> scheme.onSurface
+                        met -> metInk
+                        else -> numberInk
                     }
                     val layout = digits[k + if (met) 5 else 0]
                     val c = topLeft + Offset(half, half)
                     drawText(layout, colour, Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
-                    if (q in broken.squares) drawCircle(scheme.error, u * 0.36f, c, style = Stroke(maxOf(u * 0.06f, 2f)))
+                    if (q in broken.squares) drawCircle(error, u * 0.36f, c, style = Stroke(maxOf(u * 0.06f, 2f)))
                 }
             }
         }
@@ -323,7 +357,7 @@ object Loop : PuzzleType {
         // Lines, dot to dot.
         for (e in 0 until g.edgeCount) {
             if (s.edges[e] != LoopEdges.LINE_MARK) continue
-            drawLine(if (e in broken.edges) scheme.error else ink, dotAt(g.endA[e]), dotAt(g.endB[e]), lineW, StrokeCap.Round)
+            drawLine(if (e in broken.edges) error else ink, dotAt(g.endA[e]), dotAt(g.endB[e]), lineW, StrokeCap.Round)
         }
         // Crosses: a small x on the edge's middle.
         val xs = u * 0.09f
@@ -331,14 +365,14 @@ object Loop : PuzzleType {
         for (e in 0 until g.edgeCount) {
             if (s.edges[e] != LoopEdges.CROSS_MARK) continue
             val m = mid(e)
-            drawLine(scheme.onSurfaceVariant, Offset(m.x - xs, m.y - xs), Offset(m.x + xs, m.y + xs), xw, StrokeCap.Round)
-            drawLine(scheme.onSurfaceVariant, Offset(m.x - xs, m.y + xs), Offset(m.x + xs, m.y - xs), xw, StrokeCap.Round)
+            drawLine(crossInk, Offset(m.x - xs, m.y - xs), Offset(m.x + xs, m.y + xs), xw, StrokeCap.Round)
+            drawLine(crossInk, Offset(m.x - xs, m.y + xs), Offset(m.x + xs, m.y - xs), xw, StrokeCap.Round)
         }
         // The dots, over the lines' ends.
         val dotR = maxOf(u * 0.07f, 2f)
         for (d in 0 until g.nodes) {
-            drawCircle(scheme.onSurface, dotR, dotAt(d))
-            if (d in broken.dots) drawCircle(scheme.error, u * 0.2f, dotAt(d), style = Stroke(maxOf(u * 0.05f, 2f)))
+            drawCircle(dotInk, dotR, dotAt(d))
+            if (d in broken.dots) drawCircle(error, u * 0.2f, dotAt(d), style = Stroke(maxOf(u * 0.05f, 2f)))
         }
 
         if (!lit) return
