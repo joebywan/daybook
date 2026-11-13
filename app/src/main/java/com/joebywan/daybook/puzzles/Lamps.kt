@@ -336,6 +336,8 @@ object Lamps : PuzzleType {
             val y = r * u
             val at = Offset(x + gap / 2, y + gap / 2)
             feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                // A hint steps back what it does not name by fading the marks and numbers, not the tiles: a faded tile
+                // over the deep frame turns to mud.
                 val fade = if (dim && !named(i)) 0.45f else 1f
                 if (s.isWall(i)) {
                     val want = s.numberAt(i)
@@ -346,7 +348,7 @@ object Lamps : PuzzleType {
                         met -> inks.met
                         else -> inks.wall
                     }
-                    drawRoundRect(fill.brush(at, tile), at, tile, corner, alpha = fade)
+                    drawRoundRect(fill.brush(at, tile), at, tile, corner)
                     val ink = fill.ink.copy(alpha = fade)
                     if (bad) {
                         val ring = u * 0.06f
@@ -365,8 +367,8 @@ object Lamps : PuzzleType {
                         drawText(layout, ink, Offset(x + u / 2 - layout.size.width / 2f, y + u / 2 - layout.size.height / 2f))
                     }
                 } else {
-                    if (lit[i]) drawRoundRect(inks.lit.brush(at, tile), at, tile, corner, alpha = fade)
-                    else drawRoundRect(a.square, at, tile, corner, alpha = fade)
+                    if (lit[i]) drawRoundRect(inks.lit.brush(at, tile), at, tile, corner)
+                    else drawRoundRect(a.square, at, tile, corner)
                     when (s.marks[i]) {
                         LampsLogic.LAMP_MARK -> drawLamp(x, y, u, if (i in overlay.badLamps) a.error else inks.bulb, inks.rim, fade)
                         LampsLogic.CROSS -> drawCross(x, y, u, inks.cross.copy(alpha = fade))
