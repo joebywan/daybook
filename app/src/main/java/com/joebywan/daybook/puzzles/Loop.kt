@@ -256,6 +256,17 @@ object Loop : PuzzleType {
         return Breaks(squares, dots, edges)
     }
 
+    /**
+     * Whether square [q]'s number has nothing left to do: its lines all drawn, or for a 0 (which draws none) every side
+     * crossed or the board solved, so a solved board's 0s step back with the rest.
+     */
+    internal fun stepsBack(s: LoopState, q: Int, solved: Boolean = s.solved): Boolean {
+        val k = s.clues[q] - '0'
+        val sides = LoopLogic.sides(s.size, q)
+        return if (k > 0) linesRound(s, q) == k
+        else solved || sides.all { s.edges[it] == LoopEdges.CROSS_MARK }
+    }
+
     // ---- drawing --------------------------------------------------------------------------------
 
     private fun DrawScope.drawBoard(
@@ -284,6 +295,7 @@ object Loop : PuzzleType {
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
         val edgeBase = n * n
         val dotBase = n * n + g.edgeCount
+        val solved = s.solved
 
         // The squares, each a light hue-A tint, with its number.
         for (q in 0 until n * n) {
@@ -293,14 +305,14 @@ object Loop : PuzzleType {
                 val clue = s.clues[q]
                 if (clue != '.') {
                     val k = clue - '0'
-                    val have = linesRound(s, q)
+                    val met = stepsBack(s, q, solved)
                     val colour = when {
                         q in broken.squares -> scheme.error
-                        // A number with its lines all drawn steps back (lighter and smaller), so what is left to do stands out.
-                        have == k && k > 0 -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
+                        // A number with nothing left to do steps back (lighter and smaller), so what is left stands out.
+                        met -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
                         else -> scheme.onSurface
                     }
-                    val layout = digits[k + if (have == k && k > 0) 5 else 0]
+                    val layout = digits[k + if (met) 5 else 0]
                     val c = topLeft + Offset(half, half)
                     drawText(layout, colour, Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
                     if (q in broken.squares) drawCircle(scheme.error, u * 0.36f, c, style = Stroke(maxOf(u * 0.06f, 2f)))
