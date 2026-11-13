@@ -73,7 +73,9 @@ import com.joebywan.daybook.ui.home.sparkle
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.theme.vivid
 import kotlin.math.floor
 import kotlin.math.sqrt
@@ -255,7 +257,7 @@ object Pointers : PuzzleType {
     // ---- colour -----------------------------------------------------------------------------------
 
     /** Blue, Amber, Violet, Teal: no Coral or Green (a bump is drawn in the error colour), no Rose (near the error). */
-    private val HUES = listOf(215f, 34f, 268f, 175f)
+    internal val HUES = listOf(215f, 34f, 268f, 175f)
 
     /**
      * A hue index per arrow, so arrows that touch differ where four hues allow: each takes the first not already used
@@ -641,8 +643,19 @@ object Pointers : PuzzleType {
                         },
                 ) {
                     val unit = size.width / s.width
-                    drawRoundRect(scheme.surface, cornerRadius = CornerRadius(0.25f * unit))
-                    drawDots(s.width, s.height, unit, scheme.onSurfaceVariant.copy(alpha = 0.35f), feel, vivid(accent))
+                    // Arcade: ArcadeBoard's plain square, framed, its ink for the dots; Classic (classicLook) as before.
+                    if (classicLook()) {
+                        drawRoundRect(scheme.surface, cornerRadius = CornerRadius(0.25f * unit))
+                        drawDots(s.width, s.height, unit, scheme.onSurfaceVariant.copy(alpha = 0.35f), feel, vivid(accent))
+                    } else {
+                        val a = ArcadeBoard.of(scheme)
+                        drawRoundRect(a.square, cornerRadius = CornerRadius(0.25f * unit))
+                        val edge = maxOf(0.08f * unit, 1.5f)
+                        drawRoundRect(
+                            a.frame, Offset(edge / 2, edge / 2), Size(size.width - edge, size.height - edge), CornerRadius(0.25f * unit), style = Stroke(edge),
+                        )
+                        drawDots(s.width, s.height, unit, a.squareInk.copy(alpha = 0.3f), feel, vivid(accent))
+                    }
                     val b = bump
                     val flash = if (b == null) 0f else minOf(1f, 2f * (1f - b.progress.value)) // full warning for the first half, then fading
                     // A finger down on an arrow: the same band as the keyboard cursor's, under it.
