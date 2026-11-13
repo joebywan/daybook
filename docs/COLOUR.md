@@ -29,6 +29,13 @@ The six are hues round the wheel (violet, orange, cyan, magenta, lime, green at 
 palette were tried and dropped: the six whose tiles sit furthest apart gave two magentas, and blue makes the same tile as violet. Classic tiles keep their puzzle's accent.
 The hint glow is the `ArcadeBoard.hint` token (magenta light, amber dark) and the hint card is a plain square edged in it.
 
+**The line boards (2026-11-13): Atoms, Pearls, Loop, Links, Pipes, Arrows, Trail.** A grid of squares takes Tents' tiles
+(`ui/ArcadeTiles.kt`, `drawArcadeTiles`: the frame under plain squares, showing between them); Loop is a plain framed board
+whose numbered squares are given tiles; Atoms and Arrows a plain framed board. The loop line (Loop, Pearls) is `LoopLine`'s
+pink; Trail's line, Pipes' water and a full atom are the control gradient; Trail's numbers are amber stickers (`selected`);
+bonds, walls and dots are the square's ink. Links keeps its pinned pair palette and Arrows its four hues. All measured in
+`ArcadeLinesTest`; each board's Classic drawing is behind `classicLook()`, unchanged.
+
 Why this exists: the old theme was deliberately quiet, ink and parchment with moss. A board that
 draws only with `colorScheme` plus its one `accent` comes out beige and one-note (one board shipped that way: surface
 grey, one teal). The boards that read well (Shikaku's hue-per-region, Nonogram's blended pairs, Kings' regions) all

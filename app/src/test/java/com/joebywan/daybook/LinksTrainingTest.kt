@@ -8,6 +8,7 @@ import com.joebywan.daybook.core.praisedTechniquesOf
 import com.joebywan.daybook.puzzles.Links
 import com.joebywan.daybook.puzzles.LinksLogic
 import com.joebywan.daybook.puzzles.LinksState
+import com.joebywan.daybook.puzzles.LinksTeacher
 import com.joebywan.daybook.ui.Route
 import com.joebywan.daybook.ui.decodeRoute
 import com.joebywan.daybook.ui.encodeRoute
@@ -65,6 +66,32 @@ class LinksTrainingTest {
                 assertEquals(false, LinksTraining.judge(p, b.drag(listOf(wrong.first, wrong.second))))
             }
         }
+    }
+
+    @Test fun `every instance of a technique is the answer's, and drawing another one passes`() {
+        val others = mutableMapOf<String, Int>()
+        for (t in LinksTraining.techniques) {
+            for (p in LinksTraining.practices(t).take(6)) {
+                val b = p.board as LinksState
+                val pick = LinksTeacher.deduce(b.size, b.ends, b.links)!!.lines.toSet()
+                val all = LinksTeacher.steps(b.size, b.ends, b.links, t)
+                assertTrue("$t: the hint's own step is listed", all.any { it.lines.toSet() == pick })
+                for (step in all) {
+                    assertEquals(t, step.technique)
+                    // The board has one answer (the oracle, above), so a forced line is one of the answer's.
+                    assertTrue("$t: ${step.lines} is the answer's", step.lines.all { (a, x) -> answerHas(b, a, x) })
+                }
+                val other = all.firstOrNull { it.lines.toSet() != pick } ?: continue
+                // The player draws it with one drag through its squares.
+                val path = other.lines.flatMap { listOf(it.first, it.second) }.distinct()
+                val drawn = b.drag(path)
+                assertTrue("$t: the drag draws the instance", other.lines.all { (a, x) -> LinksLogic.hasLine(b.size, LinksLogic.masksOf(drawn.links), a, x) })
+                assertEquals("$t: another instance passes", true, LinksTraining.judge(p, drawn))
+                others[t] = (others[t] ?: 0) + 1
+            }
+        }
+        // The local rules have many instances on a fresh board; the drill must have passed some other than the hint's.
+        assertTrue("another instance was tried: $others", (others[LinksTeacher.ONE_WAY] ?: 0) > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

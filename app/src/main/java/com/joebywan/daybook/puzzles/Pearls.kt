@@ -43,7 +43,10 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
+import com.joebywan.daybook.ui.drawArcadeTiles
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.squareDrag
 
@@ -316,20 +319,29 @@ object Pearls : PuzzleType {
         val lit = !highlight.isEmpty
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = hues
+        // Arcade draws from ArcadeBoard and Loop's line; Classic (classicLook) draws exactly what it drew before.
+        val arcade = !classicLook()
+        val a = ArcadeBoard.of(scheme)
         val tint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.40f else 0.24f)
-        val ink = BoardHues.ink(hueB, dark)
+        val ink = if (arcade) LoopLine.of(dark) else BoardHues.ink(hueB, dark)
+        val error = if (arcade) a.error else scheme.error
         val lineW = u * 0.2f
         fun centre(q: Int) = Offset((q % n + 0.5f) * u, (q / n + 0.5f) * u)
         fun mid(e: Int) = (centre(g.endA[e]) + centre(g.endB[e])) / 2f
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
 
-        // Squares, a light hue-A tint over the surface so their middles read.
-        drawRect(scheme.surface, Offset.Zero, Size(n * u, n * u))
-        for (q in 0 until g.nodes) {
-            drawRect(tint, Offset((q % n) * u + u * 0.04f, (q / n) * u + u * 0.04f), Size(u * 0.92f, u * 0.92f))
+        if (arcade) {
+            // Tents' tiles: the frame shows between the squares as the grid lines.
+            drawArcadeTiles(n, n, u, a)
+        } else {
+            // Squares, a light hue-A tint over the surface so their middles read.
+            drawRect(scheme.surface, Offset.Zero, Size(n * u, n * u))
+            for (q in 0 until g.nodes) {
+                drawRect(tint, Offset((q % n) * u + u * 0.04f, (q / n) * u + u * 0.04f), Size(u * 0.92f, u * 0.92f))
+            }
+            // The frame.
+            drawRect(scheme.onSurfaceVariant.copy(alpha = 0.7f), Offset.Zero, Size(n * u, n * u), style = Stroke(maxOf(u * 0.04f, 1.5f)))
         }
-        // The frame.
-        drawRect(scheme.onSurfaceVariant.copy(alpha = 0.7f), Offset.Zero, Size(n * u, n * u), style = Stroke(maxOf(u * 0.04f, 1.5f)))
 
         // Each square's own half of every line it has, and its pearl: drawn per square so a move's squares settle.
         for (q in 0 until g.nodes) {
@@ -339,7 +351,7 @@ object Pearls : PuzzleType {
                 for (d in 0 until 4) {
                     val e = g.edge(q, d)
                     if (e < 0 || s.edges[e] != PearlsLogic.LINE_MARK) continue
-                    val colour = if (e in broken.edges) scheme.error else ink
+                    val colour = if (e in broken.edges) error else ink
                     drawLine(colour, c, mid(e), lineW, StrokeCap.Round)
                 }
                 // The pearl over its own half-lines, so the line runs into it and never hides it.
@@ -357,7 +369,7 @@ object Pearls : PuzzleType {
                         drawCircle(PEARL_BLACK, r, c, style = ring)
                     }
                 }
-                if (bad) drawCircle(scheme.error, u * 0.38f, c, style = Stroke(maxOf(u * 0.08f, 2f)))
+                if (bad) drawCircle(error, u * 0.38f, c, style = Stroke(maxOf(u * 0.08f, 2f)))
             }
         }
 
@@ -367,7 +379,7 @@ object Pearls : PuzzleType {
             if (s.edges[e] != PearlsLogic.CROSS_MARK) continue
             val m = mid(e)
             val w = maxOf(u * 0.05f, 1.2f)
-            val colour = scheme.onSurfaceVariant
+            val colour = if (arcade) a.squareInk.copy(alpha = LoopLine.CROSS) else scheme.onSurfaceVariant
             drawLine(colour, Offset(m.x - xs, m.y - xs), Offset(m.x + xs, m.y + xs), w, StrokeCap.Round)
             drawLine(colour, Offset(m.x - xs, m.y + xs), Offset(m.x + xs, m.y - xs), w, StrokeCap.Round)
         }
