@@ -63,6 +63,9 @@ import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.arcadeHardShadow
+import com.joebywan.daybook.ui.theme.classicLook
 import kotlinx.serialization.Serializable
 
 /**
@@ -130,6 +133,21 @@ object Sets : PuzzleType {
      * only the look moved: 0 was red, 1 blue, 2 green. Colour is one of four traits, never the only one.
      */
     fun palette(dark: Boolean): List<Color> = listOf(34f, 175f, 268f).map { BoardHues.deep(it, dark) }
+
+    /**
+     * The Arcade look's card colours: [palette]'s amber, teal and violet, index for index, at Arcade's pitch on Arcade's card
+     * ([ArcadeBoard.square]), spread over lightness as well as hue. `SetsPaletteTest` holds both palettes to the same floors.
+     */
+    fun arcadePalette(dark: Boolean): List<Color> =
+        if (dark) listOf(Color(0xFFFFC24D), Color(0xFF14A08F), Color(0xFFB59BFF))
+        else listOf(Color(0xFFD97400), Color(0xFF00897A), Color(0xFF7A2FE0))
+
+    /** The card colours of the look showing. */
+    fun colours(dark: Boolean): List<Color> = if (classicLook()) palette(dark) else arcadePalette(dark)
+
+    /** A card's ground: Classic's surface, Arcade's plain square. */
+    @Composable
+    private fun cardGround(): Color = if (classicLook()) MaterialTheme.colorScheme.surface else ArcadeBoard.current.square
 
     /**
      * The two cards on the home tile.
@@ -506,7 +524,6 @@ object Sets : PuzzleType {
 
     @Composable
     override fun Preview(modifier: Modifier) {
-        val scheme = MaterialTheme.colorScheme
         val corner = RoundedCornerShape(8.dp)
         Row(
             modifier.padding(2.dp),
@@ -522,7 +539,7 @@ object Sets : PuzzleType {
                         // spare height goes into the symbols rather than into margin.
                         .aspectRatio(0.64f)
                         .clip(corner)
-                        .background(scheme.surface)
+                        .background(cardGround())
                         .border(1.dp, vivid(accent).copy(alpha = 0.55f), corner),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -656,12 +673,14 @@ object Sets : PuzzleType {
         feel: Modifier,
         onTap: () -> Unit,
     ) {
-        val scheme = MaterialTheme.colorScheme
+        val classic = classicLook()
+        val a = ArcadeBoard.current
+        val ground = cardGround()
         val corner = RoundedCornerShape(12.dp)
         val fill = when {
-            peeked -> vivid(accent).copy(alpha = 0.34f).compositeOver(scheme.surface)
-            used -> vivid(accent).copy(alpha = 0.14f).compositeOver(scheme.surface)
-            else -> scheme.surface
+            peeked -> vivid(accent).copy(alpha = 0.34f).compositeOver(ground)
+            used -> vivid(accent).copy(alpha = 0.14f).compositeOver(ground)
+            else -> ground
         }
         Box(
             Modifier
@@ -671,16 +690,25 @@ object Sets : PuzzleType {
                 // Everything the highlight does not name steps back, so the named cards read at
                 // a glance without hunting for their outlines.
                 .alpha(if (look.dim) 0.4f else 1f)
+                // Arcade: light's cards are stickers, raised on a hard edge; dark's are edged in the frame.
+                .then(if (classic) Modifier else Modifier.arcadeHardShadow(12.dp))
                 .clip(corner)
                 .background(fill)
                 .border(
                     when {
-                        selected -> 2.5.dp
+                        selected -> if (classic) 2.5.dp else 3.dp
                         peeked -> 2.dp
                         used -> 1.dp
-                        else -> 0.dp
+                        classic -> 0.dp
+                        else -> 1.dp
                     },
-                    vivid(accent).copy(alpha = if (selected || peeked) 1f else 0.45f),
+                    when {
+                        classic -> vivid(accent).copy(alpha = if (selected || peeked) 1f else 0.45f)
+                        // A pick is the selection's edge, which parts from every card colour; never a fill, which would hide one.
+                        selected -> a.selectedEdge
+                        peeked || used -> vivid(accent).copy(alpha = if (peeked) 1f else 0.45f)
+                        else -> a.frame
+                    },
                     corner,
                 )
                 .then(
@@ -752,14 +780,13 @@ object Sets : PuzzleType {
      */
     @Composable
     private fun SetSlot(cards: List<Card>?, width: Dp, peeked: Boolean, onPeek: () -> Unit) {
-        val scheme = MaterialTheme.colorScheme
         val corner = RoundedCornerShape(7.dp)
         Box(
             Modifier
                 .width(width)
                 .fillMaxHeight()
                 .clip(corner)
-                .background(if (cards == null) Color.Transparent else scheme.surface)
+                .background(if (cards == null) Color.Transparent else cardGround())
                 .border(
                     if (peeked) 2.dp else 1.dp,
                     vivid(accent).copy(
@@ -798,7 +825,7 @@ object Sets : PuzzleType {
      */
     @Composable
     private fun CardFace(card: Card, inset: Dp) {
-        val colour = palette(BoardHues.isDark(MaterialTheme.colorScheme))[card.colour]
+        val colour = colours(BoardHues.isDark(MaterialTheme.colorScheme))[card.colour]
         Canvas(Modifier.fillMaxSize().padding(inset)) {
             val slots = card.count + 1
             val slotHeight = size.height / 3f

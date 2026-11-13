@@ -8,9 +8,17 @@ converted to Arcade must keep drawing its Classic self (CLAUDE.md, Colour).
 
 **Arcade (2026-10-31).** The app is indigo and vivid now (`ui/theme/Palette.kt`; players asked for more juice). Home and the converted
 boards draw from `ui/theme/ArcadeBoard.kt`: deep frame, plain squares, gradient fills that carry their own ink, measured by `ArcadeBoardTest`.
-Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel; then Cipher, Codeword, Crossword (one shared grid, `CrosswordGrid`), Hexwords, Target, Codebreaker, Mate, Sand and Unblock (2026-11-13: a letter or number the puzzle gives is the `given` lavender, one the player makes the `control` gradient, the selection amber with its edge, keys the control's lifted gradient; Mate's squares are `square` and `given`, its pieces held readable by `ChessSquaresTest`; Sand's and Codebreaker's palettes and Unblock's car hues are unchanged). The other boards still use the layers below on the Arcade scheme, with the
-`vivid()` accents and the retuned hue table, so they are lighter than those six until converted (`docs/TODO.md`). Convert a board by reading Tents' or
+Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel, Dwindle; the line boards (Atoms, Pearls, Loop, Links, Pipes, Arrows,
+Trail; below); Shikaku, LITS, Lamps, Dominoes, Mosaic, Sets (below); then Cipher, Codeword, Crossword (one shared grid, `CrosswordGrid`), Hexwords, Target, Codebreaker, Mate, Sand and Unblock (2026-11-13: a letter or number the puzzle gives is the `given` lavender, one the player makes the `control` gradient, the selection amber with its edge, keys the control's lifted gradient; Mate's squares are `square` and `given`, its pieces held readable by `ChessSquaresTest`; Sand's and Codebreaker's palettes and Unblock's car hues are unchanged). The other boards still use the layers below on the Arcade scheme, with the
+`vivid()` accents and the retuned hue table, so they are lighter than those until converted (`docs/TODO.md`). Convert a board by reading Tents' or
 Sudoku's; a colour of its own goes in its file with a test beside the tokens'.
+
+Also converted (2026-11-13), each keeping its Classic drawing behind `classicLook()`: Shikaku (each rectangle one sticker in its
+hue, `shikakuSticker`, `ShikakuInksTest`), LITS (`LitsInks`: a gradient per piece, the letter in its ink; `LitsInksTest` holds
+the pieces apart colour-blind included), Lamps (`LampsInks`), Dominoes (`DominoInks`; region tints stay `BoardHues`'), Mosaic
+(`Mosaic.arcadePalette`, solid, since the colours are the game) and Sets (`Sets.arcadePalette`). Mosaic's and Sets' palette tests
+hold the Arcade palettes to Classic's floors. Lits', Sets' and Mosaic's Classic colours were already `BoardHues` steps, not the old
+accents the TODO's colour audit describes.
 
 **Arcade's drawn accents (2026-11-13).** `vivid(accent)` in Arcade draws a pair per raw accent, light and dark, from
 `ARCADE_ACCENTS` (`ui/theme/BoardHues.kt`), solved as one set per scheme: each starts at `vividFor`'s colour and may move

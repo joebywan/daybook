@@ -23,15 +23,14 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -56,6 +55,46 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.rememberTwinTaps
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.classicLook
+
+/**
+ * Lamps' own Arcade colours, beyond [ArcadeBoard]'s: walls (deep in light, a pale block in dark, where nothing deeper than the
+ * squares would part from them), a number met (green, a tick besides), the lit wash, the bulb and its rim, the crosses.
+ * Measured in LampsInksTest.
+ */
+internal class LampsInks private constructor(
+    val wall: ArcadeFill,
+    val met: ArcadeFill,
+    val lit: ArcadeFill,
+    val bulb: Color,
+    val rim: Color,
+    val cross: Color,
+) {
+    companion object {
+        val Light = LampsInks(
+            wall = ArcadeFill(Color(0xFF2B1D78), Color(0xFF21145F), Color.White),
+            met = ArcadeFill(Color(0xFF087F5B), Color(0xFF046C4E), Color.White),
+            lit = ArcadeFill(Color(0xFFFFF0B3), Color(0xFFFFE07A), Color(0xFF21145F)),
+            bulb = Color(0xFFFFB300),
+            rim = Color(0xFF21145F),
+            cross = Color(0xFF0077C8),
+        )
+        val Dark = LampsInks(
+            wall = ArcadeFill(Color(0xFFB9AEFF), Color(0xFF9483FF), Color(0xFF120D33)),
+            met = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
+            lit = ArcadeFill(Color(0xFF5E4A12), Color(0xFF463610), Color.White),
+            bulb = Color(0xFFFFD84D),
+            rim = Color(0xFFFFF4C2),
+            cross = Color(0xFF00E5FF),
+        )
+
+        fun of(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) Dark else Light
+    }
+}
 
 /**
  * Lamps. The board is one canvas of squares: walls (numbered or blank) and white squares, lit squares washed in the
@@ -200,6 +239,7 @@ object Lamps : PuzzleType {
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
     ) {
+        if (!classicLook()) return drawBoardArcade(s, u, digits, scheme, overlay, feel, accent)
         val n = s.size
         val dark = BoardHues.isDark(scheme)
         val light = BoardHues.fill(HUE_LIGHT, dark).copy(alpha = if (dark) 0.75f else 0.6f)
@@ -266,6 +306,86 @@ object Lamps : PuzzleType {
         }
     }
 
+    /**
+     * The Arcade look: the frame between rounded squares; walls a tile of their own ([LampsInks.wall]), a number met turns
+     * green with a tick, a broken one red with a ring; lit squares take the warm wash, the bulb sits on it with its rim.
+     */
+    private fun DrawScope.drawBoardArcade(
+        s: LampsState,
+        u: Float,
+        digits: List<TextLayoutResult>,
+        scheme: ColorScheme,
+        overlay: Overlay,
+        feel: MoveFeel,
+        accent: Color,
+    ) {
+        val n = s.size
+        val a = ArcadeBoard.of(scheme)
+        val inks = LampsInks.of(scheme)
+        val hl = overlay.highlight
+        val dim = !hl.isEmpty
+        fun named(i: Int) = i in hl.strong || i in hl.soft
+        val lit = s.lit()
+        val gap = maxOf(2f, u * 0.06f)
+        val corner = CornerRadius(u * 0.14f)
+        val tile = Size(u - gap, u - gap)
+        drawRoundRect(a.frame, Offset.Zero, Size(n * u, n * u), CornerRadius(u * 0.18f))
+        for (r in 0 until n) for (c in 0 until n) {
+            val i = r * n + c
+            val x = c * u
+            val y = r * u
+            val at = Offset(x + gap / 2, y + gap / 2)
+            feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                // A hint steps back what it does not name by fading the marks and numbers, not the tiles: a faded tile
+                // over the deep frame turns to mud.
+                val fade = if (dim && !named(i)) 0.45f else 1f
+                if (s.isWall(i)) {
+                    val want = s.numberAt(i)
+                    val met = want > 0 && s.lampsBeside(i) == want
+                    val bad = i in overlay.badWalls
+                    val fill = when {
+                        bad -> ArcadeFill(a.error, a.error, a.errorInk)
+                        met -> inks.met
+                        else -> inks.wall
+                    }
+                    drawRoundRect(fill.brush(at, tile), at, tile, corner)
+                    val ink = fill.ink.copy(alpha = fade)
+                    if (bad) {
+                        val ring = u * 0.06f
+                        drawRoundRect(ink, at + Offset(ring / 2, ring / 2), Size(tile.width - ring, tile.height - ring), CornerRadius(corner.x - ring / 2), style = Stroke(ring))
+                    }
+                    if (met) {
+                        val tick = Path().apply {
+                            moveTo(x + u * 0.66f, y + u * 0.24f)
+                            lineTo(x + u * 0.73f, y + u * 0.31f)
+                            lineTo(x + u * 0.85f, y + u * 0.17f)
+                        }
+                        drawPath(tick, ink, style = Stroke(maxOf(1.5f, u * 0.05f), cap = StrokeCap.Round))
+                    }
+                    if (want >= 0) {
+                        val layout = digits[want]
+                        drawText(layout, ink, Offset(x + u / 2 - layout.size.width / 2f, y + u / 2 - layout.size.height / 2f))
+                    }
+                } else {
+                    if (lit[i]) drawRoundRect(inks.lit.brush(at, tile), at, tile, corner)
+                    else drawRoundRect(a.square, at, tile, corner)
+                    when (s.marks[i]) {
+                        LampsLogic.LAMP_MARK -> drawLamp(x, y, u, if (i in overlay.badLamps) a.error else inks.bulb, inks.rim, fade)
+                        LampsLogic.CROSS -> drawCross(x, y, u, inks.cross.copy(alpha = fade))
+                    }
+                }
+            }
+        }
+        if (dim) {
+            hintRims(hl, u, overlay.glow, overlay.pulse, scheme.background) { indices, width, color ->
+                for (i in indices) {
+                    val tl = Offset((i % n) * u + width / 2, (i / n) * u + width / 2)
+                    drawRoundRect(color, tl, Size(u - width, u - width), CornerRadius(u * 0.15f), style = Stroke(width))
+                }
+            }
+        }
+    }
+
     /** A bulb: a round glass on a short base, with rays. */
     private fun DrawScope.drawLamp(x: Float, y: Float, u: Float, glass: Color, rim: Color, alpha: Float) {
         val cx = x + u / 2
@@ -290,8 +410,9 @@ object Lamps : PuzzleType {
         drawLine(ink, Offset(x + b, y + a), Offset(x + a, y + b), w, StrokeCap.Round)
     }
 
-    private fun digitLayouts(measurer: androidx.compose.ui.text.TextMeasurer, fontPx: Float, density: Density): List<TextLayoutResult> {
-        val style = TextStyle(fontSize = with(density) { fontPx.toSp() }, fontWeight = FontWeight.SemiBold)
+    /** The wall numbers, on the digit scale: a number the board came with ([BoardGlyph.GIVEN]) in a [squarePx] square. */
+    private fun digitLayouts(measurer: androidx.compose.ui.text.TextMeasurer, squarePx: Float, density: Density): List<TextLayoutResult> {
+        val style = density.boardStyle(BoardGlyph.GIVEN, squarePx)
         return (0..4).map { measurer.measure(it.toString(), style) }
     }
 
@@ -313,7 +434,7 @@ object Lamps : PuzzleType {
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val unit = minOf(maxWidth, maxHeight) / motif.size
             val unitPx = with(density) { unit.toPx() }
-            val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.55f, density) }
+            val digits = remember(unitPx) { digitLayouts(measurer, unitPx, density) }
             Canvas(Modifier.size(unit * motif.size)) {
                 drawBoard(motif, unitPx, digits, scheme, Overlay())
             }
@@ -367,7 +488,7 @@ object Lamps : PuzzleType {
         ) {
             val unit = fitStep(n, n)
             val unitPx = with(density) { unit.toPx() }
-            val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.55f, density) }
+            val digits = remember(unitPx) { digitLayouts(measurer, unitPx, density) }
             val overlay = Overlay(highlight, glow, pulse.value, bad.first.intersect(settled.first), bad.second.intersect(settled.second))
 
             Box(

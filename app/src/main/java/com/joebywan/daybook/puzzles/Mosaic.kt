@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
@@ -209,6 +210,25 @@ object Mosaic : PuzzleType {
         BoardHues.deep(330f, false),
         BoardHues.pinnedFill(215f, false),
     )
+
+    /**
+     * The Arcade look's flood colours: [palette]'s five, index for index (amber, teal, violet, rose, blue: the names
+     * [MosaicTeacher.colourNames] gives them), each saturated to Arcade's pitch at about Classic's brightness, so the set keeps
+     * its spread over brightness as well as hue. The same in both schemes. [MosaicPaletteTest] holds both palettes to one floor.
+     */
+    val arcadePalette: List<Color> = listOf(
+        Color(0xFFFFC23D),
+        Color(0xFF008C7E),
+        Color(0xFF7A45F5),
+        Color(0xFFB0124F),
+        Color(0xFF7DB8FF),
+    )
+
+    /** The flood colours of the look showing. */
+    fun colours(): List<Color> = if (classicLook()) palette else arcadePalette
+
+    /** Arcade's seams: the frame's deep ink in light; in dark a pale line, since the dark frame is translucent. */
+    private fun arcadeWall(dark: Boolean) = if (dark) Color.White.copy(alpha = 0.8f) else Color(0xFF21145F)
 
 
     /**
@@ -1015,6 +1035,8 @@ object Mosaic : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
+        val palette = colours()
+        val wall = if (classicLook()) scheme.wall else arcadeWall(BoardHues.isDark(scheme))
         Canvas(modifier) {
             val stepPx = size.minDimension / PREVIEW_SIDE
             for (cell in PREVIEW_CELLS.indices) {
@@ -1025,7 +1047,7 @@ object Mosaic : PuzzleType {
                 )
             }
 
-            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, stepPx, stepPx * 0.1f, scheme.wall) { PREVIEW_CELLS[it] }
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, stepPx, stepPx * 0.1f, wall) { PREVIEW_CELLS[it] }
         }
     }
 
@@ -1033,6 +1055,9 @@ object Mosaic : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MosaicState
         val scheme = MaterialTheme.colorScheme
+        val palette = colours()
+        val classic = classicLook()
+        val wall = if (classic) scheme.wall else arcadeWall(BoardHues.isDark(scheme))
 
         // Kept out of MosaicState deliberately: the play screen pushes an undo entry for every
         // state handed to it, so a selection stored on the board would make "change colour" a step
@@ -1133,7 +1158,7 @@ object Mosaic : PuzzleType {
 
                     // Heavy strokes only where the colour changes, so each area reads as one
                     // outlined shape rather than a grid of tiles.
-                    drawWalls(s.width, s.height, stepPx, stepPx * 0.1f, scheme.wall) { s.cells[it] }
+                    drawWalls(s.width, s.height, stepPx, stepPx * 0.1f, wall) { s.cells[it] }
 
                     if (!highlight.isEmpty) {
                         // Everything the hint does not name steps back, so the glow is findable on
@@ -1187,7 +1212,7 @@ object Mosaic : PuzzleType {
                                 .padding(6.dp)
                                 .clip(RoundedCornerShape(11.dp))
                                 .background(palette[colour])
-                                .border(1.dp, scheme.outline, RoundedCornerShape(11.dp)),
+                                .border(if (classic) 1.dp else 2.dp, if (classic) scheme.outline else wall, RoundedCornerShape(11.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(

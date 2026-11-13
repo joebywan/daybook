@@ -35,9 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -52,6 +50,10 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,6 +67,19 @@ import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
+
+/**
+ * Dominoes' own Arcade colours, beyond [ArcadeBoard]'s: the domino (body, its edge and bar, the pips, its drop shadow) and the
+ * badge of a region that keeps its rule (Tents' met green). Region tints stay [BoardHues]'. Measured in DominoInksTest.
+ */
+internal class DominoInks private constructor(val body: Color, val bodyEdge: Color, val pip: Color, val shadow: Color, val good: Color) {
+    companion object {
+        val Light = DominoInks(Color.White, Color(0xFF21145F).copy(alpha = 0.55f), Color(0xFF21145F), Color(0x4021145F), Color(0xFF087F5B))
+        val Dark = DominoInks(Color(0xFFE7DFFF), Color(0xFF6F5CE0), Color(0xFF21145F), Color.Black.copy(alpha = 0.45f), Color(0xFF00E6A0))
+
+        fun of(dark: Boolean) = if (dark) Dark else Light
+    }
+}
 
 /**
  * Dominoes (`docs/DOMINO_SPEC.md`): an irregular board, some of it cut into coloured regions that each
@@ -354,18 +369,22 @@ object Dominoes : PuzzleType {
 
     private val Ink = Color(0xFF11201C)
 
+    /** The board's colours. Classic's are what it drew before Arcade; Arcade's squares are [ArcadeBoard]'s tiles on its frame. */
     private class Paint(scheme: ColorScheme, val dark: Boolean, hues: IntArray) {
-        val surface = scheme.surface
-        val line = scheme.outline
-        val rim = scheme.onSurfaceVariant.copy(alpha = 0.55f)
+        val arcade = !classicLook()
+        private val a = ArcadeBoard.of(scheme)
+        private val inks = DominoInks.of(dark)
+        val surface = if (arcade) a.square else scheme.surface
+        val line = if (arcade) a.frame else scheme.outline
+        val rim = if (arcade) a.frame else scheme.onSurfaceVariant.copy(alpha = 0.55f)
         val tint = hues.map { BoardHues.fill(BoardHues.REGION_HUES[it], dark).copy(alpha = if (dark) 0.75f else 0.55f) }
         val edge = hues.map { BoardHues.ink(BoardHues.REGION_HUES[it], dark) }
-        val good = BoardHues.mark(145f)
-        val error = scheme.error
-        val body = if (dark) Color(0xFFDCD4C3) else Color.White
-        val pip = Ink
-        val bodyEdge = if (dark) Color(0xFF8A8270) else scheme.onSurface.copy(alpha = 0.45f)
-        val shadow = Color.Black.copy(alpha = if (dark) 0.35f else 0.16f)
+        val good = if (arcade) inks.good else BoardHues.mark(145f)
+        val error = if (arcade) a.error else scheme.error
+        val body = if (arcade) inks.body else if (dark) Color(0xFFDCD4C3) else Color.White
+        val pip = if (arcade) inks.pip else Ink
+        val bodyEdge = if (arcade) inks.bodyEdge else if (dark) Color(0xFF8A8270) else scheme.onSurface.copy(alpha = 0.45f)
+        val shadow = if (arcade) inks.shadow else Color.Black.copy(alpha = if (dark) 0.35f else 0.16f)
         val background = scheme.background
         val onSurface = scheme.onSurface
     }
@@ -445,7 +464,7 @@ object Dominoes : PuzzleType {
 
     /** The numbers the badges show, measured at [unitPx]. */
     private fun measureLabels(measurer: TextMeasurer, s: DominoState, unitPx: Float, density: Density): Map<Int, TextLayoutResult> {
-        val style = TextStyle(fontSize = with(density) { (unitPx * 0.27f).toSp() }, fontWeight = FontWeight.Bold)
+        val style = density.boardStyle(BoardGlyph.CORNER, unitPx)
         return s.rules.mapNotNull { labelNumber(it) }.sorted().associateWith { measurer.measure(it.toString(), style) }
     }
 
@@ -481,7 +500,7 @@ object Dominoes : PuzzleType {
         val rule = s.rules[r]
         val text = labelNumber(rule)?.let { labels[it]?.size?.width?.toFloat() } ?: 0f
         val (symbol, gap) = badgeParts(rule.kind, text, u)
-        val h = u * 0.38f
+        val h = u * 0.42f
         val w = maxOf(h, symbol + gap + text + u * 0.18f)
         val centre = Offset(sq.right + u * 0.05f, sq.top - u * 0.05f)
         return Rect(Offset(centre.x - w / 2, centre.y - h / 2), Size(w, h))
@@ -546,8 +565,18 @@ object Dominoes : PuzzleType {
         val thin = maxOf(1f, u * 0.025f)
         for (i in 0 until n) if (s.open[i]) {
             val r = rect(i)
-            drawRect(paint.surface, r.topLeft, r.size)
             val g = s.regionOf[i]
+            if (paint.arcade) {
+                // A rounded tile on the frame, which shows between the squares as the grid lines.
+                val gap = maxOf(2f, u * 0.05f)
+                val tile = r.deflate(gap / 2)
+                val corner = CornerRadius(u * 0.12f)
+                drawRect(paint.line, r.topLeft, r.size)
+                drawRoundRect(paint.surface, tile.topLeft, tile.size, corner)
+                if (g >= 0) drawRoundRect(paint.tint[g], tile.topLeft, tile.size, corner)
+                continue
+            }
+            drawRect(paint.surface, r.topLeft, r.size)
             if (g >= 0) drawRect(paint.tint[g], r.topLeft, r.size)
             drawRect(paint.line, r.topLeft, r.size, style = Stroke(thin))
         }
