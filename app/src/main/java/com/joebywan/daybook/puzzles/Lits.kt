@@ -67,7 +67,7 @@ import androidx.compose.ui.graphics.SolidColor
  * The same four hue families as Classic's [Lits.palette] (blue, teal, violet, rose; no Coral or Green, which the hints' right
  * and wrong use, no amber, which is the in-progress tone), spread over brightness as well as hue. Measured in LitsInksTest.
  */
-internal class LitsInks private constructor(val pieces: Map<Lits.Piece, ArcadeFill>, val wall: Color) {
+internal class LitsInks private constructor(val pieces: Map<Lits.Piece, ArcadeFill>, val grid: Color, val wall: Color) {
     companion object {
         val Light = LitsInks(
             mapOf(
@@ -76,6 +76,8 @@ internal class LitsInks private constructor(val pieces: Map<Lits.Piece, ArcadeFi
                 Lits.Piece.T to ArcadeFill(Color(0xFF7F4DFF), Color(0xFF5F2EE0), Color.White),
                 Lits.Piece.S to ArcadeFill(Color(0xFFFF5FA8), Color(0xFFFF4F9A), Color(0xFF21145F)),
             ),
+            // The grid lines are a pale lavender, so the walls in the frame's deep ink are what part the regions.
+            grid = Color(0xFFC9BFF0),
             wall = Color(0xFF21145F),
         )
         val Dark = LitsInks(
@@ -85,6 +87,7 @@ internal class LitsInks private constructor(val pieces: Map<Lits.Piece, ArcadeFi
                 Lits.Piece.T to ArcadeFill(Color(0xFF7448FF), Color(0xFF5A2EE6), Color.White),
                 Lits.Piece.S to ArcadeFill(Color(0xFFFF6FB0), Color(0xFFFF4F9A), Color(0xFF120D33)),
             ),
+            grid = Color(0xFF3A2F80),
             // The dark frame is translucent and would hardly part the regions; a wall is the board's one structure.
             wall = Color.White.copy(alpha = 0.7f),
         )
@@ -1286,7 +1289,7 @@ object Lits : PuzzleType {
             val step = side / PREVIEW_SIDE
             if (!classic) {
                 // Arcade: the frame between plain squares, the finished L a sticker, the walls over all.
-                drawRoundRect(a.frame, origin, Size(side, side), CornerRadius(step * 0.18f))
+                drawRoundRect(inks.grid, origin, Size(side, side), CornerRadius(step * 0.18f))
                 val gap = step * 0.07f
                 for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
                     val at = Offset(origin.x + (i % PREVIEW_SIDE) * step + gap / 2, origin.y + (i / PREVIEW_SIDE) * step + gap / 2)
@@ -1442,9 +1445,9 @@ object Lits : PuzzleType {
                         else -> palette.getValue(piece)
                     }
                 }
-                // Arcade: the frame shows between the squares as the grid lines.
+                // Arcade: the grid lines show between the squares; the walls go over them in the frame's ink.
                 val gap = if (classic) 0f else maxOf(1.5f, stepPx * 0.05f)
-                if (!classic) drawRoundRect(a.frame, Offset.Zero, size, CornerRadius(stepPx * 0.16f))
+                if (!classic) drawRoundRect(inks.grid, Offset.Zero, size, CornerRadius(stepPx * 0.16f))
                 for (i in 0 until s.width * s.height) {
                     val r = i / s.width
                     val c = i % s.width

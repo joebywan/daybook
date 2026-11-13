@@ -36,6 +36,8 @@ class LitsInksTest {
             }
             val wall = inks.wall.compositeOver(a.square)
             assertTrue("$name wall ${contrast(wall, a.square)}", contrast(wall, a.square) >= 3f)
+            // The walls part from the grid lines, or the regions do not read (light's frame is the walls' own ink).
+            assertTrue("$name wall on the grid ${contrast(wall, inks.grid)}", contrast(wall, inks.grid) >= 3f)
         }
     }
 
