@@ -65,6 +65,7 @@ import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.wall
 
@@ -276,8 +277,9 @@ object Thermometers : PuzzleType {
         val a = ArcadeBoard.of(scheme).takeIf { !classicLook() }
         val glass = when {
             a == null -> scheme.onSurfaceVariant.copy(alpha = if (dark) 0.55f else 0.45f)
-            dark -> Color.White.copy(alpha = 0.6f)
-            else -> a.squareInk.copy(alpha = 0.6f)
+            // Opaque: a translucent rim darkens where its segments overlap, and the joins show as arcs.
+            dark -> Color.White.copy(alpha = 0.6f).compositeOver(a.square)
+            else -> a.squareInk.copy(alpha = 0.6f).compositeOver(a.square)
         }
         val inside = a?.given ?: scheme.surface
         val metal: Brush = if (a == null) SolidColor(mercury) else a.control.brush(Offset.Zero, Size(n * u, n * u))

@@ -308,6 +308,8 @@ object Mines : PuzzleType {
                 val square = Size(u - 2 * gap, u - 2 * gap)
                 val corner = CornerRadius(u * 0.14f)
                 feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                    // A dimmed square fades toward a plain one, not into the frame.
+                    if (alpha < 1f) drawRoundRect(a.square, at, square, corner)
                     when {
                         i in s.bumps -> {
                             drawRoundRect(a.error.copy(alpha = alpha), at, square, corner)
