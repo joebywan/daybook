@@ -29,12 +29,9 @@ closest pair is pushed apart by local search with random kicks. Closest pair: 4.
 2.34 / 1.94). `ArcadeAccentTest` pins floors of 4.5 / 8.0 and every use's contrast; Classic is untouched (`classicAccent`).
 Boards still call `vivid(accent)` with the raw accent, which is the key.
 
-**Home tiles are coloured by place in Arcade** (the owner, 2026-11-13: a tile's colour may differ from its board's). The tile at
-row r, column c takes `TILE_ACCENTS[(c + 3r) mod 6]` (`ui/home/HomeScreen.kt`): its eight neighbours are 1-4 steps along, never
-six, so no two touching tiles match, diagonals included, at any column count and whatever the order; Today's three are row -1.
-The six are hues round the wheel (violet, orange, cyan, magenta, lime, green at hsl(h, .6, .5), made into tiles by
-`ArcadeBoard.tile`), 11.7 apart at the closest by the design distance in both schemes (`HomeTileColoursTest`). Accents as the
-palette were tried and dropped: the six whose tiles sit furthest apart gave two magentas, and blue makes the same tile as violet. Classic tiles keep their puzzle's accent.
+**Home tiles take their puzzle's own accent** in both looks, so a tile matches its board. They were coloured by place
+for a day (#474, six hues by grid position); the owner, 2026-11-14, preferred each puzzle's own colour: six repeated on one
+phone screen. Two pairs share an accent (the set is full), so a player's own order can put a pair side by side.
 The hint glow is the `ArcadeBoard.hint` token (magenta light, amber dark) and the hint card is a plain square edged in it.
 
 **The line boards (2026-11-13): Atoms, Pearls, Loop, Links, Pipes, Arrows, Trail.** A grid of squares takes Tents' tiles

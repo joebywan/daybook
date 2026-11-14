@@ -1318,8 +1318,8 @@ asked once (the welcome for a new player, `LookOffer` on Home for one from befor
 **Arcade work stays behind the switch**: a board converted to Arcade keeps its Classic drawing. Tests run in both looks
 (`forEachLook`, `ContrastTest`, `ClassicLookTest`, the palette tests).
 In Arcade, `vivid(accent)` draws the accent's pair from `ARCADE_ACCENTS`, solved as a set per scheme (`ArcadeAccentTest`), Home's
-tiles take their colour from their place on the grid, not their puzzle (`tileAccentAt`, `HomeTileColoursTest`), and the hint
-glows in `ArcadeBoard.hint` (`rememberHintPaint`'s default). All three in `docs/COLOUR.md`, top.
+tiles take their puzzle's own accent (by place was tried and dropped, 2026-11-14), and the hint glows in `ArcadeBoard.hint`
+(`rememberHintPaint`'s default). All three in `docs/COLOUR.md`, top.
 
 ## Rules that keep being relearned
 

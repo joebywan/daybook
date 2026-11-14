@@ -1,5 +1,5 @@
 - Every puzzle now has the bright Arcade look; Classic keeps the calmer colours.
-- Home tiles are coloured by place, so neighbours never match; hints glow brighter.
+- Home tiles wear their own puzzle's colour again; hints glow brighter. Kings looks as it did.
 - Who's Who is played as a web of links: draw lines, rule pairs out, let the rest follow. Games carry over.
 - Equation Expert gives five guesses, and the hints win every board.
 - Training: any right Links move of the technique counts.
