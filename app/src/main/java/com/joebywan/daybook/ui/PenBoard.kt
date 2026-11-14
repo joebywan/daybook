@@ -131,6 +131,8 @@ fun <S : PenMarks<S>> Modifier.penGrid(
                 onDragEnd = { _ ->
                     val done = sweep.value
                     sweep.value = null
+                    // The last square touched, as a tap leaves it.
+                    if (done != null) cursor.value = done.at
                     if (done != null) taps.apply { it.swept(done) }
                 },
                 onDragCancel = { sweep.value = null },
