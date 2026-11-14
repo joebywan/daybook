@@ -149,6 +149,16 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "linked-totals" to "totals that share squares",
         "cage-chain" to "every cage worked through together",
     ),
+    "reckon" to linkedMapOf(
+        "last-square" to "the last square in a row or column",
+        "only-digit" to "a square with one digit left",
+        "only-place" to "a digit's only place in a row or column",
+        "cage-combination" to "a cage's digit combinations",
+        "cage-place" to "a digit's only place, counting the cages",
+        "cage-in-line" to "a cage that fills a digit in a line",
+        "naked-pair" to "two squares sharing two digits",
+        "what-if" to "a what-if",
+    ),
     "target" to linkedMapOf(
         "step" to "a step towards the target",
         "finish" to "the step that makes the target",
