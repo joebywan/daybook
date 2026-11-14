@@ -350,7 +350,7 @@ internal object ReckonLogic {
         }
         if (OPERATIONS.any { it !in ops }) return null
         val targets = cageList.mapIndexed { c, sq -> target(ops[c], sq.map { solution[it] }) }
-        return String(ops) to targets
+        return ops.concatToString() to targets
     }
 
     /**

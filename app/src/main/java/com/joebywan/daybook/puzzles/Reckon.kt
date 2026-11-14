@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -46,6 +47,7 @@ import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.style
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.wall
 
@@ -282,8 +284,11 @@ object Reckon : PuzzleType {
         return cageOf.indices.filter { i -> !seen[cageOf[i]].also { seen[cageOf[i]] = true } && ops[cageOf[i]] != ReckonLogic.GIVEN }.toSet()
     }
 
-    /** Heavy walls between cages and round the grid of [n] squares of [step] pixels, clipped so a wall's end never pokes out. */
-    private fun DrawScope.walls(n: Int, cageOf: List<Int>, step: Float, colour: Color, width: Float) {
+    /**
+     * Heavy walls between cages of a grid of [n] squares of [step] pixels, and round it where [frame], clipped so a wall's
+     * end never pokes out.
+     */
+    private fun DrawScope.walls(n: Int, cageOf: List<Int>, step: Float, colour: Color, width: Float, frame: Boolean = true) {
         clipRect(0f, 0f, step * n, step * n) {
             for (i in 0 until n * n) {
                 val x = i % n * step
@@ -291,7 +296,17 @@ object Reckon : PuzzleType {
                 if (i % n < n - 1 && cageOf[i] != cageOf[i + 1]) drawLine(colour, Offset(x + step, y), Offset(x + step, y + step), width, StrokeCap.Square)
                 if (i / n < n - 1 && cageOf[i] != cageOf[i + n]) drawLine(colour, Offset(x, y + step), Offset(x + step, y + step), width, StrokeCap.Square)
             }
-            drawRect(colour, style = Stroke(width * 2), topLeft = Offset.Zero, size = Size(step * n, step * n))
+            if (frame) drawRect(colour, style = Stroke(width * 2), topLeft = Offset.Zero, size = Size(step * n, step * n))
+        }
+    }
+
+    /** The lines between squares of one cage, over Arcade's frame. */
+    private fun DrawScope.seams(n: Int, cageOf: List<Int>, step: Float, colour: Color, width: Float) {
+        for (i in 0 until n * n) {
+            val x = i % n * step
+            val y = i / n * step
+            if (i % n < n - 1 && cageOf[i] == cageOf[i + 1]) drawLine(colour, Offset(x + step, y), Offset(x + step, y + step), width)
+            if (i / n < n - 1 && cageOf[i] == cageOf[i + n]) drawLine(colour, Offset(x, y + step), Offset(x + step, y + step), width)
         }
     }
 
@@ -399,26 +414,33 @@ object Reckon : PuzzleType {
                     sq.all { s.cells[it] != 0 } && ReckonLogic.makes(s.ops[c], s.targets[c], sq.map { s.cells[it] })
                 }
             },
-            overlay = { cell -> CageOverlay(s, at, cell, measurer) },
+            overlay = { cell -> CageOverlay(s, at, shown, cell, measurer) },
             n = n,
             wall = { p, q -> s.cageOf[p] != s.cageOf[q] },
             padKey = { ReckonTeacher.pad(n, it) },
             notesKey = ReckonTeacher.pencil(n),
+            wallGap = 2.dp,
         )
     }
 
     @Composable
-    private fun BoxScope.CageOverlay(s: ReckonState, at: Set<Int>, cell: Dp, measurer: TextMeasurer) {
+    private fun BoxScope.CageOverlay(s: ReckonState, at: Set<Int>, wrong: Set<Int>, cell: Dp, measurer: TextMeasurer) {
         val a = ArcadeBoard.current
         val classic = classicLook()
         val scheme = MaterialTheme.colorScheme
         val label = BoardGlyph.CORNER.style(cell).copy(color = if (classic) scheme.onSurface.copy(alpha = 0.85f) else a.squareInk)
+        // Arcade's walls sit in its frame's wider gaps between cages, in Mosaic's wall ink (the dark frame alone hardly parts them).
+        val arcadeWall = if (BoardHues.isDark(scheme)) Color.White.copy(alpha = 0.8f) else a.frame
         // Not a pointer target: taps fall through to the squares underneath.
         Canvas(Modifier.fillMaxSize()) {
             val px = size.width / s.size
-            // Arcade's walls are its frame, wider between cages (the grid's gaps); Classic draws them.
             if (classic) walls(s.size, s.cageOf, px, scheme.wall, 3.dp.toPx())
-            labels(s.size, s, at, px, measurer, label, a.square) { !classic && (s.cells[it] != 0 || s.selected == it) }
+            else {
+                // Inside a cage the frame's gap is eased to a hairline, so the walls are the only heavy lines.
+                seams(s.size, s.cageOf, px, lerp(a.frame, a.square, 0.65f), 1.dp.toPx())
+                walls(s.size, s.cageOf, px, arcadeWall, 3.dp.toPx(), frame = false)
+            }
+            labels(s.size, s, at, px, measurer, label, a.square) { !classic && (s.cells[it] != 0 || s.selected == it || it in wrong) }
         }
     }
 }

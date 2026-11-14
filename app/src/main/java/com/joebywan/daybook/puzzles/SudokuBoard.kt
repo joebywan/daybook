@@ -95,9 +95,9 @@ private const val SUDOKU_NOTE_ALPHA_CLASSIC = 0.85f
 internal fun ArcadeBoard.boxShade() = lerp(square, given, 0.35f)
 
 /** The frame showing on one side of a square (the other half is its neighbour's): the board's edge and a wall are the heavy ones. */
-private fun gap(edge: Boolean, wall: Boolean) = when {
+private fun gap(edge: Boolean, wall: Boolean, wallGap: Dp) = when {
     edge -> 2.dp
-    wall -> 1.5.dp
+    wall -> wallGap
     else -> 0.5.dp
 }
 
@@ -152,6 +152,8 @@ internal fun SudokuGridBoard(
     /** Highlight indices of a digit's key and of the pencil. */
     padKey: (Int) -> Int = SudokuTeacher::pad,
     notesKey: Int = SudokuTeacher.NOTES_KEY,
+    /** Arcade's frame on each side of a [wall]: Sudoku's box edges 1.5dp, Reckon's cage walls wider. */
+    wallGap: Dp = 1.5.dp,
 ) {
     // Sudoku's 3x3 boxes (their shade and frame lines); a smaller grid has none.
     val boxed = n == 9
@@ -273,8 +275,8 @@ internal fun SudokuGridBoard(
                                 .then(
                                     if (classic) Modifier.padding(1.dp)
                                     else Modifier.padding(
-                                        start = gap(c == 0, c > 0 && wall(i - 1, i)), end = gap(c == n - 1, c < n - 1 && wall(i, i + 1)),
-                                        top = gap(r == 0, r > 0 && wall(i - n, i)), bottom = gap(r == n - 1, r < n - 1 && wall(i, i + n)),
+                                        start = gap(c == 0, c > 0 && wall(i - 1, i), wallGap), end = gap(c == n - 1, c < n - 1 && wall(i, i + 1), wallGap),
+                                        top = gap(r == 0, r > 0 && wall(i - n, i), wallGap), bottom = gap(r == n - 1, r < n - 1 && wall(i, i + n), wallGap),
                                     )
                                 )
                                 .then(a.selected.glow?.takeIf { isSelected }?.let { Modifier.arcadeGlow(it, 4.dp, 1.5.dp) } ?: Modifier)
