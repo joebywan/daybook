@@ -1,12 +1,12 @@
-name: Suggest something
-description: "An idea for Daybook: a puzzle, a setting, a change to how something works."
+name: Suggest something or give feedback
+description: "An idea for Daybook (a puzzle, a setting, a change to how something works), or what you think of it."
 labels: ["enhancement"]
 body:
   - type: textarea
     id: idea
     attributes:
-      label: Your idea
-      description: What you'd like, and what it would make better for you.
+      label: Your idea or feedback
+      description: What you'd like and what it would make better, or what you like, dislike or find too hard or too easy.
     validations:
       required: true
   - type: input
