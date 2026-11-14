@@ -3,9 +3,9 @@
 
 ## How to play
 
-Tap a square, then tap a digit. Tap the digit again to clear it.
+Tap a square, then tap a digit. Tap the digit again to clear it. Tap the pencil to jot digits small in a square instead, as notes; placing a digit clears it from the notes in its row and column.
 
-On a keyboard, the arrows move, 1 to 6 place a digit, and Backspace clears.
+On a keyboard, the arrows move, 1 to 6 place a digit (or a note, with the pencil lit), and Backspace clears.
 
 A repeat, or a sign that is false, is shown in red as you go, but nothing stops you placing it.
 

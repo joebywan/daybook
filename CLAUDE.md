@@ -300,7 +300,7 @@ motif). `id = "inequality"` is hashed into every seed: never rename it.
   order-free while every digit is right), so it meets the same stuck boards and pair steps as the hints, 2.5x faster.
   `InequalityRulesTest` checks the two agree, on shipped boards and on boards one clue short.
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
-- **No pencil marks** (a 6x6 is small; Sudoku's notes would be the template if asked). The selected square is in the state (as Sudoku's),
+- **Pencil marks** (issue #498): `InequalityState.notes`, Reckon's model (a mask per square, defaulted so old saves load, a placed digit strikes its row and column's notes in the same state); notes mode is `rememberSaveable` in the board, the pencil key sits at the end of the pad (`DigitPadRow`'s `trailing`, highlight `NOTES_KEY`). The selected square is in the state (as Sudoku's),
   so `withoutSelection` is overridden. Highlight indices: squares `0 until n*n`, the k-th sign `n*n + k`, digit keys `1000 + d`.
 
 ## Mate (chess mate-in-N)
@@ -381,7 +381,7 @@ motif). `id = "regions"` is hashed into every seed: never rename it.
   (parity pins go red on purpose).
 - **The generator's walk is `lockedSteps`, not `depth`**: it places every single of a pass at once (the single rungs are order-free while every digit
   is right), so it meets the same stuck boards and locked steps as the hints. `RegionsRulesTest` checks the two agree.
-- **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer. No pencil marks.
+- **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
 - Region colours are derived (`Regions.regionColours`: a 3 to 5 colouring of the region graph, hues Violet/Amber/Teal/Blue/Gold; the thick walls carry the
   regions as well). The selected square and its digit's twins go plain (surface) so they stand out from the colours. Highlight indices: squares `0 until n*n`,
   digit keys `1000 + d`.
