@@ -1,19 +1,20 @@
 package com.joebywan.daybook.ui.home
 
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -91,20 +92,20 @@ internal fun TierFlash(flash: Pair<Difficulty, Int>?, modifier: Modifier) {
         alpha.snapTo(FLASH_ALPHA)
         alpha.animateTo(0f, if (still) snap(FLASH_HOLD_MS + FLASH_MS) else tween(FLASH_MS, delayMillis = FLASH_HOLD_MS))
     }
-    if (flash != null) Surface(
-        modifier = modifier.graphicsLayer { this.alpha = alpha.value },
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        shadowElevation = 6.dp,
-    ) {
-        Text(
-            flash.first.label,
-            style = MaterialTheme.typography.displayMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 14.dp),
-        )
-    }
+    // Never a Surface: a Surface blocks touches beneath it, and this one stays composed (invisible) after its first swipe,
+    // so a swipe starting mid-screen never reached the list and a fling could not be caught or reversed.
+    val shape = RoundedCornerShape(28.dp)
+    if (flash != null) Text(
+        flash.first.label,
+        style = MaterialTheme.typography.displayMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = modifier
+            .graphicsLayer { this.alpha = alpha.value }
+            .shadow(6.dp, shape)
+            .background(MaterialTheme.colorScheme.primaryContainer, shape)
+            .padding(horizontal = 32.dp, vertical = 14.dp),
+    )
 }
 
 private const val FLASH_ALPHA = 0.95f
