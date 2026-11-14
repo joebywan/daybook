@@ -132,8 +132,8 @@ class InequalityTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Inequality.tutorial
-        assertEquals(5, frames.size)
-        assertEquals(listOf(true, true, false, false, false), frames.map { it.judge == null && !it.freePlay })
+        assertEquals(6, frames.size)
+        assertEquals(listOf(true, true, false, false, false, false), frames.map { it.judge == null && !it.freePlay })
         val b0 = Inequality.tutorialBoard()
         // Frame 3: tap the top-left square (the 1 glows next), then 1; another square, or the 2 (the
         // wrong end of the sign), is refused.
@@ -166,10 +166,19 @@ class InequalityTeachingTest {
         assertTrue(Inequality.teach(wrong)!!.mistake)
         val cleared = wrong.enter(wrongAt, 1)
         assertEquals(TutorialStep.DONE, clash(cleared))
-        // Frame 5 is free play, and hints alone finish it with no fallback and no mistake.
-        assertTrue(frames[4].freePlay)
-        val now = frames[4].state as InequalityState
+        // Frame 5: the pencil, then a 2, notes it; placing the 2 or noting a 1 is refused. A 2 is that square's answer.
+        val pencil = frames[4]
+        val there = pencil.state as InequalityState
+        assertEquals(wrongAt, there.selected)
+        assertTrue(pencil.accepts!!(there.enter(wrongAt, 2, notesMode = true)))
+        assertFalse(pencil.accepts!!(there.enter(wrongAt, 2)))
+        assertFalse(pencil.accepts!!(there.enter(wrongAt, 1, notesMode = true)))
+        assertEquals(2, Inequality.TUTORIAL_SOLUTION[wrongAt])
+        // Frame 6 is free play, and hints alone finish it with no fallback and no mistake.
+        assertTrue(frames[5].freePlay)
+        val now = frames[5].state as InequalityState
         assertEquals(Inequality.tutorialBoard(mapOf(0 to 1)).cells, now.cells)
+        assertEquals(1 shl 1, now.visibleNotes(wrongAt))
         val end = hintWalk(now, 36) { cur ->
             val d = Inequality.teach(cur)!!
             assertFalse(d.fallback); assertFalse(d.mistake)

@@ -74,7 +74,7 @@ fun RowScope.PadKey(
 /**
  * A row of digit keys 1..[digits], [width] wide (Inequality, Regions): key d reports [anchor] of d, and a
  * digit [done] with is greyed. [onDigit] is the tap. Given [arcade] (the Arcade look), the keys are Sudoku's: the control
- * gradient, lifted, a used-up digit flat on the given fill.
+ * gradient, lifted, a used-up digit flat on the given fill. [trailing] adds keys after the digits (Inequality's pencil).
  */
 @Composable
 fun DigitPadRow(
@@ -87,6 +87,7 @@ fun DigitPadRow(
     enabled: Boolean,
     done: (Int) -> Boolean = { false },
     arcade: ArcadeBoard? = null,
+    trailing: @Composable RowScope.() -> Unit = {},
     onDigit: (Int) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -117,5 +118,6 @@ fun DigitPadRow(
                 )
             }
         }
+        trailing()
     }
 }
