@@ -219,6 +219,7 @@ object Training {
             ThermometersTraining,
             UnblockTraining,
             LinksTraining,
+            ReckonTraining,
         )
     }
 

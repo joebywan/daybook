@@ -2,6 +2,7 @@ package com.joebywan.daybook.core
 
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.CageState
+import com.joebywan.daybook.puzzles.ReckonState
 import com.joebywan.daybook.puzzles.CipherState
 import com.joebywan.daybook.puzzles.CodewordState
 import com.joebywan.daybook.puzzles.MiniState
@@ -91,6 +92,8 @@ object ParityFingerprint {
         is RegionsState -> "n=${s.size} region=${s.region.joinToString(",")} givens=${s.givens.joinToString("") { if (it) "1" else "0" }} solution=${s.solution.joinToString("")}"
         is CageState -> "givens=" + s.grid.cells.joinToString("") + " cages=" + s.cageOf.joinToString("") { it.toString(36) } +
             " sums=" + s.sums.joinToString(",") + " solution=" + s.grid.solution.joinToString("")
+        is ReckonState -> "n=${s.size} givens=" + s.cells.joinToString("") + " cages=" + s.cageOf.joinToString("") { it.toString(36) } +
+            " ops=${s.ops} targets=" + s.targets.joinToString(",") + " solution=" + s.solution.joinToString("")
         is TargetState -> "start=${s.start.joinToString(",")} target=${s.target} par=${s.par}"
         is TallyState -> "n=${s.size} digits=${s.digits} keep=${s.keep}"
         is ThermometersState -> "n=${s.size} tubes=" + s.tubes.joinToString(",") { it.joinToString(".") } + " fill=${s.fill}"

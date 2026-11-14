@@ -82,7 +82,7 @@ class AccentSpacingTest {
 
     private companion object {
         /** Puzzles that share an accent on purpose (the set is full; the owner, 2026-11-09). Pairs here skip the floors. */
-        val SHARED: Set<Set<String>> = setOf(setOf("words", "equation"), setOf("pearls", "links"))
+        val SHARED: Set<Set<String>> = setOf(setOf("words", "equation"), setOf("pearls", "links"), setOf("inequality", "reckon"))
         const val NORMAL_FLOOR = 5.7
         const val COLOUR_BLIND_FLOOR = 2.85
 

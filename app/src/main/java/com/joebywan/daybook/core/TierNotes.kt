@@ -83,6 +83,11 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "4 people, 2 things each, clues link things",
         "5 people, 2 things each, either-or clues",
     ),
+    "reckon" to listOf(
+        "Cages of up to 3 squares, a few digits given",
+        "Cages of up to 4 squares, one or two digits given",
+        "Cages of up to 5 squares, no digits given",
+    ),
     "mini" to listOf("5x5 grid, plain clues", "6x6 grid, many across clues indirect", "7x7 grid, most clues indirect"),
 )
 

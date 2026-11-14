@@ -75,10 +75,11 @@ import com.joebywan.daybook.ui.style
 
 
 /**
- * The Sudoku grid and its digit pad, shared by Sudoku and Cage Sudoku: both draw exactly this, and differ in
+ * The Sudoku grid and its digit pad, shared by Sudoku, Cage Sudoku and Reckon: all draw exactly this, and differ in
  * what a tap, a key and a digit do to their own state (the callbacks), which squares clash ([conflicts]),
- * and what is drawn over the grid ([overlay]: Cage Sudoku's dashed cages). [topBand] is the share of a
- * square's height that a label of the overlay takes from the top, which the pencil marks leave clear.
+ * and what is drawn over the grid ([overlay]: Cage Sudoku's dashed cages, Reckon's walls and labels). [topBand] is the
+ * share of a square's height that a label of the overlay takes from the top, which the pencil marks leave clear.
+ * The grid is [n] squares a side with digits 1..n; only a 9x9 has 3x3 boxes (their shade and frame lines).
  */
 
 /** Squares holding the selected square's digit: apart from the entered blue-violet, the selected amber and the error red. */
@@ -93,12 +94,15 @@ private const val SUDOKU_NOTE_ALPHA_CLASSIC = 0.85f
 /** Every other box's empty squares. */
 internal fun ArcadeBoard.boxShade() = lerp(square, given, 0.35f)
 
-/** The frame showing between two squares, half each side: a box's edge and the board's are the heavy ones. */
-private fun gap(line: Int) = when {
-    line == 0 || line == 9 -> 2.dp
-    line % 3 == 0 -> 1.5.dp
+/** The frame showing on one side of a square (the other half is its neighbour's): the board's edge and a wall are the heavy ones. */
+private fun gap(edge: Boolean, wall: Boolean, wallGap: Dp) = when {
+    edge -> 2.dp
+    wall -> wallGap
     else -> 0.5.dp
 }
+
+/** Whether neighbouring squares [a] and [b] of a 9x9 lie in different 3x3 boxes. */
+private fun boxWall(a: Int, b: Int) = a % 9 / 3 != b % 9 / 3 || a / 27 != b / 27
 
 /** Sudoku's units for the move feel: the rows, the columns and the boxes, each in reading order. */
 internal val SUDOKU_UNITS: List<IntArray> = List(27) { u ->
@@ -117,12 +121,15 @@ internal fun List<Int>.holdsOneToNine(unit: IntArray): Boolean = unit.fold(0) { 
 /** The squares holding [digit], in reading order: a unit of the move feel, so a digit-first player hears each digit finished. */
 internal fun List<Int>.squaresOf(digit: Int): IntArray = indices.filter { this[it] == digit }.toIntArray()
 
-/** Whether [digit] is on the board nine times, never twice in a row, column or box: finished by the rules, as a unit is. */
-internal fun List<Int>.allNine(digit: Int): Boolean {
+/** Whether [digit] is on an [n]-wide board n times, never twice in a row, column (or, on a 9x9, box): finished by the rules, as a unit is. */
+internal fun List<Int>.allPlaced(digit: Int, n: Int): Boolean {
     val at = squaresOf(digit)
-    return at.size == 9 && at.map { it / 9 }.toSet().size == 9 && at.map { it % 9 }.toSet().size == 9 &&
-        at.map { it / 27 * 3 + it % 9 / 3 }.toSet().size == 9
+    return at.size == n && at.map { it / n }.toSet().size == n && at.map { it % n }.toSet().size == n &&
+        (n != 9 || at.map { it / 27 * 3 + it % 9 / 3 }.toSet().size == 9)
 }
+
+/** Whether [digit] is on a 9x9 board nine times, never twice in a row, column or box. */
+internal fun List<Int>.allNine(digit: Int): Boolean = allPlaced(digit, 9)
 
 @Composable
 internal fun SudokuGridBoard(
@@ -139,10 +146,20 @@ internal fun SudokuGridBoard(
     units: List<IntArray> = SUDOKU_UNITS,
     complete: (Int) -> Boolean = { s.cells.holdsOneToNine(SUDOKU_UNITS[it]) },
     overlay: @Composable BoxScope.(cell: Dp) -> Unit = {},
+    n: Int = 9,
+    /** Whether neighbouring squares a and b are parted by a wall, which Arcade's frame shows wider: a box's edge here, a cage's in Reckon. */
+    wall: (Int, Int) -> Boolean = ::boxWall,
+    /** Highlight indices of a digit's key and of the pencil. */
+    padKey: (Int) -> Int = SudokuTeacher::pad,
+    notesKey: Int = SudokuTeacher.NOTES_KEY,
+    /** Arcade's frame on each side of a [wall]: Sudoku's box edges 1.5dp, Reckon's cage walls wider. */
+    wallGap: Dp = 1.5.dp,
 ) {
-    // The board's own units, then each digit's nine squares (where they stand now; it glows once all nine are in).
-    val feel = rememberMoveFeel(s.cells, units + List(9) { s.cells.squaresOf(it + 1) }) { u ->
-        if (u < units.size) complete(u) else s.cells.allNine(u - units.size + 1)
+    // Sudoku's 3x3 boxes (their shade and frame lines); a smaller grid has none.
+    val boxed = n == 9
+    // The board's own units, then each digit's n squares (where they stand now; it glows once all are in).
+    val feel = rememberMoveFeel(s.cells, units + List(n) { s.cells.squaresOf(it + 1) }) { u ->
+        if (u < units.size) complete(u) else s.cells.allPlaced(u - units.size + 1, n)
     }
     val a = ArcadeBoard.current
     val scheme = MaterialTheme.colorScheme
@@ -183,7 +200,7 @@ internal fun SudokuGridBoard(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .boardKeys(interactive) { key, _, repeat ->
-                val action = digitKeyAction(key, 9) ?: return@boardKeys false
+                val action = digitKeyAction(key, n) ?: return@boardKeys false
                 if (!repeat || action is DigitKeyAction.Move) {
                     if (action is DigitKeyAction.Digit) notePress(action.digit)
                     if (action is DigitKeyAction.Clear) notedAt = null
@@ -194,23 +211,32 @@ internal fun SudokuGridBoard(
         contentAlignment = Alignment.Center,
     ) {
         val side = padBoardSide()
-        val cell = side / 9
+        val cell = side / n
         val padWidth = maxWidth
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                Modifier.size(side).highlightGrid(9, 9).background(if (classic) Color.Transparent else a.frame, RoundedCornerShape(8.dp)).drawBehind {
+                Modifier.size(side).highlightGrid(n, n).background(if (classic) Color.Transparent else a.frame, RoundedCornerShape(8.dp)).drawBehind {
                     if (classic) return@drawBehind
                     // The frame again over a box's edge: dark's is translucent, and one layer of it hardly parts the boxes.
-                    for (k in 1..2) {
+                    if (boxed) for (k in 1..2) {
                         val at = size.width * k / 3f
                         drawLine(a.frame, Offset(at, 0f), Offset(at, size.height), 3.dp.toPx())
                         drawLine(a.frame, Offset(0f, at), Offset(size.width, at), 3.dp.toPx())
+                    } else {
+                        // The same over each wall, a side at a time (a cage's walls bend).
+                        val step = size.width / n
+                        for (i in 0 until n * n) {
+                            val x = i % n * step
+                            val y = i / n * step
+                            if (i % n < n - 1 && wall(i, i + 1)) drawLine(a.frame, Offset(x + step, y), Offset(x + step, y + step), 3.dp.toPx())
+                            if (i / n < n - 1 && wall(i, i + n)) drawLine(a.frame, Offset(x, y + step), Offset(x + step, y + step), 3.dp.toPx())
+                        }
                     }
                 },
             ) {
-                for (r in 0 until 9) {
-                    for (c in 0 until 9) {
-                        val i = r * 9 + c
+                for (r in 0 until n) {
+                    for (c in 0 until n) {
+                        val i = r * n + c
                         val isSelected = s.selected == i
                         val sameValue = selectedValue != 0 && s.cells[i] == selectedValue
                         val look = highlight.look(i)
@@ -221,7 +247,7 @@ internal fun SudokuGridBoard(
                             val ground = when {
                                 isSelected -> BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f).compositeOver(scheme.surface)
                                 sameValue -> classicTwin
-                                (r / 3 + c / 3) % 2 == 0 -> boxTint
+                                boxed && (r / 3 + c / 3) % 2 == 0 -> boxTint
                                 else -> scheme.surface
                             }
                             val ink = when {
@@ -236,7 +262,7 @@ internal fun SudokuGridBoard(
                             sameValue -> SudokuTwin
                             s.cells[i] != 0 && !s.givens[i] -> a.control
                             s.givens[i] -> ArcadeFill(a.given, a.given, a.givenInk)
-                            (r / 3 + c / 3) % 2 == 0 -> ArcadeFill(boxShade, boxShade, a.squareInk)
+                            boxed && (r / 3 + c / 3) % 2 == 0 -> ArcadeFill(boxShade, boxShade, a.squareInk)
                             else -> ArcadeFill(a.square, a.square, a.squareInk)
                         }
                         Box(
@@ -248,7 +274,10 @@ internal fun SudokuGridBoard(
                                 .moveFeel(feel, i, if (classic) Color(accent) else a.selected.from)
                                 .then(
                                     if (classic) Modifier.padding(1.dp)
-                                    else Modifier.padding(start = gap(c), end = gap(c + 1), top = gap(r), bottom = gap(r + 1))
+                                    else Modifier.padding(
+                                        start = gap(c == 0, c > 0 && wall(i - 1, i), wallGap), end = gap(c == n - 1, c < n - 1 && wall(i, i + 1), wallGap),
+                                        top = gap(r == 0, r > 0 && wall(i - n, i), wallGap), bottom = gap(r == n - 1, r < n - 1 && wall(i, i + n), wallGap),
+                                    )
                                 )
                                 .then(a.selected.glow?.takeIf { isSelected }?.let { Modifier.arcadeGlow(it, 4.dp, 1.5.dp) } ?: Modifier)
                                 // Under the dimming, so a dimmed square fades to itself and not to the frame.
@@ -296,10 +325,12 @@ internal fun SudokuGridBoard(
                                 val style = BoardGlyph.NOTE.style(cell * (1f - band * 0.75f)).copy(color = ink, textAlign = TextAlign.Center)
                                 // Drawn, not composed: nine Text nodes in each of up to eighty-one
                                 // cells would be a lot of layout for a board that redraws on every tap.
+                                // Three to a row: three rows on a 9x9, two for six digits.
+                                val rows = (n + 2) / 3
                                 Canvas(Modifier.fillMaxSize()) {
                                     val sub = size.width / 3f
-                                    val rowHeight = (size.height * (1f - band) - if (band > 0f) 2.dp.toPx() else 0f) / 3f
-                                    for (d in 1..9) {
+                                    val rowHeight = (size.height * (1f - band) - if (band > 0f) 2.dp.toPx() else 0f) / rows
+                                    for (d in 1..n) {
                                         if (noted and (1 shl (d - 1)) == 0) continue
                                         val laid = measurer.measure(d.toString(), style, maxLines = 1)
                                         val r = (d - 1) / 3
@@ -349,15 +380,15 @@ internal fun SudokuGridBoard(
                 Modifier.width(padWidth).keepClear(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                (1..9).forEach { digit ->
-                    val remaining = 9 - s.cells.count { it == digit }
+                (1..n).forEach { digit ->
+                    val remaining = n - s.cells.count { it == digit }
                     val at = s.selected
                     // In notes mode a key that is already pencilled on the selected cell is tinted.
                     val pencilled = armedDigit == digit || notesMode && at != null && s.hasNote(at, digit)
                     // Notes cannot go on a filled or given cell: the keys show it rather than do nothing.
                     val inert = notesMode && at != null && !s.canNote(at)
                     PadKey(
-                        SudokuTeacher.pad(digit), highlight, glow, pulse,
+                        padKey(digit), highlight, glow, pulse,
                         // Classic's keys are flat: the surface, hue A's tint when pencilled, the variant once a digit is used up.
                         fill = when {
                             !classic -> Color.Transparent
@@ -400,7 +431,7 @@ internal fun SudokuGridBoard(
                 }
                 // The mode switch lives with the keys it changes. Not a state: see notesMode.
                 PadKey(
-                    SudokuTeacher.NOTES_KEY, highlight, glow, pulse,
+                    notesKey, highlight, glow, pulse,
                     fill = if (!classic) Color.Transparent else if (notesMode) BoardHues.mark(hueA) else scheme.surface,
                     enabled = interactive,
                     onClick = {

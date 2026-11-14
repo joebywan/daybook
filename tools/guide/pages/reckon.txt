@@ -1,0 +1,183 @@
+# Reckon
+> Make every cage's number, 1 to 6 once per line
+
+## How to play
+
+Tap a square, then tap a digit. Tap the digit again to clear it.
+
+Or pick the digit first: with no square selected, tap a digit, then every square it goes in. Tap the selected square to let go of it, and the digit again to finish.
+
+Tap the pencil to take notes. While it is lit, a digit is pencilled small in the square instead of placed, and placing a digit clears it from the notes of the squares in its row and column.
+
+On a keyboard, the arrows move, 1 to 6 place a digit (or a note in pencil mode), and Backspace clears.
+
+A repeat in a row or column, or a cage that can no longer make its number, turns red after a moment, but nothing stops you placing a digit.
+
+Stuck? The first tap on Hint says where to look, and the second explains why. You make the move yourself, unless you ask for "Show me". If a digit you placed is wrong, Hint points at that first. Every board has exactly one answer, and you never need to guess to find it.
+
+## Rules
+
+- Fill every square with a digit from 1 to the size of the grid: no repeat in a row or a column.
+- Bold lines mark cages. The number and sign in a cage's corner is what its digits make: added (+), multiplied (×), or in a cage of two, the bigger less (−) or over (÷) the smaller.
+- A cage may repeat a digit when the two squares share no row or column.
+- A cage of one square is given, and stays put.
+
+## What changes per tier
+
+- Standard: Cages of up to 3 squares, a few digits given. About 18 cages, 3 to 5 of them single given squares.
+- Hard: Cages of up to 4 squares, one or two digits given. About 15 cages. Needs a cage that settles a digit for its whole line, or two squares sharing two digits, at least once.
+- Expert: Cages of up to 5 squares, no digits given. About 13 cages, and the cages are all you start from. Needs a what-if at least once.
+
+## Techniques
+
+These are the steps the hints teach, simplest first. Try them in this order. On each board, the colours and bold lines are the cages, the darker tint is where to look, rings mark the digits the reasoning leans on, and the filled square is the move. Every board here is a real position from the game, and this is the step the hint gives on it.
+
+### last-square | The last square in a row or column
+
+A row or column with one empty square is missing one digit, so that digit goes there.
+
+~~~board
+6 . . . . 4
+4 1 2 3 . 5
+. . . . . .
+. . . . . .
+. . . . 5 .
+. . . . . .
+regions: abbccd aefghi jeklhm jjklhm nokpqm nopprr
+corners: r1c1=24× r1c2=8+ r1c4=2÷ r2c2=2× r2c5=11+ r3c1=11+ r3c3=72× r3c4=24× r3c6=6+ r5c1=1− r5c2=10+ r5c4=10× r6c5=3−
+focus: r2c1-r2c6
+cite: r2c1 r2c2 r2c3 r2c4 r2c6
+answer: r2c5=6
+caption: Row 2 holds 4, 1, 2, 3 and 5, so its last empty square is the 6.
+~~~
+
+### only-digit | A square with one digit left
+
+Start from a square. Its row and column may between them hold every digit but one.
+
+~~~board
+6 . . . . 4
+4 1 2 3 6 5
+5 2 . . . .
+. 5 . . . .
+. . . . 5 .
+. . . . . .
+regions: abbccd aefghi jeklhm jjklhm nokpqm nopprr
+corners: r1c1=24× r1c2=8+ r1c4=2÷ r2c2=2× r2c5=11+ r3c1=11+ r3c3=72× r3c4=24× r3c6=6+ r5c1=1− r5c2=10+ r5c4=10× r6c5=3−
+focus: r1c2
+cite: r1c1 r1c6 r2c2 r3c2 r4c2
+answer: r1c2=3
+caption: Its row holds 6 and 4, and its column 1, 2 and 5, so only 3 is left.
+~~~
+
+### only-place | A digit's only place in a row or column
+
+Start from a digit a line still needs. Every other empty square in the line may already have that digit in its own row or column.
+
+~~~board
+6 3 5 . . 4
+4 1 2 3 6 5
+5 2 . . . .
+. 5 . . . .
+. . . . 5 .
+. . . . . .
+regions: abbccd aefghi jeklhm jjklhm nokpqm nopprr
+corners: r1c1=24× r1c2=8+ r1c4=2÷ r2c2=2× r2c5=11+ r3c1=11+ r3c3=72× r3c4=24× r3c6=6+ r5c1=1− r5c2=10+ r5c4=10× r6c5=3−
+focus: r6c1-r6c6
+answer: r6c4=5
+caption: Row 6 needs a 5. Columns 1, 2, 3, 5 and 6 each have theirs already, so it goes in column 4.
+~~~
+
+### cage-combination | A cage's digit combinations
+
+Now the cages come in. List the ways a cage can make its number with the digits its squares can still take. Two squares making 3÷ are 1 and 3 or 2 and 6; 15× is only 3 and 5. A cage may repeat a digit, but only in squares that share no row or column, so its shape matters. When the ways leave a square one digit, that's it.
+
+~~~board
+6 . . . . 4
+4 . 2 3 . 5
+. . . . . .
+. . . . . .
+. . . . 5 .
+. . . . . .
+regions: abbccd aefghi jeklhm jjklhm nokpqm nopprr
+corners: r1c1=24× r1c2=8+ r1c4=2÷ r2c2=2× r2c5=11+ r3c1=11+ r3c3=72× r3c4=24× r3c6=6+ r5c1=1− r5c2=10+ r5c4=10× r6c5=3−
+focus: r2c2 r3c2
+cite: r2c2 r3c2
+answer: r2c2=1
+caption: 2× in two squares is only 1 and 2, either way round. Row 2 has its 2 already, so this square is the 1.
+~~~
+
+### cage-place | A digit's only place, counting the cages
+
+A digit's only place in a line again, with the cages counted too: a square whose cage has no way to hold the digit is no place for it.
+
+~~~board
+6 . . . . 4
+4 1 2 3 6 5
+. 2 . . . .
+. . . . . .
+. . . . 5 .
+. . . . . .
+regions: abbccd aefghi jeklhm jjklhm nokpqm nopprr
+corners: r1c1=24× r1c2=8+ r1c4=2÷ r2c2=2× r2c5=11+ r3c1=11+ r3c3=72× r3c4=24× r3c6=6+ r5c1=1− r5c2=10+ r5c4=10× r6c5=3−
+focus: r3c1-r3c6
+answer: r3c1=5
+caption: Row 3 needs a 5. Columns 5 and 6 have theirs, and the cages of columns 3 and 4 can't hold one: 72× down a column is 3 × 4 × 6, and 24× is 4 × 6. So it goes in column 1.
+~~~
+
+### cage-in-line | A cage that fills a digit in a line
+
+Sometimes every way of a cage puts some digit in the squares it has in one line. Then no other square of that line can have it.
+
+~~~board
+. . . . . .
+. . . . . .
+. . . . . .
+. . . . . .
+. . . 4 . .
+. . . . . .
+regions: abbcde abfcde ggfdde hiijjk hhhlmk nnoomm
+corners: r1c1=2÷ r1c2=6× r1c4=5− r1c5=12+ r1c6=10+ r2c3=2− r3c1=9+ r4c1=17+ r4c2=5× r4c4=1− r4c6=7+ r5c5=72× r6c1=2− r6c3=3−
+focus: r4c1 r5c1 r5c2 r5c3 r5c5
+cite: r5c1 r5c2 r5c3
+answer: r5c5=3
+caption: However the 17+ cage is filled (1·5·5·6, 2·3·6·6, 2·4·5·6 or 3·3·5·6), a 6 lands in its part of row 5. So this square is no 6, and the 72× cage, 3 × 4 × 6 or 6 × 2 × 6, leaves it only 3: row 5 has its 4.
+~~~
+
+### naked-pair | Two squares sharing two digits
+
+Two squares in a line that can each be only the same two digits take both of them, so no other square in that line can hold either. Strike them off and look for the single it leaves.
+
+~~~board
+6 2 . . 1 4
+. 1 2 . . .
+. . . . . .
+. . . . . .
+. . . . . .
+. . . . . 6
+regions: aabbcd eabffd eghfii jghhhi jklllm jknnmm
+corners: r1c1=9+ r1c3=30× r1c6=1− r2c1=8+ r2c4=12+ r3c2=2÷ r3c3=16+ r3c5=8+ r4c1=8× r5c2=20× r5c3=18× r5c6=13+ r6c3=1−
+focus: r2c1 r2c6 r3c4
+cite: r2c1 r2c6
+answer: r3c4=2
+caption: The ringed squares of row 2 can only be 3 or 5, so they take both. The 12+ cage's two squares in row 2 are then 4 and 6, which make 10, leaving 2 for its third.
+~~~
+
+### what-if | A what-if
+
+Take a square left two digits and suppose one. Follow it a few steps: if a square, a line or a cage is left with nothing, the supposition was wrong and the square is the other digit.
+
+~~~board
+. . . . . .
+. . . . . .
+5 . . . . .
+. . . . . .
+. . 5 . . .
+. . . . . .
+regions: abccde abbcde ffbgee fhbgii jhhiik jhllik
+corners: r1c1=2÷ r1c2=13+ r1c3=120× r1c5=11+ r1c6=48× r3c1=20× r3c4=2÷ r4c2=20+ r4c5=12+ r5c1=3− r5c6=2− r6c3=2×
+focus: r1c3
+cite: r6c3
+answer: r1c3=6
+caption: The 120× cage is 4 × 5 × 6 and column 3 has its 5, so this square is 4 or 6. Suppose 4: then row 6, column 3 would be 2, and column 2 would have nowhere for its 3. So it is 6.
+~~~
