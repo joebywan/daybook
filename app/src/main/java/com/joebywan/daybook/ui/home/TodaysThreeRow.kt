@@ -68,8 +68,8 @@ internal fun TodaysThreeRow(
     var sharing by rememberSaveable { mutableStateOf(false) }
     val chips: @Composable (Modifier) -> Unit = { m ->
         Row(m, horizontalArrangement = Arrangement.spacedBy(TileGap), verticalAlignment = Alignment.CenterVertically) {
-            three.forEachIndexed { i, p ->
-                ThreeChip(p, i, (p.id to tier) in done, p == next, shown, compact, { onPlay(p.id) }, Modifier.weight(1f))
+            three.forEach { p ->
+                ThreeChip(p, (p.id to tier) in done, p == next, shown, compact, { onPlay(p.id) }, Modifier.weight(1f))
             }
         }
     }
@@ -104,12 +104,11 @@ private fun Modifier.heightIn(compact: Boolean) = if (compact) this else height(
 
 @Composable
 private fun ThreeChip(
-    puzzle: PuzzleType, place: Int, solved: Boolean, next: Boolean, enabled: Boolean, compact: Boolean, onClick: () -> Unit, modifier: Modifier,
+    puzzle: PuzzleType, solved: Boolean, next: Boolean, enabled: Boolean, compact: Boolean, onClick: () -> Unit, modifier: Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
-    // Coloured by place, as the grid's tiles are: as if a row above the grid's first, so the three never match each other.
-    val tile = ArcadeBoard.tile(Color(tileAccentAt(-1, place)), BoardHues.isDark(scheme))
+    val tile = ArcadeBoard.tile(accent, BoardHues.isDark(scheme))
     val shape = RoundedCornerShape(14.dp)
     // Classic (issue #418): the surface, tinted with the accent once solved, as before Arcade; no ring, no lift.
     val classic = classicLook()

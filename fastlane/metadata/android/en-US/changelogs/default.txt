@@ -1,4 +1,6 @@
-- New puzzle: Reckon. Fill a 6x6 grid with 1 to 6, once in every row and column, so the digits in each cage make its number with its sign: add, take away, multiply or divide.
+- New puzzle: Reckon. Fill a 6x6 grid with 1 to 6, once in every row and column, so each cage's digits make its number with its sign.
 - Its hints explain each cage's combinations, and a Training course drills them.
-- Every puzzle now has the bright Arcade look; Classic keeps the calmer colours.
-- Who's Who is played as a web of links: draw lines, rule pairs out, let the rest follow.
+- Home tiles wear their own puzzle's colour again; hints glow brighter.
+- Who's Who is played as a web of links. Games carry over, and it takes a keyboard.
+- Equation Expert gives five guesses, and the hints win every board.
+- Training: any right Links move of the technique counts.
