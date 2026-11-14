@@ -62,7 +62,7 @@ never "harder"): "Cages of up to 3 squares, a few digits given" / "Cages of up t
 - `lastResort` per tier is the first seed from 1 the tier accepts, proved by a test; `FallbackTest` walks a year per tier.
 
 **Measured as built** (2026-11-14, a year of daily boards a tier, `ReckonRulesTest`, `build/reports/reckon-generation.txt`;
-JVM only, the browsers are still to measure):
+browsers below the table):
 
 | | Standard | Hard | Expert |
 |---|---|---|---|
@@ -72,6 +72,9 @@ JVM only, the browsers are still to measure):
 | Cages by `+ − × ÷` | 3.5 / 3.0 / 5.6 / 1.8 | 4.2 / 2.3 / 5.2 / 1.5 | 4.4 / 2.1 / 5.0 / 1.4 |
 
 No day of a year reaches `lastResort`. The bands above held as written; nothing was moved.
+
+Browsers (2026-11-14, `?dump&range=365&puzzle=reckon&times`, one page at a time), ms median / p95 / max: Chromium
+0.2 / 0.6 / 1.0, 2.3 / 8.5 / 21, 29 / 118 / 229; WebKit 0 / 1 / 2, 3 / 13 / 32, 43 / 178 / 343.
 
 ## The ladder (`ReckonTeacher.kt`, shared with the generator)
 
@@ -93,7 +96,7 @@ supposes one of a square's two digits. Measured (`ReckonTeachingTest`, 200 rando
 by hints alone): no fallback on any board; 32.0 / 34.6 / 36.0 steps a board, of which cage combinations 12.6 / 11.3 / 10.9,
 cage-place 0.8 / 3.2 / 3.7, cage in a line 0 / 1.41 / 1.38, naked pair 0 / 0.08 / 0.18, what-if 0 / 0 / 1.40; every Hard
 board needs a cage in a line or a pair, every Expert board a what-if. Slowest single hint 3.6 ms on the JVM.
-Training: a course on rungs 2, 3 and 5 (`core/training/`), once the ladder is measured.
+Training: every praised rung, as the digit courses do (`core/training/ReckonTraining.kt`; `TrainingTest` asks for all of them); the final board is practice seed 10's Expert board, the first whose walk needs all eight.
 
 ## The board on a phone
 
@@ -117,6 +120,14 @@ measured, and the rules that follow:
 - **Check by rendering**, both browsers, 375x537 and 390x844, light and dark, the longest label on the board, and a
   board full of notes: `tools/render/render.py`. Then on the emulator. The board ships only if no label touches a wall
   or a note, and squares read as squares (not stripes) where cages run in long lines.
+- **As built** (rendered both browsers, both sizes, both schemes and both looks, and on the emulator, 2026-11-14): no Arcade
+  tint per cage. The frame's gap alone (Sudoku's 1.5dp box edge) did not part cages: in dark the frame is 20% white, and
+  in light a 1dp navy seam against a 3dp navy wall read as the same line. So Arcade's wall gap is 2dp a side with
+  Mosaic's wall ink drawn in it (white 80% dark, the frame's navy light), and inside a cage the gap is eased to a pale
+  hairline; Classic draws the walls in `ColorScheme.wall`. Labels are `BoardGlyph.CORNER` of the square (16sp at 49dp)
+  in a 0.34 band; a label on a filled, selected or red square sits on a chip of the plain square, as Cage Sudoku's. Six
+  notes fill a 2x3 under the band and touch neither label nor wall. Sudoku's and Cage Sudoku's boards, rendered before
+  and after the generalisation (both sizes, schemes and browsers, Standard and Expert), are pixel-identical.
 
 ## Board, input, keys
 
