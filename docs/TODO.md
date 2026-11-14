@@ -264,9 +264,11 @@ In order of measured demand, then fit:
   never touch. Little demand, and near the declined island puzzle: show the owner an example first. *M.*
 - Magnets and map colouring: no dedicated Android app found. Not suggested.
 
-Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Hidato (Trail). KenKen / Calcudoku
-(557K) is Cage Sudoku's cages with -, x and / on Inequality's Latin square: an *S–M* variant if wanted, built from
-`CageLogic` and `InequalityLogic`, not a new engine.
+- [ ] **Reckon (KenKen / Calcudoku, 557K; issue #483, wanted 2026-11-14).** 6x6 arithmetic cages on a Latin square.
+  Spec: `docs/RECKON_SPEC.md`. `CageLogic` is 9x9-bound, so the base is `InequalityLogic` plus a new cage ladder; the
+  grid and pad are Sudoku's generalised to n. *M.*
+
+Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Hidato (Trail).
 
 **Not recommended** (noted so nobody re-investigates): plain word-search and sliding-tile puzzles are generator-easy
 but do not demand thought, against the owner's stated taste. (A crossword was here for want of a clue database; the
