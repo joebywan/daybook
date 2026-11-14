@@ -185,6 +185,11 @@ class LaunchPreferences(private val store: KeyValueStore) {
 
     suspend fun setShowTestPuzzles(on: Boolean) = setFlag(KEY_TEST_PUZZLES, on)
 
+    /** Whether Who's Who counts a link the marks imply as made (issue #500). On unless the player turned it off. */
+    val whosWhoAutoSolve: Flow<Boolean> = flag(KEY_WHOSWHO_AUTO)
+
+    suspend fun setWhosWhoAutoSolve(on: Boolean) = setFlag(KEY_WHOSWHO_AUTO, on)
+
     /** An on/off switch, stored as "on" or "off"; anything but "off" (nothing stored included) is on. */
     private fun flag(key: String): Flow<Boolean> = store.string(key).map { it != "off" }
 
@@ -246,6 +251,7 @@ class LaunchPreferences(private val store: KeyValueStore) {
         const val KEY_ORDER = "puzzle_order"
         const val KEY_SOUND = "play_sound"
         const val KEY_TEST_PUZZLES = "test_puzzles"
+        const val KEY_WHOSWHO_AUTO = "whoswho_auto_solve"
         const val KEY_DIFFICULTY = "difficulty"
         const val KEY_SHOW_TIMER = "show_timer"
         // The web page reads it before the app loads, as `daybook_launch.appearance` (index.html).

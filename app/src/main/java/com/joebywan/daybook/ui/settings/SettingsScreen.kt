@@ -81,6 +81,8 @@ fun SettingsScreen(
     onTraining: () -> Unit = {},
     testPuzzles: Boolean = false,
     onTestPuzzles: (Boolean) -> Unit = {},
+    whosWhoAutoSolve: Boolean = true,
+    onWhosWhoAutoSolve: (Boolean) -> Unit = {},
 ) {
     val rateLink = rememberRateLink()
 
@@ -118,6 +120,15 @@ fun SettingsScreen(
                         "when you solve. $VIBRATION_NOTE",
                     checked = vibrate,
                     onChecked = onVibrate,
+                )
+            }
+            item {
+                SettingSwitch(
+                    title = "Who's Who: finish by elimination",
+                    detail = "Once you've ruled out every other option, the one left counts as linked, so you don't have " +
+                        "to draw it. Off, you draw every line yourself.",
+                    checked = whosWhoAutoSolve,
+                    onChecked = onWhosWhoAutoSolve,
                 )
             }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
