@@ -26,13 +26,15 @@ data class ReckonState(
     val notes: List<Int> = List(size * size) { 0 },
     val selected: Int? = null,
     override val moves: Int = 0,
+    /** Squares a Training practice fixed as given (the walk's digits so far), beside the one-square cages; empty in play. */
+    val locked: List<Int> = emptyList(),
 ) : PuzzleState {
 
     /** The rules, never [solution]: every line 1..n once and every cage making its target. */
     override val solved: Boolean get() = ReckonLogic.isSolved(size, cells, cageOf, ops, targets)
 
-    /** Whether [index] is a given (a one-square cage), which can never change. */
-    fun isGiven(index: Int): Boolean = ops[cageOf[index]] == ReckonLogic.GIVEN
+    /** Whether [index] is a given (a one-square cage, or a square a practice [locked]), which can never change. */
+    fun isGiven(index: Int): Boolean = ops[cageOf[index]] == ReckonLogic.GIVEN || index in locked
 
     /** Squares the board shows to be wrong: repeats in a line, and squares of a cage that cannot make its target. */
     fun conflicts(): Set<Int> = ReckonLogic.clashes(size, cells) + ReckonLogic.cageConflicts(size, cells, cageOf, ops, targets)

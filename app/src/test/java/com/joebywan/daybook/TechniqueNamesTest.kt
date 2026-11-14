@@ -74,6 +74,7 @@ class TechniqueNamesTest {
         "mini" to MiniTeacher.TECHNIQUES,
         "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
         "links" to LinksTeacher.TECHNIQUES,
+        "reckon" to com.joebywan.daybook.puzzles.ReckonTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -144,6 +145,16 @@ class TechniqueNamesTest {
         for (t in Difficulty.entries) for (seed in 1L..10L) {
             val got = Links.neededTechnique(Links.generate(seed, t))
             assertTrue("links $t seed $seed: $got", got in links[t.ordinal])
+        }
+        // Reckon's Hard needs a cage in a line or a pair; Expert a what-if.
+        val reckon = listOf(
+            setOf(null),
+            setOf(com.joebywan.daybook.puzzles.ReckonTeacher.CAGE_LINE, com.joebywan.daybook.puzzles.ReckonTeacher.NAKED_PAIR),
+            setOf(com.joebywan.daybook.puzzles.ReckonTeacher.WHAT_IF),
+        )
+        for (t in Difficulty.entries) for (seed in 1L..10L) {
+            val got = com.joebywan.daybook.puzzles.Reckon.neededTechnique(com.joebywan.daybook.puzzles.Reckon.generate(seed, t))
+            assertTrue("reckon $t seed $seed: $got", got in reckon[t.ordinal])
         }
         // Mines' Hard and Expert each gate on a level of two techniques: whichever the walk used.
         val mines = listOf(setOf(null), setOf(MinesTeacher.SUBSET, MinesTeacher.PAIR), setOf(MinesTeacher.EDGE, MinesTeacher.WHAT_IF))

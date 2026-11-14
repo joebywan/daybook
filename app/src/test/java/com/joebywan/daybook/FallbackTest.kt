@@ -208,6 +208,11 @@ class FallbackTest {
     fun `links proves every daily board of a year on every tier`() =
         assertYearProved(Links, attempts = LinksLogic.ATTEMPTS, attempt = LinksLogic::attempt) { seed, d -> LinksLogic.generateVerified(seed, d) }
 
+    /** [com.joebywan.daybook.puzzles.ReckonLogic.generateVerified] returns a board only when the tier's ladder finished it at the tier's depth and the count found one answer. */
+    @Test
+    fun `reckon proves every daily board of a year on every tier`() =
+        assertYearProved(com.joebywan.daybook.puzzles.Reckon) { seed, d -> com.joebywan.daybook.puzzles.ReckonLogic.generateVerified(seed, d) }
+
     /** [SandLogic.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
     @Test
     fun `sand proves every daily board of a year on every tier`() = assertYearProved(Sand) { seed, d -> SandLogic.generateVerified(seed, d) }

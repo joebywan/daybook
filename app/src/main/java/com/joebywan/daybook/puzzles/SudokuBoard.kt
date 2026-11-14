@@ -128,6 +128,9 @@ internal fun List<Int>.allPlaced(digit: Int, n: Int): Boolean {
         (n != 9 || at.map { it / 27 * 3 + it % 9 / 3 }.toSet().size == 9)
 }
 
+/** Whether [digit] is on a 9x9 board nine times, never twice in a row, column or box. */
+internal fun List<Int>.allNine(digit: Int): Boolean = allPlaced(digit, 9)
+
 @Composable
 internal fun SudokuGridBoard(
     s: SudokuState,

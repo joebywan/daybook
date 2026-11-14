@@ -116,7 +116,7 @@ object Reckon : PuzzleType {
         val s = state as ReckonState
         val given = List(s.size * s.size) { if (s.isGiven(it)) s.cells[it] else 0 }
         val most = ReckonTeacher.depth(s.size, given, s.cageOf, s.ops, s.targets) ?: return null
-        return ReckonTeacher.TECHNIQUES[most].takeIf { most >= ReckonTeacher.rung(ReckonTeacher.CAGE_LINE) }
+        return if (most >= ReckonTeacher.rung(ReckonTeacher.CAGE_LINE)) ReckonTeacher.TECHNIQUES[most] else null
     }
 
     // ---- walkthrough -----------------------------------------------------------------------
