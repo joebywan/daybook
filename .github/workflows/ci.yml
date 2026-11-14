@@ -106,6 +106,14 @@ jobs:
       - name: Build the player guide
         run: python3 tools/guide/build.py --out "$RUNNER_TEMP/guide"
 
+      # GitHub drops an invalid issue form from the chooser without a word (an unquoted ": " hid the
+      # feature form). SchemaStore's schemas, bundled with check-jsonschema, catch that and bad keys.
+      - name: Check the issue forms
+        run: |
+          pipx run check-jsonschema==0.39.0 --builtin-schema vendor.github-issue-forms \
+            .github/ISSUE_TEMPLATE/bug_report.yml .github/ISSUE_TEMPLATE/feature_request.yml
+          pipx run check-jsonschema==0.39.0 --builtin-schema vendor.github-issue-config .github/ISSUE_TEMPLATE/config.yml
+
       # Deliberately assembleRelease, not assembleDebug. Building a different variant here from
       # the one that ships is how a broken release goes out repeatedly behind a green check.
       # Unsigned is fine: secrets are not exposed to pull requests from forks.
