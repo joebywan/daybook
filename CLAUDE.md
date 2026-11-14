@@ -1477,6 +1477,11 @@ budget, no pruning, and the waypoint order checked only once a full line exists 
 the generator's on every one of those points. It is slow, several seconds per Expert board, so the
 sample thins as the boards grow rather than dropping the large ones.
 
+**Taps are tested by drawing the board** (`app/src/testDebug`, Compose's test rule under Robolectric): a pure tap function can be
+right while the board hands its pills a stale copy of it (Who's Who, PR #486: a `::tap` reference to a local fun was kept from
+an earlier composition, so a second pill was chosen instead of linked; only the keyboard, which called it directly, worked).
+`WhosWhoTapUiTest` taps Ann, then the cat, and fails on that bug. Pass composables lambda values, never `::localFun`.
+
 `FallbackTest` exists because a generator can degrade silently. It has twice needed tightening
 after passing on plainly broken boards: once while LITS fell back on every board, because it
 asserted a property the fallback also satisfied, and once while Snap numbered 39 of 42 squares,
