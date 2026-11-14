@@ -64,42 +64,44 @@ import java.time.LocalDate
  * fired routinely would still pass the solvability tests while quietly shipping a trivial board,
  * so each one is pinned here by a property only the real generator produces.
  */
-class FallbackTest {
+private val probeSeeds = seeds(20, Difficulty.HARD, "probe", LocalDate.of(2026, 5, 1))
 
-    private val seeds = seeds(20, Difficulty.HARD, "probe", LocalDate.of(2026, 5, 1))
-
-    /**
-     * Walks every tier of 2026's daily seeds through [verified] (null when nothing was proved), asserts no day gave up,
-     * and that the first [shipsChecked] days of each tier are what [PuzzleType.generate] ships. With [attempt], also
-     * counts the draws each proved board took out of [attempts] (printed) and asserts every one is under [ceiling].
-     */
-    private fun assertYearProved(
-        p: PuzzleType,
-        fellBack: String = "shipped its last resort",
-        unit: String = "days",
-        shipsChecked: Long = 365,
-        attempts: Int = 0,
-        ceiling: Int = attempts / 2,
-        attempt: ((Long, Difficulty, Int) -> Any?)? = null,
-        verified: (Long, Difficulty) -> Any?,
-    ) {
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            val draws = mutableListOf<Int>()
-            for (day in 0 until 365) {
-                val date = TEST_START.plusDays(day.toLong())
-                val seed = daySeed(day, p.id, difficulty)
-                val proved = verified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                if (day < shipsChecked) assertEquals("${p.id} $date/${difficulty.name}", proved, p.generate(seed, difficulty))
-                if (attempt != null) draws += 1 + (0 until attempts).first { attempt(seed, difficulty, it) != null }
-            }
-            if (attempt == null) continue
-            println("${p.id} ${difficulty.name}: draws per board mean ${"%.2f".format(draws.average())}, most ${draws.max()} of $attempts")
-            assertTrue("${p.id} ${difficulty.name} came close to the allowance: ${draws.max()}", draws.max() < ceiling)
+/**
+ * Walks every tier of 2026's daily seeds through [verified] (null when nothing was proved), asserts no day gave up,
+ * and that the first [shipsChecked] days of each tier are what [PuzzleType.generate] ships. With [attempt], also
+ * counts the draws each proved board took out of [attempts] (printed) and asserts every one is under [ceiling].
+ */
+private fun assertYearProved(
+    p: PuzzleType,
+    fellBack: String = "shipped its last resort",
+    unit: String = "days",
+    shipsChecked: Long = 365,
+    attempts: Int = 0,
+    ceiling: Int = attempts / 2,
+    attempt: ((Long, Difficulty, Int) -> Any?)? = null,
+    verified: (Long, Difficulty) -> Any?,
+) {
+    val gaveUp = mutableListOf<String>()
+    for (difficulty in Difficulty.entries) {
+        val draws = mutableListOf<Int>()
+        for (day in 0 until 365) {
+            val date = TEST_START.plusDays(day.toLong())
+            val seed = daySeed(day, p.id, difficulty)
+            val proved = verified(seed, difficulty)
+            if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+            if (day < shipsChecked) assertEquals("${p.id} $date/${difficulty.name}", proved, p.generate(seed, difficulty))
+            if (attempt != null) draws += 1 + (0 until attempts).first { attempt(seed, difficulty, it) != null }
         }
-        assertTrue("${p.id} $fellBack on ${gaveUp.size} $unit: $gaveUp", gaveUp.isEmpty())
+        if (attempt == null) continue
+        println("${p.id} ${difficulty.name}: draws per board mean ${"%.2f".format(draws.average())}, most ${draws.max()} of $attempts")
+        assertTrue("${p.id} ${difficulty.name} came close to the allowance: ${draws.max()}", draws.max() < ceiling)
     }
+    assertTrue("${p.id} $fellBack on ${gaveUp.size} $unit: $gaveUp", gaveUp.isEmpty())
+}
+
+// One class per few puzzles, not one class: Gradle hands each test class to one worker, and as one class these years
+// took 13 minutes on a single worker, the slowest thing in CI. Grouped by measured time (2026-11-14), about 3 minutes each.
+class FallbackTest {
 
     /**
      * A whole year of real daily seeds on every tier, not the twenty probe seeds the others use.
@@ -183,6 +185,10 @@ class FallbackTest {
     @Test
     fun `mini proves every daily board of a year on every tier`() = assertYearProved(Mini) { seed, d -> MiniLogic.generateVerified(seed, d) }
 
+}
+
+class FallbackWordsTest {
+
     /** [com.joebywan.daybook.puzzles.HexLogic.generateVerified] returns a board only when the exact search says common words reach its target. */
     @Test
     fun `hexwords proves every daily board of a year on every tier`() =
@@ -199,6 +205,10 @@ class FallbackTest {
     /** [UnblockLogic.generateVerified] returns a board only when a fresh breadth-first search proves its par, the fewest moves, inside the tier. */
     @Test
     fun `unblock proves every daily board of a year on every tier`() = assertYearProved(Unblock) { seed, d -> UnblockLogic.generateVerified(seed, d) }
+
+}
+
+class FallbackLinksTest {
 
     /**
      * [LinksLogic.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
@@ -250,10 +260,14 @@ class FallbackTest {
     @Test
     fun `sudoku proves every daily board of a year on every tier`() = assertYearProved(Sudoku) { seed, d -> Sudoku.generateVerified(seed, d) }
 
+}
+
+class FallbackGridsTest {
+
     @Test
     fun `lits never falls back to a single region`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds) {
+            for (seed in probeSeeds) {
                 val state = Lits.generate(seed, difficulty) as LitsState
                 val regions = state.region.distinct().size
                 assertTrue("lits/${difficulty.name}/$seed fell back ($regions regions)", regions >= 4)
@@ -302,6 +316,10 @@ class FallbackTest {
     fun `lamps proves every daily board of a year on every tier`() =
         assertYearProved(Lamps, attempts = LampsLogic.ATTEMPTS, attempt = LampsLogic::attempt) { seed, d -> LampsLogic.generateVerified(seed, d) }
 
+}
+
+class FallbackLoopsTest {
+
     /**
      * [PearlsLogic.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
      * deepest, and the exhaustive count proved one loop. Also measures the redraws (printed): a draw is redrawn when
@@ -348,7 +366,7 @@ class FallbackTest {
     @Test
     fun `snap never falls back to numbering every square`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds) {
+            for (seed in probeSeeds) {
                 val state = Snap.generate(seed, difficulty) as SnapState
                 val numbered = state.waypoints.count { it > 0 }
                 assertTrue(
@@ -362,7 +380,7 @@ class FallbackTest {
     @Test
     fun `shikaku clues always tile the whole grid`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds) {
+            for (seed in probeSeeds) {
                 val state = Shikaku.generate(seed, difficulty) as ShikakuState
                 val area = state.clues.filterNotNull().sum()
                 assertTrue(
