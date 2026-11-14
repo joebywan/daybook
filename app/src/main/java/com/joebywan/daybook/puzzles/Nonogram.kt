@@ -66,6 +66,7 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.PenKeyAction
 import com.joebywan.daybook.core.penKeyAction
+import com.joebywan.daybook.core.sweptCells
 import com.joebywan.daybook.ui.Sweep
 import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.penKeys
@@ -324,6 +325,8 @@ object Nonogram : PuzzleType {
         accent: Color = Color.Unspecified,
         zoom: Float = 1f,
         cursor: Int? = null,
+        focus: Int? = null,
+        focusTint: Color = Color.Unspecified,
     ) {
         val highlight = overlay.highlight
         val n = s.width * s.height
@@ -339,6 +342,8 @@ object Nonogram : PuzzleType {
                 val y = r * u
                 val mark = s.cells[r * s.width + c]
                 drawRect(if (classic) scheme.surface else if (mark == NonogramLogic.CROSSED) arcade.given else arcade.square, Offset(x, y), Size(u, u))
+                // The row and column of the square in hand, under the marks, so a long line can be followed to its clue.
+                if (focus != null && (r == focus / s.width || c == focus % s.width)) drawRect(focusTint, Offset(x, y), Size(u, u))
                 feelSquare(feel, r * s.width + c, Offset(x, y), Size(u, u), accent) {
                     when {
                         classic && mark == NonogramLogic.FILLED -> drawRoundRect(
@@ -427,6 +432,8 @@ object Nonogram : PuzzleType {
         bad: BooleanArray = BooleanArray(s.height + s.width),
         overlay: HintGlow = HintGlow(),
         view: GridView = GridView(),
+        focus: Int? = null,
+        focusTint: Color = Color.Unspecified,
     ) {
         val u = g.u
         val cu = u * view.scale
@@ -442,10 +449,12 @@ object Nonogram : PuzzleType {
         // [centre] places a number by how many numbers come after it in the line.
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
             val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
+            val focused = focus != null && (line == focus / s.width || line == s.height + focus % s.width)
             if (classic) {
                 // Classic, as before Arcade: a finished line's numbers fade on a green band; an impossible line's stay full
                 // strength in the error ink (no band under them, which would cut its contrast), boxed in a dashed outline.
                 if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
+                if (focused) drawRoundRect(focusTint, band, bandSize, CornerRadius(u * 0.2f))
                 if (done[line] && !bad[line]) drawRoundRect(scheme.primary.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
                 if (bad[line]) {
                     val w = maxOf(u * 0.06f, 1.5f)
@@ -492,6 +501,7 @@ object Nonogram : PuzzleType {
                 )
             }
             if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.3f * overlay.pulse), at, side, CornerRadius(corner))
+            if (focused) drawRoundRect(focusTint, at, side, CornerRadius(corner))
             val ink = when {
                 bad[line] -> arcade.errorInk
                 finished -> doneFill.ink
@@ -519,6 +529,12 @@ object Nonogram : PuzzleType {
             }
         }
     }
+
+    /** The row and column in hand: a tint of the accent, light enough to leave every mark readable. */
+    private const val FOCUS_ALPHA = 0.16f
+
+    /** How far the sweep count stays from the finger's centre: a fingertip is about 10 mm across. */
+    private val FINGER_CLEAR = 40.dp
 
     /** Which lines (rows, then columns) show their clue. */
     private fun linesDone(s: NonogramState, clues: List<List<Int>>) = BooleanArray(clues.size) { NonogramLogic.lineDone(s, it, clues[it]) }
@@ -567,6 +583,9 @@ object Nonogram : PuzzleType {
                 val thin = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Normal) }
 
                 val shown = taps.shown.swept(sweep.value)
+                // The square in hand: the finger's in a sweep, else the last one touched or the keyboard's.
+                val focus = (sweep.value?.at ?: cursor.value).takeIf { interactive }
+                val focusTint = vivid(accent).copy(alpha = FOCUS_ALPHA)
                 val palette = remember(s.solution, arcade) { paletteFor(s, BoardHues.isDark(scheme)) }
                 // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
                 val units = remember(s.solution) { lineUnits(s.width, s.height) }
@@ -590,7 +609,7 @@ object Nonogram : PuzzleType {
 
                 Box(g.box.gridZoom(view, g.gridAt, g.gridSize, zooms)) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawClues(shown, g, text, thin, linesDone(shown, clues), scheme, bad, HintGlow(highlight, glow, pulse.value), view.value)
+                        drawClues(shown, g, text, thin, linesDone(shown, clues), scheme, bad, HintGlow(highlight, glow, pulse.value), view.value, focus, focusTint)
                     }
                     // Taps and sweeps are read over the grid alone, in its own coordinates (the zoom
                     // layer maps the finger back to them); the clues beside it are not part of the play area.
@@ -608,8 +627,24 @@ object Nonogram : PuzzleType {
                                 // The cursor is drawn with the grid, as a ring of two colours, so the shared one stays clear.
                                 // Classic's cursor is the pen grid's own, in the primary colour, as before Arcade.
                                 .penGrid(taps, interactive, pen, g.u, sweep, cursor, if (classic) scheme.primary else Color.Transparent, sweeps = !view.value.zoomed)
-                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale, cursor.value.takeIf { interactive && !classic }) },
+                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale, cursor.value.takeIf { interactive && !classic }, focus, focusTint) },
                         )
+                    }
+                    // How many squares the sweep covers, held clear of the finger (sweepCountAt).
+                    val held = sweep.value?.takeIf { interactive }
+                    val count = held?.let { sweptCells(it.start, it.at, s.width).size } ?: 0
+                    if (held != null && count > 1) {
+                        val label = measurer.measure(count.toString(), MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                        Canvas(Modifier.fillMaxSize()) {
+                            val cu = g.u * view.value.scale
+                            val finger = g.gridAt + view.value.offset + Offset((held.at % s.width + 0.5f) * cu, (held.at / s.width + 0.5f) * cu)
+                            val pad = Offset(12.dp.toPx(), 4.dp.toPx())
+                            val pill = Size(maxOf(label.size.width + 2 * pad.x, label.size.height + 2 * pad.y), label.size.height + 2 * pad.y)
+                            val down = held.start % s.width == held.at % s.width && held.start != held.at
+                            val at = sweepCountAt(finger, pill, size, FINGER_CLEAR.toPx(), down)
+                            drawRoundRect(scheme.inverseSurface, at, pill, CornerRadius(pill.height / 2f))
+                            drawText(label, scheme.inverseOnSurface, at + Offset((pill.width - label.size.width) / 2f, pad.y))
+                        }
                     }
                     if (view.value.zoomed) {
                         Box(g.corner, contentAlignment = Alignment.Center) {
@@ -688,4 +723,18 @@ object Nonogram : PuzzleType {
             }
         }
     }
+}
+
+/**
+ * Where a [pill] of [box] goes beside a finger at [finger] (top-left), at least [clear] from it. The hand
+ * comes from below, so above the finger if there is room and the sweep runs across ([down] false: above a
+ * column sweep it would cover the squares the finger is heading for); else beside it, on the side with
+ * more room, its foot level with the finger. Never below: that is under the hand.
+ */
+internal fun sweepCountAt(finger: Offset, pill: Size, box: Size, clear: Float, down: Boolean = false): Offset {
+    fun x(at: Float) = at.coerceIn(0f, maxOf(0f, box.width - pill.width))
+    val above = finger.y - clear - pill.height
+    if (!down && above >= 0f) return Offset(x(finger.x - pill.width / 2f), above)
+    val left = finger.x > box.width / 2f
+    return Offset(if (left) finger.x - clear - pill.width else finger.x + clear, maxOf(0f, finger.y - pill.height))
 }

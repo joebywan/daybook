@@ -242,6 +242,10 @@ into every seed: never rename it.
 - **The pen (Fill/Cross) is `rememberSaveable` in the board, not state.** A sweep is one state: it locks to the row or column
   of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
   `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
+- **The square in hand tints its row and column** (the finger's in a sweep, else the last touched or the keyboard's; a sweep
+  leaves the cursor where it ended, in Tally and Thermometers too), squares and clue bands alike. **A sweep shows how many
+  squares it covers** in a pill kept `FINGER_CLEAR` (40dp) from the finger: above it, or beside it near the top and for a
+  column sweep (above would hide the squares ahead), never below, where the hand is (`sweepCountAt`, `NonogramSweepCountTest`).
 - **Hard and Expert zoom** (`NonogramZoom.kt`, the owner's design): pinch zooms (to 2.5x); zoomed in, one finger pans and a
   tap still marks, so sweeping is for the whole board; a corner button (in the empty corner above the row clues) fits the
   board again. Clues stay pinned to the edges and keep their size. The view (`GridView`) is `remember`, never state: a

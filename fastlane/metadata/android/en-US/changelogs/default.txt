@@ -2,5 +2,4 @@
 - Its hints explain each cage's combinations, and a Training course drills them.
 - Home tiles wear their own puzzle's colour again; hints glow brighter.
 - Who's Who is played as a web of links. Games carry over, and it takes a keyboard.
-- Equation Expert gives five guesses, and the hints win every board.
-- Training: any right Links move of the technique counts.
+- Nonogram counts the squares a sweep covers and tints your row and column.
