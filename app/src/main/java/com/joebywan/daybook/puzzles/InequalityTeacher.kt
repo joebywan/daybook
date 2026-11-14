@@ -64,6 +64,9 @@ internal object InequalityTeacher {
     /** Highlight index of digit [d]'s key under the board. */
     fun pad(d: Int): Int = 1000 + d
 
+    /** Highlight index of the pencil key. */
+    const val NOTES_KEY = 1100
+
     // ---- what the player can see ------------------------------------------------------------------
 
     /** Rows 0..n-1, then columns. */

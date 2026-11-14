@@ -6,12 +6,29 @@ import com.joebywan.daybook.puzzles.InequalityLogic
 import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.Sign
+import com.joebywan.daybook.puzzles.clearCell
+import com.joebywan.daybook.puzzles.enter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InequalityRulesTest {
+
+    @Test
+    fun `notes toggle, are struck by a placed digit in their lines, and clear with the square`() {
+        // Squares 1, 4 and 5 are open; 0 is open too. 1 shares row 0 with square 0, 4 shares column 0, 5 neither.
+        val start = Inequality.tutorialBoard()
+        val noted = listOf(1, 4, 5).fold(start) { s, i -> s.enter(i, 1, notesMode = true).enter(i, 2, notesMode = true) }
+        assertEquals(listOf(3, 3, 3), listOf(1, 4, 5).map { noted.visibleNotes(it) })
+        assertEquals(1, noted.enter(1, 2, notesMode = true).visibleNotes(1))
+        assertEquals(noted, noted.enter(2, 1, notesMode = true)) // a given takes no notes
+        val placed = noted.enter(0, 1)
+        assertEquals(listOf(2, 2, 3), listOf(1, 4, 5).map { placed.visibleNotes(it) })
+        assertEquals(0, placed.clearCell(5).visibleNotes(5))
+        // A digit placed on a noted square hides its notes, and taking it out does not bring them back.
+        assertEquals(0, noted.enter(5, 1).enter(5, 1).visibleNotes(5))
+    }
 
     private fun board(day: Int, d: Difficulty) =
         Inequality.generate(daySeed(day, Inequality.id, d), d) as InequalityState

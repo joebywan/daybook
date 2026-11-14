@@ -20,6 +20,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.theme.arcadeLift
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -68,7 +81,9 @@ import com.joebywan.daybook.ui.style
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
- * an empty square and is what the player changes. Squares are numbered row by row.
+ * an empty square and is what the player changes. Squares are numbered row by row. [notes] are the
+ * player's pencil marks (issue #498), Sudoku's encoding: bit `d - 1` for digit d; defaulted, so a save
+ * from before them loads with none. Field names are a save format: never rename one.
  */
 @Serializable
 data class InequalityState(
@@ -79,6 +94,7 @@ data class InequalityState(
     val signs: List<Sign>,
     val selected: Int? = null,
     override val moves: Int = 0,
+    val notes: List<Int> = List(size * size) { 0 },
 ) : PuzzleState {
 
     /** The rules, not a comparison with [solution]: a full Latin square with every sign true. */
@@ -89,10 +105,31 @@ data class InequalityState(
         InequalityLogic.clashes(size, cells) +
             InequalityLogic.brokenSigns(cells, signs).flatMap { listOf(signs[it].lo, signs[it].hi) }
 
-    /** Sets a digit, or clears the square with 0. `this` when nothing changes (a given, or the same digit). */
-    fun withCell(index: Int, value: Int): InequalityState =
-        if (givens[index] || cells[index] == value) this
-        else copy(cells = cells.toMutableList().also { it[index] = value }, moves = moves + 1)
+    /**
+     * Sets a digit, or clears the square with 0. The square's own notes go either way; a placed digit is also struck from
+     * the notes of its row and column, in this same state, so one undo restores both (Reckon's rule). `this` when nothing
+     * changes (a given, or the same digit).
+     */
+    fun withCell(index: Int, value: Int): InequalityState {
+        if (givens[index] || cells[index] == value) return this
+        val next = notes.toMutableList()
+        next[index] = 0
+        if (value != 0) {
+            val strike = (1 shl (value - 1)).inv()
+            for (j in next.indices) if (j != index && (j / size == index / size || j % size == index % size)) next[j] = next[j] and strike
+        }
+        return copy(cells = cells.toMutableList().also { it[index] = value }, notes = if (next == notes) notes else next, moves = moves + 1)
+    }
+
+    /** The notes drawn on [index]: none on a filled square. */
+    fun visibleNotes(index: Int): Int = if (cells[index] != 0) 0 else notes[index]
+
+    fun canNote(index: Int): Boolean = !givens[index] && cells[index] == 0
+
+    /** Adds the note for [digit] on [index], or takes it off; never refused on an open square. */
+    fun toggleNote(index: Int, digit: Int): InequalityState =
+        if (!canNote(index)) this
+        else copy(notes = notes.toMutableList().also { it[index] = it[index] xor (1 shl (digit - 1)) }, moves = moves + 1)
 
     fun select(index: Int): InequalityState = copy(selected = index)
 }
@@ -112,10 +149,11 @@ object Inequality : PuzzleType {
         "No digit may repeat in a row or a column.",
         "A sign between two squares points at the smaller one: the narrow end is the smaller digit.",
         "Tap a square, then tap a digit. Tap the digit again to clear it.",
+        "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the square instead of placed.",
         "A repeat, or a sign that is false, is shown in red as you go.",
     )
 
-    override val keyboardHelp = listOf("Arrows move, 1-6 place a digit, Backspace clears.")
+    override val keyboardHelp = listOf("Arrows move, 1-6 place a digit (or a note in pencil mode), Backspace clears.")
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         generateVerified(seed, difficulty) ?: InequalityLogic.lastResort(difficulty)
@@ -152,7 +190,7 @@ object Inequality : PuzzleType {
     /** The first sign is the one that matters: square 0 is smaller than square 1. */
     internal val TUTORIAL_SIGNS = listOf(Sign(0, 1), Sign(2, 6), Sign(5, 4), Sign(10, 11))
 
-    internal fun tutorialBoard(entered: Map<Int, Int> = emptyMap(), selected: Int? = null): InequalityState =
+    internal fun tutorialBoard(entered: Map<Int, Int> = emptyMap(), selected: Int? = null, noted: Map<Int, Int> = emptyMap()): InequalityState =
         InequalityState(
             size = 4,
             givens = TUTORIAL_SOLUTION.indices.map { it !in TUTORIAL_OPEN },
@@ -160,10 +198,14 @@ object Inequality : PuzzleType {
             solution = TUTORIAL_SOLUTION,
             signs = TUTORIAL_SIGNS,
             selected = selected,
+            notes = List(16) { i -> noted[i]?.let { 1 shl (it - 1) } ?: 0 },
         )
 
     /** Where the walkthrough's wrong digit goes: a 1 beside the 1 already in column 3. */
     private const val TUTORIAL_WRONG = 14
+
+    /** The walkthrough's pencil mark in that square: its row lacks 1 and 2 and its column has the 1, so a 2, its answer. */
+    private const val TUTORIAL_NOTED = 2
 
     override val tutorial: List<TutorialFrame> by lazy {
         val start = tutorialBoard()
@@ -220,6 +262,18 @@ object Inequality : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG),
+                caption = "Not sure of a digit? Tap the pencil, then a digit, to jot it small. This row lacks 1 and 2, " +
+                    "and the column has a 1: pencil a 2 here.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_WRONG, InequalityTeacher.NOTES_KEY, InequalityTeacher.pad(TUTORIAL_NOTED))),
+                accepts = { next ->
+                    next is InequalityState && next.cells == done.cells &&
+                        next.notes == tutorialBoard(placed, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)).notes
+                },
+                retry = "Tap the glowing pencil, then the 2.",
+                done = "Penciled. Tap the pencil again to go back to placing digits.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(placed, selected = TUTORIAL_WRONG, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)),
                 caption = "Your turn: finish the board. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
@@ -335,6 +389,9 @@ object Inequality : PuzzleType {
         val twin = BoardHues.fill(hueB, dark)
         val band = BoardHues.fill(hueA, dark).copy(alpha = 0.45f)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
+        // Which way the digit keys act. Transient UI state, so not in the state: PlayScreen would make every flip an undo step.
+        var notesMode by rememberSaveable { mutableStateOf(false) }
+        val measurer = rememberTextMeasurer()
         // The Classic look (issue #418) draws what Inequality drew before Arcade: hue A the signs and selection, B the player's digits.
         val classic = classicLook()
         val a = ArcadeBoard.of(scheme)
@@ -355,7 +412,7 @@ object Inequality : PuzzleType {
                 .padding(horizontal = 12.dp)
                 .boardKeys(interactive) { key, _, repeat ->
                     val action = digitKeyAction(key, n) ?: return@boardKeys false
-                    if (!repeat || action is DigitKeyAction.Move) s.applyKey(action)?.let(onState)
+                    if (!repeat || action is DigitKeyAction.Move) s.applyKey(action, notesMode)?.let(onState)
                     true
                 },
             contentAlignment = Alignment.Center,
@@ -417,6 +474,32 @@ object Inequality : PuzzleType {
                                 .clickable(enabled = interactive) { onState(s.select(i)) },
                             contentAlignment = Alignment.Center,
                         ) {
+                            val noted = s.visibleNotes(i)
+                            if (noted != 0) {
+                                val noteInk = when {
+                                    fill != null -> fill.ink
+                                    selected -> Color.White
+                                    else -> scheme.onSurface.copy(alpha = SUDOKU_NOTE_ALPHA_CLASSIC)
+                                }
+                                val style = BoardGlyph.NOTE.style(cell).copy(color = noteInk, textAlign = TextAlign.Center)
+                                // Sudoku's layout: three to a row, drawn rather than composed.
+                                val rows = (n + 2) / 3
+                                Canvas(Modifier.fillMaxSize()) {
+                                    val sub = size.width / 3f
+                                    val rowHeight = size.height / rows
+                                    for (d in 1..n) {
+                                        if (noted and (1 shl (d - 1)) == 0) continue
+                                        val laid = measurer.measure(d.toString(), style, maxLines = 1)
+                                        drawText(
+                                            laid,
+                                            topLeft = Offset(
+                                                (d - 1) % 3 * sub + (sub - laid.size.width) / 2f,
+                                                (d - 1) / 3 * rowHeight + (rowHeight - laid.size.height) / 2f,
+                                            ),
+                                        )
+                                    }
+                                }
+                            }
                             if (s.cells[i] != 0) {
                                 Text(
                                     s.cells[i].toString(),
@@ -460,8 +543,34 @@ object Inequality : PuzzleType {
                     enabled = interactive && s.selected != null,
                     done = { d -> s.cells.count { it == d } == n },
                     arcade = a.takeIf { !classic },
+                    trailing = {
+                        // The mode switch lives with the keys it changes, as Sudoku's does.
+                        val keyShape = RoundedCornerShape(10.dp)
+                        PadKey(
+                            InequalityTeacher.NOTES_KEY, highlight, glow, pulse,
+                            fill = if (!classic) Color.Transparent else if (notesMode) mark else scheme.surface,
+                            enabled = interactive,
+                            onClick = { notesMode = !notesMode },
+                            modifier = Modifier.semantics { contentDescription = if (notesMode) "Notes on" else "Notes off" }.then(
+                                if (classic) Modifier
+                                else if (notesMode) Modifier.arcadeLift(a.selected, 10.dp).background(a.selected.brush, keyShape).border(2.dp, a.selectedEdge, keyShape)
+                                else Modifier.background(a.given, keyShape),
+                            ),
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = when {
+                                    classic -> if (notesMode) Color.White else scheme.onSurface
+                                    notesMode -> a.selected.ink
+                                    else -> a.givenInk
+                                },
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
                 ) { digit ->
-                    val next = s.enter(s.selected ?: return@DigitPadRow, digit)
+                    val next = s.enter(s.selected ?: return@DigitPadRow, digit, notesMode)
                     if (next !== s) onState(next)
                 }
             }

@@ -89,7 +89,7 @@ internal val SudokuTwin = ArcadeFill(Color(0xFF5CF2C8), Color(0xFF14D3A6), Color
 internal val SudokuHintLight = Color(0xFFE6007E)
 
 /** How strongly a note is inked in the Classic look (its size is `BoardGlyph.NOTE`). Tuned by rendering, before Arcade. */
-private const val SUDOKU_NOTE_ALPHA_CLASSIC = 0.85f
+internal const val SUDOKU_NOTE_ALPHA_CLASSIC = 0.85f
 
 /** Every other box's empty squares. */
 internal fun ArcadeBoard.boxShade() = lerp(square, given, 0.35f)
