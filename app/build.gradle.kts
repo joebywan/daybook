@@ -120,8 +120,20 @@ android {
 // each written by one class only. The longest class (TargetTeachingTest, ~6 min) sets the floor.
 // Capped at 4, CI's core count: uncapped, a 32-core desktop started 32 test JVMs per run, and two sessions
 // testing at once left the machine unusable.
+// -PtestShard=K/N runs only the test classes whose name hashes to K of N, so N CI machines share the suite (ci.yml,
+// unit-tests). A class goes whole with its inner classes, and every class lands in exactly one shard.
+val testShard: String? = providers.gradleProperty("testShard").orNull
 tasks.withType<Test>().configureEach {
     maxParallelForks = minOf(4, Runtime.getRuntime().availableProcessors())
+    inputs.property("testShard", testShard ?: "all")
+    testShard?.let { shard ->
+        val (k, n) = shard.split("/").map(String::toInt)
+        require(k in 1..n) { "testShard wants K/N with 1 <= K <= N, not $shard" }
+        exclude { el ->
+            val path = el.relativePath.pathString
+            !el.isDirectory && path.endsWith(".class") && Math.floorMod(path.substringBefore('$').removeSuffix(".class").hashCode(), n) != k - 1
+        }
+    }
     // GuideTest reads these. The build cache would otherwise replay its last pass on a change to a page alone.
     inputs.dir("../tools/guide/pages").withPathSensitivity(PathSensitivity.RELATIVE)
     // HelpLinksTest reads the issue forms, for the same reason.
