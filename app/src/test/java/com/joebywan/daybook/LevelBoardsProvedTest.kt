@@ -76,6 +76,7 @@ class LevelBoardsProvedTest {
         "dwindle" to DwindleLogic::generateVerified,
         "unblock" to com.joebywan.daybook.puzzles.UnblockLogic::generateVerified,
         "links" to LinksLogic::generateVerified,
+        "reckon" to com.joebywan.daybook.puzzles.ReckonLogic::generateVerified,
     )
 
     @Test

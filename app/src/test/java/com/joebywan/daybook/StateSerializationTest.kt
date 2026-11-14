@@ -134,6 +134,11 @@ class StateSerializationTest {
             val noted = (cell + 1 until 81).first { !state.grid.givens[it] }
             state.select(cell).withCell(cell, 5).toggleNote(noted, 3)
         }
+        is com.joebywan.daybook.puzzles.ReckonState -> {
+            val cell = state.cells.indexOfFirst { it == 0 }
+            val noted = (cell + 1 until state.cells.size).first { state.cells[it] == 0 }
+            state.select(cell).withCell(cell, 5).toggleNote(noted, 3)
+        }
         is CipherState -> state.select(1).withDigit(1, 7).withDigit(0, 3)
         is CodewordState -> (1..state.letters.size).first { it !in state.given }.let { state.select(it).withLetter(it, 25) }
         is MiniState -> state.select(state.letters.indexOf(' ')).type('z').type('q')

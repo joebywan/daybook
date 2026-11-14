@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop, Thermometers, Unblock and Links, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Reckon, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop, Thermometers, Unblock and Links, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -452,6 +452,34 @@ shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
 - **Cage totals are drawn in the top-left of the cage's first square**, so the pencil marks of that square give up the top 27% of it
   (`topBand`). Dashed outlines are `Cages.drawCages` (inset 9% of a square, bends and notches closed), in hue A's ink.
 - Highlight indices are Sudoku's: squares 0..80, digit keys `81 + d`, the pencil 91.
+
+## Reckon (arithmetic cages)
+
+A 6x6 Latin square cut into cages, each with a number and a sign (+ − × ÷): its digits make the number with the sign. Never
+"KenKen" (a trademark) or "Calcudoku" where a player sees it (`GuideTest` bans both). Spec, decisions and measurements:
+`docs/RECKON_SPEC.md`. `puzzles/ReckonRules.kt` (state, `ReckonLogic`: rules, cages' ways, the count, generator),
+`ReckonTeacher.kt`, `Reckon.kt` (object, keys, walkthrough, motif, board). `id = "reckon"` is hashed into every seed: never rename it.
+
+- **6x6 on every tier; tiers are cages, givens and ladder depth** (`ReckonLogic.specFor`): biggest cage 3 / 4 / 5 (`×` at most 4,
+  so a label is at most four glyphs), one-square cages (the givens) 3-5 / 1-2 / none, and Standard singles and cage ways,
+  Hard must need a cage in a line or a pair, Expert a what-if. Tally's `Spec.needs` gate.
+- **A cage may repeat a digit in squares that share no line**, so its ways depend on its shape. `ReckonLogic.ways` keeps the rule;
+  the hints say it where it bites.
+- **Deduction, not uniqueness, is the ship condition** (the owner, 2026-11-14): a board ships when the teacher's ladder finishes it
+  from its givens at the tier's depth; every rung is sound for every answer, so it has one, and `solutions` (no budget, `Verdict`)
+  is a second opinion. `ReckonOracle` (reading order, cages checked only when full) is the independent check; hints never fall back
+  on a generated board, and a year per tier never reaches `lastResort` (`FallbackTest`).
+- **`solved` checks the rules**; a mistake is a digit the stored answer lacks, sound because the answer is unique. Red after a 1 s
+  settle: a repeat in a line, a full cage off its number, a cage no filling can finish.
+- **The board is Sudoku's grid and pad** (`SudokuGridBoard`, generalised to n: boxes, their shade and frame lines only on a 9x9;
+  a `wall` between squares widens Arcade's frame), with Reckon's overlay: Classic draws the cage walls in `ColorScheme.wall`,
+  Arcade's are its frame; no dashed outlines. Labels sit top-left in the first square of a cage in reading order, in a
+  `LABEL_BAND` its notes and digit leave clear; a one-square cage shows its digit as a given, with no label. The grid draws a
+  `SudokuState` view of the state (a given wherever a cage is one square), so notes, digit-first entry, the twin highlight
+  and the keys are Sudoku's. Highlight indices: squares, digit keys `n*n + d`, the pencil `n*n + 7`.
+- **Accent shared with Inequality** (`AccentSpacingTest.SHARED`: the set is full; both Latin squares, far apart on the grid).
+- **Training** (`core/training/ReckonTraining.kt`): every praised rung, `PlacementDrill`; a practice's walked digits are
+  `ReckonState.locked` (defaulted empty, so they show as givens and cannot be erased).
 
 ## Target (number arithmetic)
 
@@ -1333,7 +1361,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LoopLogic`, `UnblockLogic`, `LinksLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle, Unblock, Loop and Links (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LoopLogic`, `UnblockLogic`, `LinksLogic`, `ReckonLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle, Unblock, Loop, Links and Reckon (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

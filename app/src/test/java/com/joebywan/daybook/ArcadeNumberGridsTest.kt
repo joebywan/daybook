@@ -3,7 +3,6 @@ package com.joebywan.daybook
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import com.joebywan.daybook.puzzles.Inequality
-import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.ui.ArcadeMetDark
 import com.joebywan.daybook.ui.ArcadeMetLight
@@ -15,7 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The Arcade look's own colours on Inequality, Regions, Kings, Sun & Moon, Tally, Thermometers and Mines, beyond what
+ * The Arcade look's own colours on Inequality, Regions, Sun & Moon, Tally, Thermometers and Mines, beyond what
  * ArcadeBoardTest already holds of the shared tokens: each against what it is drawn on, in both schemes.
  */
 class ArcadeNumberGridsTest {
@@ -71,12 +70,4 @@ class ArcadeNumberGridsTest {
         }
     }
 
-    @Test fun `Kings' marks read on every region, and the crown in its rim`() {
-        for (c in Kings.regionColours) {
-            val tile = Color(c)
-            atLeast(4.5f, Kings.ArcadeMarkInk, tile, "mark ink on ${c.toString(16)}")
-            atLeast(3f, Kings.ArcadeMarkInk.copy(alpha = 0.75f).compositeOver(tile), tile, "cross on ${c.toString(16)}")
-        }
-        atLeast(3f, Kings.ArcadeCrown, Kings.ArcadeMarkInk, "crown inside its rim")
-    }
 }

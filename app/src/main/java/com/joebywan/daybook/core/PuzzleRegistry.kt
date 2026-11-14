@@ -19,6 +19,7 @@ import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.Reckon
 import com.joebywan.daybook.puzzles.Links
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
@@ -86,6 +87,7 @@ object PuzzleRegistry {
         Unblock,
         Equation,
         Links,
+        Reckon,
     )
 
     /**

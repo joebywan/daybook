@@ -15,7 +15,7 @@ Each puzzle has a page in the **[player guide](https://knowhowit.com.au/daybook/
 
 | Every puzzle, every day | Sudoku | Lexicon | Word Wheel |
 |---|---|---|---|
-| ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three (Atoms, Sudoku, Word Wheel) and the grid of all 38 puzzles, gentlest first: Arrows, Pipes, Trail, Sudoku, Lexicon and Sand in view](docs/screenshots/home.png) | ![A Sudoku board on Standard, in the Arcade look](docs/screenshots/sudoku.png) | ![A Lexicon board two guesses in, its letters marked](docs/screenshots/lexicon.png) | ![A Word Wheel board: a wheel of letters under a small crossword](docs/screenshots/word-wheel.png) |
+| ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three (Atoms, Sudoku, Word Wheel) and the grid of all 39 puzzles, gentlest first: Arrows, Pipes, Trail, Sudoku, Lexicon and Sand in view](docs/screenshots/home.png) | ![A Sudoku board on Standard, in the Arcade look](docs/screenshots/sudoku.png) | ![A Lexicon board two guesses in, its letters marked](docs/screenshots/lexicon.png) | ![A Word Wheel board: a wheel of letters under a small crossword](docs/screenshots/word-wheel.png) |
 
 ![On a tablet the board sits beside the title, hints and tools: a Sudoku](docs/screenshots/tablet-sudoku.png)
 
@@ -97,6 +97,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Loop | Slitherlink (loop through the dots) | One closed loop along the squares' sides, from dot to dot: each number says how many of its square's four sides the loop uses |
 | Links | Numberlink (pair-joining paths) | Join each pair of matching numbers with one path through side-touching squares; paths never cross and every square is used |
 | Who's Who | Logic grid, drawn as a graph | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house", by drawing lines between them |
+| Reckon | Calcudoku (arithmetic cages) | 1 to 6 once per row and column; the digits in each cage make its number with its sign (+ − × ÷) |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -147,6 +148,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   it is kept only if a person's ladder (a line's end with one way on, a square with two ways in, a way that would cut a
   pair off or leave a square no pair can reach, and on Expert a short what-if) finishes it at the tier's depth, and an
   exhaustive count proves one answer; an independent solver that decides every square's lines in reading order agrees.
+- **Reckon** — a random Latin square cut into random cages, each given a sign its digits allow, kept only if a person's
+  ladder (singles, each cage's ways with its shape's repeat rule, a cage confined to a line, a pair, and on Expert a short
+  what-if) finishes it at the tier's depth; an exhaustive count proves one answer, and an independent solver that fills
+  squares in reading order and checks a cage only once it is full agrees.
 - **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
   sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
   is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
