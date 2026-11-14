@@ -5,12 +5,24 @@ description: >
   :web:wasmJsBrowserDistribution) with JDK 17 and the Android SDK set up. A year of every puzzle and
   tier (12,045 boards) takes about a minute in each browser; see tools/web-parity/check.py.
 
+inputs:
+  jvm:
+    description: A board dump WebParityDumpTest already wrote; empty to write one here.
+    default: ''
+  browsers:
+    description: Comma-separated.
+    default: chromium,webkit
+  shard:
+    description: K/N, to check only every N-th page from the K-th (check.py --shard).
+    default: 1/1
+
 runs:
   using: composite
   steps:
     # The JVM's side: the same year, in the page's order. DAYBOOK_PARITY_DUMP is not an input Gradle
     # knows about, so without --rerun a restored build cache would skip the test and write no file.
     - name: JVM board dump
+      if: inputs.jvm == ''
       shell: bash
       env:
         DAYBOOK_PARITY_DUMP: ${{ runner.temp }}/jvm-parity.txt
@@ -29,13 +41,15 @@ runs:
         path: |
           ~/.cache/ms-playwright
           ~/apt-archives
-        key: playwright-apt-${{ runner.os }}-${{ hashFiles('tools/web-parity/requirements.txt') }}
+        key: playwright-apt-${{ runner.os }}-${{ inputs.browsers }}-${{ hashFiles('tools/web-parity/requirements.txt') }}
 
     # apt is never time-killed: a killed install left dpkg half-configured and the retry failed at once.
     # Its downloads go to the cached folder, it waits for another apt's lock, and a failure is retried
     # once after `dpkg --configure -a`. The browser download can hang silently, so it gets ten minutes.
     - name: Install Playwright and its browsers
       shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
       run: |
         python3 -m venv "$RUNNER_TEMP/pwenv"
         "$RUNNER_TEMP/pwenv/bin/pip" install --quiet -r tools/web-parity/requirements.txt
@@ -46,8 +60,9 @@ runs:
         printf 'Dir::Cache::Archives "%s";\nDPkg::Lock::Timeout "300";\nAPT::Keep-Downloaded-Packages "true";\n' \
           ~/apt-archives | sudo tee /etc/apt/apt.conf.d/99daybook-cache >/dev/null
         pw="$RUNNER_TEMP/pwenv/bin/python -m playwright"
-        $pw install-deps chromium webkit || { echo "::warning::install-deps failed; retrying once"; sudo dpkg --configure -a; $pw install-deps chromium webkit; }
-        timeout 600 $pw install chromium webkit || { echo "::warning::browser download failed or hung; retrying once"; timeout 600 $pw install chromium webkit; }
+        browsers="${BROWSERS//,/ }"
+        $pw install-deps $browsers || { echo "::warning::install-deps failed; retrying once"; sudo dpkg --configure -a; $pw install-deps $browsers; }
+        timeout 600 $pw install $browsers || { echo "::warning::browser download failed or hung; retrying once"; timeout 600 $pw install $browsers; }
         sudo chown -R "$USER" ~/apt-archives
 
     - if: steps.pw-cache.outputs.cache-hit != 'true'
@@ -60,6 +75,10 @@ runs:
 
     - name: Compare the browser's boards with the JVM's
       shell: bash
+      env:
+        JVM: ${{ inputs.jvm || format('{0}/jvm-parity.txt', runner.temp) }}
+        BROWSERS: ${{ inputs.browsers }}
+        SHARD: ${{ inputs.shard }}
       run: >
         "$RUNNER_TEMP/pwenv/bin/python" tools/web-parity/check.py
-        --jvm "$RUNNER_TEMP/jvm-parity.txt"
+        --jvm "$JVM" --browsers "$BROWSERS" --shard "$SHARD"

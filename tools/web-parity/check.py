@@ -154,6 +154,8 @@ def main() -> int:
     ap.add_argument("--browsers", default="chromium,webkit", help="comma-separated (default: %(default)s)")
     ap.add_argument("--timeout", type=float, default=1800, help="seconds each page may take (default: %(default)s)")
     ap.add_argument("--show", type=int, default=5, help="differing lines to show per puzzle (default: %(default)s)")
+    ap.add_argument("--shard", default="1/1", metavar="K/N",
+                    help="check only every N-th page starting at the K-th, so N machines share the work (default: all)")
     args = ap.parse_args()
     args.browsers = [b for b in args.browsers.split(",") if b]
 
@@ -172,7 +174,15 @@ def main() -> int:
     if LEVELS in expected and len(expected[LEVELS]) != days * LEVEL_SIZE:
         print(f"{args.jvm}: {len(expected[LEVELS])} level lines, expected {days} levels x {LEVEL_SIZE}", file=sys.stderr)
         return 2
-    print(f"JVM dump: {len(expected)} puzzles x {days} days x {TIERS} tiers; browsers: {', '.join(args.browsers)}", flush=True)
+    try:
+        k, n = (int(x) for x in args.shard.split("/"))
+        assert 1 <= k <= n
+    except (ValueError, AssertionError):
+        print(f"--shard wants K/N with 1 <= K <= N, not {args.shard}", file=sys.stderr)
+        return 2
+    # Pages are dealt round the shards in the file's order, so every page is checked by exactly one shard.
+    expected = dict(list(expected.items())[k - 1::n])
+    print(f"JVM dump: {len(expected)} puzzles x {days} days x {TIERS} tiers (shard {args.shard}); browsers: {', '.join(args.browsers)}", flush=True)
     return asyncio.run(main_async(args, expected, days))
 
 
