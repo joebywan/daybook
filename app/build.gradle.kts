@@ -53,6 +53,10 @@ android {
         versionName = buildVersionName
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     signingConfigs {
         if (haveReleaseKey) {
             create("release") {
@@ -151,4 +155,9 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
+    // Compose UI tests under Robolectric live in src/testDebug, since the test activity's manifest is debug only.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }

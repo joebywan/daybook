@@ -9,6 +9,7 @@ serialization = "1.12.0"
 # One version for both builds: Android and the web read dates through the same code.
 datetime = "0.8.0"
 junit = "4.13.2"
+robolectric = "4.17"
 desugarJdkLibs = "2.1.5"
 composeMultiplatform = "1.12.2"
 
@@ -23,6 +24,10 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+# Compose UI tests on the JVM (app/src/testDebug): a board drawn and tapped, as a player would.
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 # Web (Compose Multiplatform) coordinates; the plugin's compose.* accessors are deprecated.
 jb-compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version = "1.9.0" } # versioned apart from the rest, as the plugin's own default was
 jb-compose-resources = { group = "org.jetbrains.compose.components", name = "components-resources", version.ref = "composeMultiplatform" }
