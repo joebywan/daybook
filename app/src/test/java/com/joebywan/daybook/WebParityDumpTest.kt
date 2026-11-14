@@ -6,6 +6,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * The JVM's half of the year-long diff against the browser. With `DAYBOOK_PARITY_DUMP=<file>` set,
@@ -23,17 +24,28 @@ class WebParityDumpTest {
         val path = System.getenv("DAYBOOK_PARITY_DUMP")
         assumeTrue("set DAYBOOK_PARITY_DUMP to a file to write the year", !path.isNullOrEmpty())
         val days = System.getenv("DAYBOOK_PARITY_DAYS")?.toIntOrNull() ?: 365
-        val out = StringBuilder()
-        for (type in PuzzleRegistry.all) {
-            for (day in 0 until days) {
-                val date = TEST_START.plusDays(day.toLong())
-                for (tier in Difficulty.entries) {
-                    out.append(ParityFingerprint.line(type, date.toString(), tier, daySeed(day, type.id, tier))).append('\n')
+        // A puzzle's year at a time on every core (generators are pure), written in the page's order. One thread
+        // took 11 minutes of CI's web parity; the file is the same byte for byte.
+        val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+        try {
+            val parts = PuzzleRegistry.all.map { type ->
+                pool.submit<String> {
+                    buildString {
+                        for (day in 0 until days) {
+                            val date = TEST_START.plusDays(day.toLong())
+                            for (tier in Difficulty.entries) {
+                                append(ParityFingerprint.line(type, date.toString(), tier, daySeed(day, type.id, tier))).append('\n')
+                            }
+                        }
+                    }
                 }
+            } + pool.submit<String> {
+                // Then as many levels as days, five boards each, under the pseudo-puzzle "levels".
+                buildString { for (level in 1..days) ParityFingerprint.levelLines(level).forEach { append(it).append('\n') } }
             }
+            File(path!!).writeText(parts.joinToString("") { it.get() })
+        } finally {
+            pool.shutdown()
         }
-        // Then as many levels as days, five boards each, under the pseudo-puzzle "levels".
-        for (level in 1..days) ParityFingerprint.levelLines(level).forEach { out.append(it).append('\n') }
-        File(path!!).writeText(out.toString())
     }
 }

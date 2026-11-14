@@ -122,12 +122,16 @@ jobs:
   # Every board the browser generates must match the JVM's. A job here rather than a path-filtered workflow
   # so that it can be a required check: a required check from a workflow that never started blocks the merge,
   # so this job always runs and passes at once when nothing that could change a board was touched.
-  web-parity:
+  # Web parity is split across machines: one builds the web app and the JVM's boards, then four compare them, a
+  # browser and half the pages each, side by side. As one job it took 47 minutes, every part waiting on the last.
+  web-parity-dump:
     runs-on: ubuntu-26.04
-    timeout-minutes: 75
+    timeout-minutes: 45
     permissions:
       contents: read
-      statuses: write   # only used by the workflow_dispatch steps below
+      statuses: write   # only used by the workflow_dispatch step below
+    outputs:
+      run: ${{ steps.paths.outputs.run }}
     steps:
       - name: Report pending (dispatched run)
         if: github.event_name == 'workflow_dispatch'
@@ -158,18 +162,87 @@ jobs:
       - uses: ./.github/actions/setup-build
         if: steps.paths.outputs.run
 
-      - name: Build web distribution
+      # One Gradle run, so the web build and the JVM's boards are made side by side. DAYBOOK_PARITY_DUMP is not an
+      # input Gradle knows about, so without --rerun a restored build cache would skip the test and write no file.
+      - name: Build the web app and the JVM's boards
         if: steps.paths.outputs.run
-        run: ./gradlew :web:wasmJsBrowserDistribution
+        env:
+          DAYBOOK_PARITY_DUMP: ${{ runner.temp }}/parity/jvm-parity.txt
+          DAYBOOK_PARITY_DAYS: '365'
+        run: |
+          mkdir -p "$RUNNER_TEMP/parity"
+          ./gradlew :web:wasmJsBrowserDistribution :app:testDebugUnitTest --rerun --tests '*WebParityDumpTest*'
+          test -s "$DAYBOOK_PARITY_DUMP" || { echo "::error::WebParityDumpTest wrote no dump"; exit 1; }
+          cp -r web/build/dist/wasmJs/productionExecutable "$RUNNER_TEMP/parity/dist"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.paths.outputs.run
+        with:
+          name: web-parity-inputs
+          path: ${{ runner.temp }}/parity
+          retention-days: 1
+
+  web-parity-browser:
+    needs: web-parity-dump
+    if: needs.web-parity-dump.outputs.run
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+        shard: ['1/2', '2/2']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: web-parity-inputs
+          path: ${{ runner.temp }}/parity
+
+      # check.py looks for the distribution where the build leaves it.
+      - run: mkdir -p web/build/dist/wasmJs && mv "$RUNNER_TEMP/parity/dist" web/build/dist/wasmJs/productionExecutable
 
       - uses: ./.github/actions/web-parity
-        if: steps.paths.outputs.run
+        with:
+          jvm: ${{ runner.temp }}/parity/jvm-parity.txt
+          browsers: ${{ matrix.browser }}
+          shard: ${{ matrix.shard }}
+
+  # The check the ruleset requires, by this name: green when every browser job passed, or when nothing could
+  # change a board and none ran.
+  web-parity:
+    needs: [web-parity-dump, web-parity-browser]
+    if: always()
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: write   # only used by the workflow_dispatch step below
+    steps:
+      - name: Did every part pass?
+        id: verdict
+        env:
+          DUMP: ${{ needs.web-parity-dump.result }}
+          BROWSERS: ${{ needs.web-parity-browser.result }}
+          RAN: ${{ needs.web-parity-dump.outputs.run }}
+        run: |
+          echo "dump: $DUMP, browsers: $BROWSERS, needed: ${RAN:-no}"
+          if [ "$DUMP" = success ] && { [ "$BROWSERS" = success ] || { [ -z "$RAN" ] && [ "$BROWSERS" = skipped ]; }; }; then
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=$([ "$DUMP" = cancelled ] || [ "$BROWSERS" = cancelled ] && echo cancelled || echo failure)" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Report result (dispatched run)
-        if: always() && github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         env:
-          GH_TOKEN: ${{ github.token }}
-          RESULT: ${{ job.status }}
+          GH_TOKEN: ${{ github.token }}   # on this step only: a job-level token would be readable by everything the job runs
+          RESULT: ${{ steps.verdict.outputs.result }}
         run: |
           case "$RESULT" in
             success) state=success ;;
@@ -179,3 +252,8 @@ jobs:
           gh api "repos/${{ github.repository }}/statuses/${{ github.sha }}" \
             -f state="$state" -f context=web-parity -f description="Dispatched CI: $RESULT" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Fail unless every part passed
+        env:
+          RESULT: ${{ steps.verdict.outputs.result }}
+        run: '[ "$RESULT" = success ] || { echo "::error::web parity: $RESULT"; exit 1; }'
