@@ -12,7 +12,7 @@ departs from the recipe. Where the two disagree on a point not listed here, the 
 | `id` | `"reckon"` (hashed into every seed: never rename). Display name **Reckon** (the owner left the name to Claude, 2026-11-14: a plain word for working a sum out, one short line on a home tile). Tagline along the lines of "Make every cage's sum with 1 to 6 in each line". The genre is published as *KenKen* (a trademark) and *Calcudoku*: neither name appears anywhere the player sees (Cage Sudoku / Dominoes precedent; `GuideTest` bans both). |
 | Grid | **6x6 on every tier**, digits 1-6. Tiers differ by cages, givens and the depth the hints need, never by size (the issue's suggestion; Cage Sudoku's precedent). One size is also one layout to get right on a phone, below. |
 | Not a Cage Sudoku tier | Its own puzzle: no boxes, four operations, and repeats allowed in a cage, so its logic, hints and save are its own. |
-| Answer | **Exactly one**, proved exhaustively. `solved` checks the rules, never the stored answer. |
+| Answer | **Reached by deduction, never by a guess** (the owner, 2026-11-14: "who cares if boards have 1 answer, as long as they don't need to guess to get there. Deduction rather than blind guessing."). A board ships when the hints' ladder finishes it from its givens at the tier's depth; every rung is sound for every legal answer, so a finished board has one answer anyway. `solved` checks the rules, never the stored answer. |
 | Notes | Pencil marks, as Sudoku's (stored, never refused, struck from peers in the same state). Candidate work is most of this genre. |
 | Bad judgements allowed | Any digit in any open square. Clashes and broken cages are shown after the usual 1 s settle, never refused. |
 
@@ -46,32 +46,37 @@ never "harder"): "Cages of up to 3 squares, a few digits given" / "Cages of up t
 
 - **Latin square:** a fresh 6x6 per attempt from `Rng(seed + attempt)` (rows shuffled under the column rule, or
   Inequality's own filler if it generalises). No hash order may reach the `Rng`.
-- **Cages:** grown from the first uncovered square in reading order (Shikaku's pattern), a size drawn up to the tier's
-  cap, stray singles merged into a neighbour on Hard and Expert. Then an operation per cage drawn from those its digits
-  allow (`÷` only when whole, `×` only up to 4 squares), weighted so every operation appears on every board.
-- **Proof:** `ReckonLogic.solutions` (candidate masks per square and per cage tuple, propagated to a fixpoint, then a branch
-  on the cage with fewest tuples; no budget; a sealed `Verdict` where only `ExactlyOne` carries an answer), then the
-  ladder's walk must finish at the tier's depth. Taking back is cheap here: a draw that fails is redrawn, not dug.
+- **Cages:** the tier's one-square givens placed first at random, then cages grown from the first uncovered square in
+  reading order (Shikaku's pattern) to a size of 2 to the cap, the smaller of two draws (uniform sizes left Expert with
+  many five-square `+` cages and a board in 200 draws), a stray single merged into a neighbouring cage with room, else
+  the draw is redrawn. Then an operation per cage from those its digits allow (`÷` only when whole, `×` only up to 4
+  squares, `−` `÷` only on two), weighted `+` 2, `×` 3, `−` 3, `÷` 4; a missing operation is moved onto a cage that
+  allows it whose own operation appears twice, so every board shows all four (asserted over a year a tier).
+- **Ship condition: the ladder finishes the board** (`ReckonTeacher.depth`, at the tier's depth), the owner's "deduction
+  rather than blind guessing". The what-if rung is bounded deduction (a supposition followed at most `MAX_LINKS` = 3 steps
+  to a contradiction); no rung branches deeper. Uniqueness is not steered for: it follows from a sound ladder finishing.
+  `ReckonLogic.solutions` (candidate masks, each cage cut to its ways, a split on the square with fewest digits; no budget;
+  `core/Verdict`, only `ExactlyOne` carries an answer) is a cheap second opinion after the walk, and the tests' check.
   `ReckonOracle` (test) shares nothing: square by square in reading order over 1-6, the cages checked only when full.
+  A draw that fails is redrawn, not dug.
 - `lastResort` per tier is the first seed from 1 the tier accepts, proved by a test; `FallbackTest` walks a year per tier.
 
-**Measured before building** (2026-11-14, a throwaway Python probe, not kept: random Latin square, random cages, a
-random allowed operation per cage, no tuning, 200 draws each):
+**Measured as built** (2026-11-14, a year of daily boards a tier, `ReckonRulesTest`, `build/reports/reckon-generation.txt`;
+JVM only, the browsers are still to measure):
 
-| Cages | One answer |
-|---|---|
-| up to 3, singles allowed | 68% |
-| up to 4, singles allowed | 42% |
-| up to 4, no singles | 26% |
-| up to 6, no singles | 10% |
+| | Standard | Hard | Expert |
+|---|---|---|---|
+| Draws a board, mean / median / max (of `ATTEMPTS` = 2000) | 2.8 / 2 / 15 | 17.9 / 12 / 119 | 39.0 / 28 / 223 |
+| JVM ms, median / p95 / max | 0.2 / 0.4 / 1.0 | 1.8 / 6.5 / 15 | 21 / 85 / 164 |
+| Cages a board, biggest, givens | 17.8, 3.0, 4.0 | 14.7, 3.9, 1.4 | 12.8, 4.6, 0 |
+| Cages by `+ − × ÷` | 3.5 / 3.0 / 5.6 / 1.8 | 4.2 / 2.3 / 5.2 / 1.5 | 4.4 / 2.1 / 5.0 / 1.4 |
 
-So uniqueness alone is cheap on every tier; the cost will be the depth gate, which is the number to measure first
-(draws a board over a year, JVM and both browsers, as the other puzzles record).
+No day of a year reaches `lastResort`. The bands above held as written; nothing was moved.
 
 ## The ladder (`ReckonTeacher.kt`, shared with the generator)
 
-Simplest first; each rung ends in a placement or a note struck, and a hint never asks the player to keep an elimination
-it has not shown:
+Simplest first; as built, every rung ends in a placement (candidates are derived from the placed digits on every call, as
+Inequality's are), so a hint never asks the player to keep an elimination it has not shown:
 
 1. Last square in a line; only digit left; only place in a line (Inequality's singles).
 2. **Cage combinations:** a cage's tuples (respecting its shape's repeat rule and the digits its squares can still take)
@@ -82,6 +87,12 @@ it has not shown:
 
 The generator's ladder is the teacher's (the Cage Sudoku lesson: a stronger generator leaves the teacher a step it
 cannot explain). A mistake is a digit that differs from the stored square, sound because the board has one answer.
+Rung 2 is two techniques (a square the cage's ways leave one digit, `cage-combination`; a digit the cages leave one place
+in a line, `cage-place`); rungs 3 and 4 cut, then must place (counting the cages again if it takes that); the what-if
+supposes one of a square's two digits. Measured (`ReckonTeachingTest`, 200 random and 365 daily boards a tier, from blank
+by hints alone): no fallback on any board; 32.0 / 34.6 / 36.0 steps a board, of which cage combinations 12.6 / 11.3 / 10.9,
+cage-place 0.8 / 3.2 / 3.7, cage in a line 0 / 1.41 / 1.38, naked pair 0 / 0.08 / 0.18, what-if 0 / 0 / 1.40; every Hard
+board needs a cage in a line or a pair, every Expert board a what-if. Slowest single hint 3.6 ms on the JVM.
 Training: a course on rungs 2, 3 and 5 (`core/training/`), once the ladder is measured.
 
 ## The board on a phone
