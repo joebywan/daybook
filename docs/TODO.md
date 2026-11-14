@@ -53,7 +53,6 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
-- [ ] **Reckon: README screenshots.** `docs/screenshots/home.png` (and its alt text, "38 puzzles") predates Reckon; recapture on a clean install. *S.*
 - [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
 - [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and 93% of Expert
   generation; Expert is 99 ms median, 0.43 s p95, 0.8 s worst in Chromium, 0.17 / 0.72 / 1.4 s in WebKit (a quiet
