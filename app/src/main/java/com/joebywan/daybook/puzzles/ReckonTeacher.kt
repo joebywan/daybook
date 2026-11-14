@@ -221,7 +221,7 @@ internal object ReckonTeacher {
             for ((a, other) in listOf(p to q, q to p)) {
                 val cur = cells.toMutableList().also { it[x] = a }
                 val links = mutableListOf<Hit>()
-                var contra: Contra? = null
+                var contra: Contra?
                 while (true) {
                     val t = Sight(b, cur)
                     contra = t.contradiction()
@@ -320,21 +320,21 @@ internal object ReckonTeacher {
         val cols = sq.map { it % b.n }.distinct().size
         return when {
             sq.size == 2 -> "pair"
-            rows == 1 || cols == 1 -> "line"
+            rows == 1 || cols == 1 -> "straight line"
             sq.size == 3 -> "L"
             sq.size == 4 && rows == 2 && cols == 2 -> "square"
             else -> "bent shape"
         }
     }
 
-    /** "The 8× cage can hold 1·2·4 or 2·2·3 (2·2·2 is out: an L repeats a digit only away from its corner)." */
+    /** "The 8× cage can hold 1·2·4 (2·2·2 would repeat a digit within a row or column of its L)." Long and short forms. */
     private fun cageWays(b: Board, c: Int, s: Sight): Pair<String, String> {
         val all = ReckonLogic.ways(b.n, b.cages[c], b.ops[c], b.targets[c], IntArray(b.cages[c].size) { fullMask(b.n) })
         val fits = combos(all)
         val out = shapeOut(b, c, fits)
         val now = combos(s.ways[c])
         val head = "The ${b.label(c)} cage can hold ${listed(fits, "or")}"
-        val why = if (out.isEmpty()) "" else " (${listed(out, "or")} would repeat a digit in one line of its ${shape(b, c)})"
+        val why = if (out.isEmpty()) "" else " (${listed(out, "or")} would repeat a digit within a row or column of its ${shape(b, c)})"
         val left = if (now.size < fits.size) " Its lines leave ${listed(now, "or")}." else ""
         return "$head$why.$left" to "$head.$left"
     }
