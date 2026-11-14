@@ -9,12 +9,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  # `build`, the check the ruleset requires, is a short gate at the end. The work runs side by side before it: the unit
+  # tests in four shards (they took 29-40 minutes on one machine) and the release build with the other checks.
+  unit-tests:
     runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/4', '2/4', '3/4', '4/4']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-build
+
+      # Debug only: `test` ran the same suite twice, debug and release (R8 never runs in unit tests). release.yml still
+      # runs `test` on any tree this workflow did not pass. -PtestShard: app/build.gradle.kts.
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest -PtestShard=${{ matrix.shard }}
+
+  release-build:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: read   # the attribution check reads the pull request's current body
-      statuses: write   # only used by the workflow_dispatch steps below
+      statuses: write   # only used by the workflow_dispatch step below
     steps:
       # Renovate's pull requests are made with GITHUB_TOKEN, which triggers no workflows, so
       # tools/dispatch-ci-for-renovate.sh runs this workflow by hand on their branches. The
@@ -77,11 +101,6 @@ jobs:
 
       - uses: ./.github/actions/setup-build
 
-      # Debug only: `test` ran the same suite twice, debug and release (R8 never runs in unit tests), about half the
-      # job. release.yml still runs `test` on any tree this job did not pass.
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest
-
       # GuideTest checks the facts; this catches a page the builder refuses, which would otherwise first
       # fail in pages.yml after the merge and hold up the web deploy.
       - name: Build the player guide
@@ -93,22 +112,50 @@ jobs:
       - name: Build release variant
         run: ./gradlew assembleRelease
 
+  build:
+    needs: [unit-tests, release-build]
+    if: always()
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      statuses: write   # only used by the workflow_dispatch step below
+    steps:
+      - name: Did every part pass?
+        id: verdict
+        env:
+          TESTS: ${{ needs.unit-tests.result }}
+          RELEASE: ${{ needs.release-build.result }}
+        run: |
+          echo "unit tests: $TESTS, release build: $RELEASE"
+          if [ "$TESTS" = success ] && [ "$RELEASE" = success ]; then r=success
+          elif [ "$TESTS" = cancelled ] || [ "$RELEASE" = cancelled ]; then r=cancelled
+          else r=failure; fi
+          echo "result=$r" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.verdict.outputs.result == 'success'
+        with:
+          persist-credentials: false
+
       # release.yml skips its own run of the tests when this exact source tree already passed here (the
       # usual case: a pull request merged onto the main it was tested against). Any other tree, such as
       # two pull requests merged side by side, is tested again before it ships.
       - name: Record the tree that passed
+        if: steps.verdict.outputs.result == 'success'
         run: git rev-parse 'HEAD^{tree}' > tested-tree.txt && echo "TREE=$(cat tested-tree.txt)" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.verdict.outputs.result == 'success'
         with:
           name: tested-tree-${{ env.TREE }}
           path: tested-tree.txt
           retention-days: 14
 
       - name: Report result (dispatched run)
-        if: always() && github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
-          RESULT: ${{ job.status }}
+          RESULT: ${{ steps.verdict.outputs.result }}
         run: |
           case "$RESULT" in
             success) state=success ;;
@@ -118,6 +165,11 @@ jobs:
           gh api "repos/${{ github.repository }}/statuses/${{ github.sha }}" \
             -f state="$state" -f context=build -f description="Dispatched CI: $RESULT" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Fail unless every part passed
+        env:
+          RESULT: ${{ steps.verdict.outputs.result }}
+        run: '[ "$RESULT" = success ] || { echo "::error::build: $RESULT"; exit 1; }'
 
   # Every board the browser generates must match the JVM's. A job here rather than a path-filtered workflow
   # so that it can be a required check: a required check from a workflow that never started blocks the merge,
