@@ -72,6 +72,16 @@ internal object ReckonTeacher {
         val cages = ReckonLogic.cages(cageOf)
         val lines: List<List<Int>> = List(n) { r -> List(n) { r * n + it } } + List(n) { c -> List(n) { it * n + c } }
         fun label(c: Int) = ReckonLogic.label(ops[c], targets[c])
+
+        /** A memo of each cage's ways by its squares' masks (7 bits each, at most 6 squares): looked up, never walked. */
+        private val memo = HashMap<Long, List<IntArray>>()
+
+        fun ways(c: Int, masks: IntArray): List<IntArray> {
+            val sq = cages[c]
+            var key = c.toLong() shl 42
+            for (p in sq.indices) key = key or (masks[sq[p]].toLong() shl (7 * p))
+            return memo.getOrPut(key) { ReckonLogic.ways(n, sq, ops[c], targets[c], IntArray(sq.size) { masks[sq[it]] }) }
+        }
     }
 
     private class Sight(val b: Board, val cells: List<Int>, from: IntArray? = null) {
@@ -88,7 +98,7 @@ internal object ReckonTeacher {
             val start = from ?: base
             cand = start.copyOf()
             ways = b.cages.mapIndexed { c, sq ->
-                val ws = ReckonLogic.ways(n, sq, b.ops[c], b.targets[c], IntArray(sq.size) { start[sq[it]] })
+                val ws = b.ways(c, start)
                 for (p in sq.indices) cand[sq[p]] = ws.fold(0) { m, w -> m or bit(w[p]) }
                 ws
             }

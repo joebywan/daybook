@@ -284,7 +284,7 @@ internal object ReckonLogic {
         val given = grown.size
         for (i in 0 until n * n) {
             if (owner[i] >= 0) continue
-            val size = rng.nextInt(2, spec.cap)
+            val size = minOf(rng.nextInt(2, spec.cap), rng.nextInt(2, spec.cap))
             val cage = mutableListOf(i)
             owner[i] = grown.size
             while (cage.size < size) {
@@ -335,7 +335,11 @@ internal object ReckonLogic {
                 else -> listOf(PLUS)
             }
         }
-        val ops = cageList.map { rng.pick(allowed(it)) }.toCharArray()
+        val ops = cageList.map { sq ->
+            val choices = allowed(sq)
+            var roll = rng.nextInt(choices.sumOf { WEIGHT.getValue(it) })
+            choices.first { roll -= WEIGHT.getValue(it); roll < 0 }
+        }.toCharArray()
         for (op in OPERATIONS) {
             if (op in ops) continue
             val movable = cageList.indices.filter { c -> op in allowed(cageList[c]) && ops.count { it == ops[c] } >= 2 }
@@ -346,6 +350,12 @@ internal object ReckonLogic {
         val targets = cageList.mapIndexed { c, sq -> target(ops[c], sq.map { solution[it] }) }
         return String(ops) to targets
     }
+
+    /**
+     * How often each allowed operation is drawn: the ones that say more about their digits are drawn more, since a
+     * board of `+` cages rarely has one answer, let alone one the ladder can find.
+     */
+    private val WEIGHT = mapOf(GIVEN to 1, PLUS to 2, TIMES to 3, MINUS to 3, DIVIDE to 4)
 
     private fun target(op: Char, d: List<Int>): Int = when (op) {
         PLUS -> d.sum()
