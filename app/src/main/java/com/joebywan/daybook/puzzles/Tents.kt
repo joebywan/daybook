@@ -70,8 +70,6 @@ internal class TentsInks private constructor(
     val met: ArcadeFill,
     val tent: Color,
     val tentDoor: Color,
-    /** How much of [grass] shows on a square a tent sprouted, over the plain square. */
-    val sprouted: Float,
 ) {
     companion object {
         val Light = TentsInks(
@@ -80,7 +78,6 @@ internal class TentsInks private constructor(
             met = ArcadeFill(Color(0xFF087F5B), Color(0xFF046C4E), Color.White),
             tent = Color(0xFF21145F),
             tentDoor = Color(0xFFFFF4C2),
-            sprouted = 0.42f,
         )
         val Dark = TentsInks(
             tree = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
@@ -88,7 +85,6 @@ internal class TentsInks private constructor(
             met = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
             tent = Color(0xFF21145F),
             tentDoor = Color(0xFFFFF4C2),
-            sprouted = 0.72f, // dark's deep square swallows the green at less
         )
 
         fun of(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) Dark else Light
@@ -296,15 +292,10 @@ object Tents : PuzzleType {
                         drawRoundRect(a.selected.brush(at, tile), at, tile, corner)
                         drawTent(x, y, u, inks.tent, inks.tentDoor)
                     }
-                    s.marks[i] == TentsLogic.GRASS -> {
+                    seen[i] == TentsLogic.GRASS -> {
+                        // The player's own grass and grass sprouted round a tent look alike (the owner, 2026-11-14), as in Classic.
                         drawRoundRect(inks.grass.brush(at, tile), at, tile, corner)
                         drawGrass(x, y, u, inks.grass.ink, 0.085f)
-                    }
-                    seen[i] == TentsLogic.GRASS -> {
-                        // Sprouted round a tent, not the player's own note: the same grass, paler and finer.
-                        drawRoundRect(a.square, at, tile, corner)
-                        drawRoundRect(inks.grass.brush(at, tile), at, tile, corner, alpha = inks.sprouted)
-                        drawGrass(x, y, u, inks.grass.ink, 0.05f)
                     }
                     i == overlay.cursor -> drawRoundRect(a.selected.brush(at, tile), at, tile, corner)
                     else -> drawRoundRect(a.square, at, tile, corner)
