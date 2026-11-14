@@ -462,7 +462,9 @@ object WhosWho : PuzzleType {
 
         CappedFontScale {
             // A tap on item i (-1: the empty board), from a finger or the keyboard: one state at most.
-            fun tap(i: Int) {
+            // A lambda, not a local fun: a `::tap` reference handed to the pills was kept from an earlier composition, so a
+            // tap saw no choice and a second pill was chosen instead of linked.
+            val tap: (Int) -> Unit = { i ->
                 val (next, chosen) = s.tap(selected, i)
                 if (next !== s) onState(next)
                 held = Held(next, chosen)
@@ -494,7 +496,7 @@ object WhosWho : PuzzleType {
                     for (c in 0..b.columns) Chip(null, view == c, { Header(b, c, dark, Modifier.size(20.dp)) }) { view = c }
                 }
                 Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
-                    Graph(s, closure, selected, cursor, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive, ::tap)
+                    Graph(s, closure, selected, cursor, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive, tap)
                 }
                 Clues(b, badClue, paint.highlight, paint.glow, paint.pulse, dark, interactive, Modifier.weight(1f).fillMaxWidth().widthIn(max = 560.dp)) {
                     val next = s.strike(it)
