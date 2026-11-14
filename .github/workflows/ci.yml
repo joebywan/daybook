@@ -77,8 +77,10 @@ jobs:
 
       - uses: ./.github/actions/setup-build
 
+      # Debug only: `test` ran the same suite twice, debug and release (R8 never runs in unit tests), about half the
+      # job. release.yml still runs `test` on any tree this job did not pass.
       - name: Unit tests
-        run: ./gradlew test
+        run: ./gradlew testDebugUnitTest
 
       # GuideTest checks the facts; this catches a page the builder refuses, which would otherwise first
       # fail in pages.yml after the merge and hold up the web deploy.
