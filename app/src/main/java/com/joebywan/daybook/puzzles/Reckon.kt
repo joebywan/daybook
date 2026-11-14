@@ -325,9 +325,12 @@ object Reckon : PuzzleType {
 
     // ---- home-grid motif -------------------------------------------------------------------
 
-    /** The walkthrough's top-left 3x3: the 18× L (3, 2, 3), 4÷, 7+ and 1− (a legal crop; cages of the crop only). */
+    /**
+     * The walkthrough's top-left 3x3: the 18× L (3, 2, 3), 4÷, 7+ and 1− (a legal crop; cages of the crop only). Digits only
+     * in squares without a label, so neither covers the other at tile size.
+     */
     private val PREVIEW_CAGES = listOf(0, 1, 1, 0, 0, 2, 3, 3, 2)
-    private val PREVIEW_DIGITS = listOf(3, 0, 0, 2, 3, 0, 0, 0, 0)
+    private val PREVIEW_DIGITS = listOf(0, 0, 0, 2, 3, 0, 0, 0, 0)
     private val PREVIEW_OPS = "*/+-"
     private val PREVIEW_TARGETS = listOf(18, 4, 7, 1)
 
@@ -358,8 +361,7 @@ object Reckon : PuzzleType {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             PREVIEW_DIGITS[i].toString(),
-                            modifier = Modifier.padding(top = cell * LABEL_BAND * 0.7f),
-                            style = BoardGlyph.ENTERED.style(cell * 0.85f),
+                            style = BoardGlyph.ENTERED.style(cell),
                             color = fill.ink,
                             textAlign = TextAlign.Center,
                         )
