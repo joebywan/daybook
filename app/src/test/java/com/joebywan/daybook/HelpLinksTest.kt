@@ -44,4 +44,17 @@ class HelpLinksTest {
         // The form tells players where the version is, so the place must exist under that name.
         assertTrue("Settings" in bug && "Version" in bug)
     }
+
+    /** GitHub drops a form that is not valid YAML from the chooser without a word; an unquoted ": " in a value did that. */
+    @Test
+    fun `no issue form has an unquoted colon in a value`() {
+        val dir = generateSequence(File("").absoluteFile) { it.parentFile }
+            .map { File(it, ".github/ISSUE_TEMPLATE") }.first { it.isDirectory }
+        val keyed = Regex("""^\s*(?:-\s+)?[a-z_]+:\s+(.*)$""")
+        for (f in dir.listFiles { f -> f.extension == "yml" }!!) for ((i, line) in f.readLines().withIndex()) {
+            val value = keyed.find(line)?.groupValues?.get(1) ?: continue
+            if (value.firstOrNull() in listOf('"', '\'', '[', '|', '>')) continue
+            assertTrue("${f.name}:${i + 1} needs quotes: $line", ": " !in value && !value.endsWith(":"))
+        }
+    }
 }

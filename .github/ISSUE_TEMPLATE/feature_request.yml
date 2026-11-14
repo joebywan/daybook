@@ -1,5 +1,5 @@
 name: Suggest something
-description: An idea for Daybook: a puzzle, a setting, a change to how something works.
+description: "An idea for Daybook: a puzzle, a setting, a change to how something works."
 labels: ["enhancement"]
 body:
   - type: textarea
