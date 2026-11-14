@@ -33,11 +33,11 @@ class HelpLinksTest {
     }
 
     @Test
-    fun `the issue forms ask for the version, the device, the puzzle and a screenshot`() {
+    fun `the issue forms ask for steps, the version, the device, the puzzle and a screenshot`() {
         val dir = generateSequence(File("").absoluteFile) { it.parentFile }
             .map { File(it, ".github/ISSUE_TEMPLATE") }.first { it.isDirectory }
         val bug = File(dir, "bug_report.yml").readText()
-        for (id in listOf("id: version", "id: device", "id: puzzle", "id: tier", "id: screenshot")) {
+        for (id in listOf("id: steps", "id: version", "id: device", "id: puzzle", "id: tier", "id: screenshot")) {
             assertTrue("bug_report.yml lacks $id", id in bug)
         }
         assertTrue("feature form missing", File(dir, "feature_request.yml").isFile)

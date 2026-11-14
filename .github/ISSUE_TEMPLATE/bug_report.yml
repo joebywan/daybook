@@ -14,6 +14,17 @@ body:
       description: What you did, what you expected, and what happened instead.
     validations:
       required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen again
+      description: The taps that lead to the problem, one per line. If it only happened once, say so.
+      placeholder: |
+        1. Open Sudoku, Hard, today's daily
+        2. Tap a square, then the pencil
+        3. Tap 5
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
@@ -52,4 +63,4 @@ body:
     id: screenshot
     attributes:
       label: Screenshot
-      description: A screenshot helps a lot. Drag it in here, or paste it.
+      description: A screenshot (or a short screen recording) helps a lot. Drag it in here, or paste it.
