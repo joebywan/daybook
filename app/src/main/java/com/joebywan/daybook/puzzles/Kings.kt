@@ -1,8 +1,6 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
-import com.joebywan.daybook.ui.theme.ArcadeBoard
-import com.joebywan.daybook.ui.theme.classicLook
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -201,7 +199,7 @@ object Kings : PuzzleType {
      *
      * [colourNames] names these, index for index; keep the two in step.
      */
-    internal val regionColours = listOf(
+    private val regionColours = listOf(
         0xFFEF9E8D, // salmon
         0xFFC86D05, // burnt orange
         0xFFDDC152, // mustard
@@ -310,19 +308,6 @@ object Kings : PuzzleType {
      * vanish on half of them. At least 4.5:1 against every region colour.
      */
     private val MarkInk = Color(0xFF11201C)
-
-    /** Arcade's mark ink: the board ink of the look, at least 4.5:1 on every region colour too ([ArcadeNumberGridsTest]). */
-    internal val ArcadeMarkInk = Color(0xFF180E48) // the frame's indigo, a step deeper: 21145F is 4.2:1 on the burnt orange
-
-    /** Arcade's crown: gold, under a rim of [ArcadeMarkInk] so it parts from the warm tiles. */
-    internal val ArcadeCrown = Color(0xFFFFC21F)
-
-    /** The ink every mark is drawn in, in the look showing (the Classic look, issue #418, keeps [MarkInk]). */
-    private fun markInk() = if (classicLook()) MarkInk else ArcadeMarkInk
-
-    /** A crown that clashes with nothing: Classic's solid ink, Arcade's gold in a rim of ink. */
-    @Composable
-    private fun KingCrown(cell: Dp) = if (classicLook()) Crown(cell, MarkInk) else Crown(cell, ArcadeCrown, rim = ArcadeMarkInk)
 
     private fun sizeFor(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> 7
@@ -775,13 +760,13 @@ object Kings : PuzzleType {
             // Square and centred in whatever shape the grid hands over. `maxHeight` is infinite
             // when the tile is free to grow, and taking the smaller leaves the width in charge.
             val cell = minOf(maxWidth, maxHeight) / MOTIF_SIZE
-            Box(Modifier.size(cell * MOTIF_SIZE).then(if (classicLook()) Modifier else Modifier.background(ArcadeBoard.current.frame, RoundedCornerShape(6.dp)))) {
+            Box(Modifier.size(cell * MOTIF_SIZE)) {
                 for (r in 0 until MOTIF_SIZE) {
                     for (c in 0 until MOTIF_SIZE) {
                         val i = r * MOTIF_SIZE + c
                         Tile(cell, r, c, Color(regionColours[motifRegions[i]])) {
                             when (motifMarks[i]) {
-                                Mark.KING -> KingCrown(cell)
+                                Mark.KING -> Crown(cell, MarkInk)
                                 Mark.BLOCKED -> BlockedCross(cell)
                                 Mark.EMPTY -> Unit
                             }
@@ -811,7 +796,7 @@ object Kings : PuzzleType {
         val shown = taps.shown
         val conflicts = shown.conflicts()
         val eliminated = shown.eliminated()
-        val (highlight, glow, pulse) = rememberHintPaint(ink = markInk()) // on opaque tiles, in both themes
+        val (highlight, glow, pulse) = rememberHintPaint(ink = MarkInk) // on opaque tiles, in both themes
         val palette = remember(s.region) { regionPalette(s.size, s.region) }
         // Rows, columns and regions: one finished holds exactly one king, clashing with nothing.
         val units = remember(s.region) {
@@ -848,8 +833,6 @@ object Kings : PuzzleType {
                 Modifier
                     .size(cell * s.size)
                     .highlightGrid(s.size, s.size)
-                    // Arcade: the tiles sit on the deep frame (the Classic look, issue #418, draws what Kings drew before).
-                    .then(if (classicLook()) Modifier else Modifier.background(ArcadeBoard.of(scheme).frame, RoundedCornerShape(6.dp)))
                     .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                     .pointerInput(interactive, cellPx) {
                         if (!interactive) return@pointerInput
@@ -910,16 +893,16 @@ object Kings : PuzzleType {
                             Color(regionColours[palette[s.region[i]]]).let {
                                 if (look.dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
                             },
-                            feel = Modifier.moveFeel(feel, i, if (classicLook()) vivid(accent) else ArcadeBoard.of(scheme).selected.from),
+                            feel = Modifier.moveFeel(feel, i, vivid(accent)),
                             outline = Modifier.hintOutline(look.strong, look.soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                         ) {
                             when (mark) {
                                 // A clashing crown is filled in the error colour, which on a red
                                 // or orange tile would be all but invisible, so it keeps an ink rim.
                                 Mark.KING -> if (i in conflicts) {
-                                    Crown(cell, if (classicLook()) scheme.error else ArcadeBoard.of(scheme).error, rim = markInk())
+                                    Crown(cell, scheme.error, rim = MarkInk)
                                 } else {
-                                    KingCrown(cell)
+                                    Crown(cell, MarkInk)
                                 }
                                 Mark.BLOCKED -> BlockedCross(cell)
                                 // A square the board has ruled out is a fact, not a suggestion, so
@@ -969,7 +952,7 @@ object Kings : PuzzleType {
     @Composable
     private fun BlockedCross(cell: Dp) {
         Canvas(Modifier.fillMaxSize().padding(cell * 0.28f)) {
-            val ink = markInk().copy(alpha = 0.75f)
+            val ink = MarkInk.copy(alpha = 0.75f)
             val width = size.minDimension * 0.2f
             drawLine(ink, Offset(0f, 0f), Offset(size.width, size.height), width, StrokeCap.Round)
             drawLine(ink, Offset(0f, size.height), Offset(size.width, 0f), width, StrokeCap.Round)
