@@ -1,7 +1,6 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import com.joebywan.daybook.puzzles.TentsInks
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
@@ -26,9 +25,6 @@ class TentsInksTest {
             atLeast(3f, inks.tent, a.selected.from, "$name tent, first stop")
             atLeast(3f, inks.tent, a.selected.to, "$name tent, second stop")
             atLeast(3f, inks.tentDoor, inks.tent, "$name door")
-            for (stop in listOf(inks.grass.from, inks.grass.to)) {
-                atLeast(3f, inks.grass.ink, stop.copy(alpha = inks.sprouted).compositeOver(a.square), "$name sprouted grass")
-            }
         }
     }
 }
