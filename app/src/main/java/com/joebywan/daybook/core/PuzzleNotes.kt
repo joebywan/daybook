@@ -230,6 +230,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A dot takes no line or two, never one or three.",
         "Never join the two ends of a line unless it is the whole loop.",
     ),
+    "reckon" to listOf(
+        "Two squares making 3÷ can only be 1 and 3, or 2 and 6.",
+        "A cage of two making 5− on 1 to 6 holds a 1 and a 6.",
+        "A cage repeats a digit only in squares sharing no line.",
+        "15× in two squares is 3 and 5: no other pair multiplies to it.",
+        "Each line adds to 21: a + cage in it says what the rest holds.",
+    ),
     "links" to listOf(
         "A corner square always has a path turning through it.",
         "A square with only two free neighbours joins both of them.",
