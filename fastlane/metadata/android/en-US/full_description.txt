@@ -7,7 +7,7 @@ WHAT'S INSIDE
 • Nonogram picture grids
 • Futoshiki-style inequality grids, Shikaku rectangles, LITS, Tents and trees, Regions
 • Kings, a Star Battle-style crown placement; Sun & Moon, a Takuzu-style binary grid; Atoms, Hashi-style bonds
-• Number puzzles: Tally sums, Cipher letter sums (cryptarithms) and Target arithmetic
+• Number puzzles: Reckon arithmetic cages, Tally sums, Cipher letter sums (cryptarithms) and Target arithmetic
 • Dominoes: lay every tile so each coloured region keeps its rule
 • Mines: clear a minefield by its numbers alone, never a guess
 • Lamps: light every square, with no lamp shining on another

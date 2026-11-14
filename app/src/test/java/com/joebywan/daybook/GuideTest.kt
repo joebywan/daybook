@@ -58,6 +58,8 @@ import com.joebywan.daybook.puzzles.PearlsTeacher
 import com.joebywan.daybook.puzzles.LoopTeacher
 import com.joebywan.daybook.puzzles.LinksLogic
 import com.joebywan.daybook.puzzles.LinksTeacher
+import com.joebywan.daybook.puzzles.ReckonLogic
+import com.joebywan.daybook.puzzles.ReckonTeacher
 import com.joebywan.daybook.puzzles.PipesTeacher
 import com.joebywan.daybook.puzzles.Placement
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -174,6 +176,7 @@ class GuideTest {
         "inequality" to ::inequalityStep,
         "regions" to ::regionsStep,
         "cages" to ::cagesStep,
+        "reckon" to ::reckonStep,
         "tally" to ::tallyStep,
         "thermometers" to ::thermometersStep,
         "nonogram" to ::nonogramStep,
@@ -498,6 +501,23 @@ class GuideTest {
         val cells = b.rows.flatten().map { it.toIntOrNull() ?: 0 }
         assertTrue("${b.technique}: a position with one answer", CageLogic.solutions(board, cells) is Verdict.ExactlyOne)
         val step = CageTeacher.deduce(board, cells) ?: return null
+        assertEquals("${b.technique}: the digit placed", step.digit.toString(), b.marks("answer")[step.cell])
+        return step
+    }
+
+    /** Cages as `regions`, each label a `corners` mark (`12×`); a one-square cage with no label is a given, its digit its number. */
+    private fun reckonStep(b: Board): TeachStep? {
+        val n = b.width
+        val cageOf = b.letters("regions")
+        val cells = b.rows.flatten().map { it.toIntOrNull() ?: 0 }
+        val corners = b.marks("corners")
+        val sign = mapOf('+' to '+', '−' to '-', '×' to '*', '÷' to '/')
+        val k = cageOf.max() + 1
+        val ops = String(CharArray(k) { c -> corners[cageOf.indexOf(c)]?.let { sign.getValue(it.last()) } ?: '=' })
+        val targets = List(k) { c -> corners[cageOf.indexOf(c)]?.dropLast(1)?.toInt() ?: cells[cageOf.indexOf(c)] }
+        for (c in 0 until k) if (ops[c] == '=') assertEquals("${b.technique}: an unlabelled cage is one given square", 1, cageOf.count { it == c })
+        assertTrue("${b.technique}: a position with one answer", ReckonLogic.solutions(n, cells, cageOf, ops, targets) is Verdict.ExactlyOne)
+        val step = ReckonTeacher.deduce(n, cells, cageOf, ops, targets) ?: return null
         assertEquals("${b.technique}: the digit placed", step.digit.toString(), b.marks("answer")[step.cell])
         return step
     }
@@ -1093,7 +1113,7 @@ class GuideTest {
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort", "slitherlink", "numberlink", "flow free", "rush hour", "unblock me",
+            "wordscapes", "water sort", "kenken", "calcudoku", "slitherlink", "numberlink", "flow free", "rush hour", "unblock me",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))

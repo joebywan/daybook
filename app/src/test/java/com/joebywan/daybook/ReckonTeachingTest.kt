@@ -162,6 +162,36 @@ class ReckonTeachingTest {
         assertEquals(s.solution[a.cell], a.digit)
     }
 
+    /**
+     * Uniqueness cannot tell reasoning from peeking, so: random 4x4 boards with several answers (by [ReckonOracle]),
+     * walked by the teacher's reasoning alone, every step agreeing with every answer the board still allows.
+     */
+    @Test
+    fun `steps hold for every answer still possible, on boards with several`() {
+        var boards = 0
+        var steps = 0
+        for (seed in 1L..600L) {
+            val rng = Rng(seed)
+            val n = 4
+            val solution = com.joebywan.daybook.puzzles.InequalityLogic.randomSquare(n, rng)
+            val cageOf = ReckonLogic.carve(n, ReckonLogic.Spec(3, 0..1, 0, 0), rng) ?: continue
+            val (ops, targets) = ReckonLogic.operations(n, cageOf, solution, rng) ?: continue
+            var cells = List(n * n) { if (ops[cageOf[it]] == ReckonLogic.GIVEN) solution[it] else 0 }
+            val answers = ReckonOracle.solutions(n, cells, cageOf, ops, targets, limit = 10_000)
+            if (answers.size < 2) continue
+            boards++
+            while (true) {
+                val step = ReckonTeacher.deduce(n, cells, cageOf, ops, targets) ?: break
+                val still = answers.filter { a -> cells.indices.all { cells[it] == 0 || cells[it] == a[it] } }
+                assertTrue("seed $seed ${step.technique}: square ${step.cell} = ${step.digit}", still.isNotEmpty() && still.all { it[step.cell] == step.digit })
+                steps++
+                cells = cells.toMutableList().also { it[step.cell] = step.digit }
+            }
+        }
+        println("several-answer boards $boards, steps checked $steps")
+        assertTrue("boards $boards, steps $steps", boards >= 50 && steps >= 100)
+    }
+
     @Test
     fun `a part-played board survives a save, notes and selection included`() {
         val s = daily(3, Difficulty.HARD)
