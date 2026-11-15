@@ -154,6 +154,12 @@ internal fun SudokuGridBoard(
     notesKey: Int = SudokuTeacher.NOTES_KEY,
     /** Arcade's frame on each side of a [wall]: Sudoku's box edges 1.5dp, Reckon's cage walls wider. */
     wallGap: Dp = 1.5.dp,
+    /**
+     * Arcade only: each square's own ground in place of the box shade and the given and entered tiles (Cage Sudoku's cage
+     * colours, issue #499). A given is inked by [BoardHues.onFill], an entry in the pad's colour made readable on it; the selection,
+     * a twin and a clash keep their own fills.
+     */
+    tint: ((Int) -> Color)? = null,
 ) {
     // Sudoku's 3x3 boxes (their shade and frame lines); a smaller grid has none.
     val boxed = n == 9
@@ -260,6 +266,9 @@ internal fun SudokuGridBoard(
                             wrong -> ArcadeFill(a.error, a.error, a.errorInk)
                             isSelected -> a.selected
                             sameValue -> SudokuTwin
+                            tint != null -> tint(i).let {
+                                ArcadeFill(it, it, if (s.cells[i] != 0 && !s.givens[i]) BoardHues.textOn(if (dark) a.control.from else a.control.to, it) else BoardHues.onFill(it))
+                            }
                             s.cells[i] != 0 && !s.givens[i] -> a.control
                             s.givens[i] -> ArcadeFill(a.given, a.given, a.givenInk)
                             boxed && (r / 3 + c / 3) % 2 == 0 -> ArcadeFill(boxShade, boxShade, a.squareInk)
@@ -315,6 +324,7 @@ internal fun SudokuGridBoard(
                                 val ink = when {
                                     classic -> scheme.onSurface.copy(alpha = SUDOKU_NOTE_ALPHA_CLASSIC)
                                     isSelected -> a.selected.ink
+                                    tint != null -> fill.ink
                                     else -> a.givenInk
                                 }
                                 // The disc behind a highlighted digit's note: Classic's twin square colour, under its own ink.

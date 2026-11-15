@@ -275,7 +275,49 @@ object BoardHues {
             }
             if (go(0)) return colour
         }
-        return IntArray(count) { it % REGION_HUES.size } // not reached on a planar layout; the region outlines still show
+        return fiveColours(adj) // when the search runs out of budget: five always do on a map of regions
+    }
+
+    /**
+     * Five colours for any map of connected regions that touch by an edge (a planar graph), no two neighbours alike, with no
+     * budget: proved, not measured (issue #499). Regions come off smallest first, so each has at most five neighbours
+     * coloured before it; one with five, all different, frees a colour by Kempe's swap: for two of those neighbours a and
+     * b, the regions reachable from a through a's and b's colours, if b is not among them, swap the two colours, and a's
+     * colour is free. On a planar map some pair always allows it.
+     */
+    fun fiveColours(adj: List<BooleanArray>): IntArray {
+        val count = adj.size
+        val near = List(count) { v -> (0 until count).filter { adj[v][it] } }
+        val out = BooleanArray(count)
+        val order = ArrayList<Int>(count)
+        repeat(count) {
+            val v = (0 until count).filter { !out[it] }.minBy { u -> near[u].count { !out[it] } }
+            out[v] = true
+            order += v
+        }
+        val colour = IntArray(count) { -1 }
+        for (v in order.asReversed()) {
+            val coloured = near[v].filter { colour[it] >= 0 }
+            var free = (0 until 5).firstOrNull { c -> coloured.none { colour[it] == c } }
+            if (free == null) {
+                swap@ for (a in coloured) for (b in coloured) {
+                    val ca = colour[a]
+                    val cb = colour[b]
+                    if (ca == cb) continue
+                    val chain = mutableSetOf(a)
+                    val todo = ArrayDeque(listOf(a))
+                    while (todo.isNotEmpty()) for (u in near[todo.removeFirst()]) {
+                        if ((colour[u] == ca || colour[u] == cb) && chain.add(u)) todo += u
+                    }
+                    if (b in chain) continue
+                    for (u in chain) colour[u] = if (colour[u] == ca) cb else ca
+                    free = ca
+                    break@swap
+                }
+            }
+            colour[v] = free ?: 0 // not reached on a planar map (`CageColoursTest`)
+        }
+        return colour
     }
 
     private val TEXT = listOf(Color(0xFF21145F), Color.White, Color.Black)

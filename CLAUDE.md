@@ -451,6 +451,11 @@ shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
   `CageLogic.cageConflicts` (a repeat in a cage, a cage over its total, a full cage that misses it).
 - **Cage totals are drawn in the top-left of the cage's first square**, so the pencil marks of that square give up the top 27% of it
   (`topBand`). Dashed outlines are `Cages.drawCages` (inset 9% of a square, bends and notches closed), in hue A's ink.
+- **Arcade colours the cages** (issue #499; Classic is untouched): `Cages.cageColours` gives touching cages different colours
+  of `cageTint`'s five per scheme (searched for colour-blind vision: closest pair 11.0 light, 12.5 dark under normal, deutan,
+  protan and tritan sight; Regions' fills were 0.95), drawn through `SudokuGridBoard`'s `tint`; dashes are thin and quiet
+  (inset 13%), totals 1.2x on a chip of their cage's colour, the 3x3 edges heavy solid lines. `BoardHues.regionColours`
+  falls back on `fiveColours` (Kempe's swap, no budget), so no board can give two touching cages one colour: `CageColoursTest`.
 - Highlight indices are Sudoku's: squares 0..80, digit keys `81 + d`, the pencil 91.
 
 ## Reckon (arithmetic cages)
