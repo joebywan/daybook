@@ -11,9 +11,12 @@ on:
       - '.github/workflows/renovate.yml'
   workflow_dispatch:
 
+# Queue, never cancel: web parity takes ~20 minutes, and every merge and every release (publish-fdroid
+# dispatches this) cancelled the run in progress, so on a busy day nothing deployed and the site drifted
+# releases behind. GitHub keeps one run going and only the newest waiting, so the last push still wins.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
