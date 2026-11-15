@@ -21,9 +21,11 @@ val androidOnly = listOf(
 )
 
 // The version Settings shows on the web (`rememberAppVersion`), so a bug report can say which build it came from:
-// version.txt, and the commit Actions built (GITHUB_SHA), else "local". The APK's run number is not known to Pages.
+// the release it was built from (DAYBOOK_WEB_VERSION, set by pages.yml from the release tag: `1.51.392`, or `1.51.392 +1`
+// past it), else version.txt; and the commit Actions built (GITHUB_SHA), else "local".
 val webVersionDir = layout.buildDirectory.dir("generated/webVersion")
-val webVersionText = providers.fileContents(rootProject.layout.projectDirectory.file("version.txt")).asText.map { it.trim() }
+val webVersionText = providers.environmentVariable("DAYBOOK_WEB_VERSION").map { it.trim() }.filter { it.isNotEmpty() }
+    .orElse(providers.fileContents(rootProject.layout.projectDirectory.file("version.txt")).asText.map { it.trim() })
 val webCommit = providers.environmentVariable("GITHUB_SHA").map { it.take(7) }.orElse("local")
 val generateWebVersion by tasks.registering {
     val out = webVersionDir
