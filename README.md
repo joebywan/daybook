@@ -13,6 +13,12 @@ Each puzzle has a page in the **[player guide](https://knowhowit.com.au/daybook/
 **[Get it on F-Droid](https://f-droid.org/packages/com.joebywan.daybook/)** ·
 **[Play in the browser](https://knowhowit.com.au/daybook/)**
 
+[![Latest release](https://img.shields.io/github/v/release/joebywan/daybook?label=release)](https://github.com/joebywan/daybook/releases/latest)
+[![Google Play](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Fplay.json)](https://play.google.com/store/apps/details?id=com.joebywan.daybook)
+[![f-droid.org](https://img.shields.io/f-droid/v/com.joebywan.daybook?label=f-droid.org)](https://f-droid.org/packages/com.joebywan.daybook/)
+[![F-Droid (own repo)](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Ffdroid.json)](docs/fdroid/README.md)
+[![Web](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Fweb.json)](https://knowhowit.com.au/daybook/)
+
 | Every puzzle, every day | Sudoku | Lexicon | Word Wheel |
 |---|---|---|---|
 | ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three (Atoms, Sudoku, Word Wheel) and the grid of all 39 puzzles, gentlest first: Arrows, Pipes, Trail, Sudoku, Lexicon and Sand in view](docs/screenshots/home.png) | ![A Sudoku board on Standard, in the Arcade look](docs/screenshots/sudoku.png) | ![A Lexicon board two guesses in, its letters marked](docs/screenshots/lexicon.png) | ![A Word Wheel board: a wheel of letters under a small crossword](docs/screenshots/word-wheel.png) |
