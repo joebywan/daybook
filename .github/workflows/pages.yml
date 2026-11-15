@@ -22,9 +22,11 @@ jobs:
   build:
     runs-on: ubuntu-26.04
     steps:
+      # Full history and tags: the web badge is the release tag of this commit (tools/badges.py).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: ./.github/actions/setup-build
 
@@ -54,6 +56,15 @@ jobs:
             mkdir -p web/build/dist/wasmJs/productionExecutable/fdroid
             cp -r fdroid-branch/repo web/build/dist/wasmJs/productionExecutable/fdroid/repo
           fi
+
+      # The README's version badges (shields.io endpoints at badges/*.json): web, Play and our F-Droid repo.
+      # A badge it cannot read says "unknown"; it never stops the deploy.
+      - name: Add the version badges to the site
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          pip install --quiet google-api-python-client google-auth || true
+          python3 tools/badges.py web/build/dist/wasmJs/productionExecutable --fdroid fdroid-branch/repo
 
       # The player guide (tools/guide/): static pages at guide/ and guide/<puzzle id>. After web parity, which
       # has no need of them. sw.js leaves guide/ alone, so a page read never replaces the cached app.
