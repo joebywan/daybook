@@ -94,6 +94,10 @@ data class CageState(
 /** The share of a square's height that a cage's total takes from the top of its first square. */
 private const val LABEL_BAND = 0.34f
 
+/** Arcade's band, for its totals drawn [ARCADE_LABEL_SCALE] times larger (issue #499). */
+private const val ARCADE_LABEL_BAND = 0.38f
+private const val ARCADE_LABEL_SCALE = 1.2f
+
 /**
  * Cage Sudoku — a Sudoku whose dashed cages must add up. The grid, the pad, the notes and the keys are
  * Sudoku's own ([SudokuGridBoard]); this adds the cages over it, their totals, and the logic that makes
@@ -296,7 +300,15 @@ object Cages : PuzzleType {
         return out
     }
 
-    /** Dashed outlines for the cages of an [n] x [n] grid of [cell]-pixel squares (see [cageOutline]). */
+    /** Arcade's dashed outlines (issue #499): thin, each cage's in its own [ink], no halo (see [cageOutline]). */
+    internal fun DrawScope.drawCages(cageOf: List<Int>, n: Int, cell: Float, ink: (Int) -> Color, stroke: Float, inset: Float, dash: Float) {
+        val effect = PathEffect.dashPathEffect(floatArrayOf(cell * dash, cell * dash))
+        for (g in cageOutline(cageOf, n, inset)) {
+            drawLine(ink(g.cage), Offset(g.x0 * cell, g.y0 * cell), Offset(g.x1 * cell, g.y1 * cell), strokeWidth = stroke, pathEffect = effect)
+        }
+    }
+
+    /** Dashed outlines for the cages of an [n] x [n] grid of [cell]-pixel squares (see [cageOutline]), each dash on a [halo]. */
     internal fun DrawScope.drawCages(cageOf: List<Int>, n: Int, cell: Float, ink: Color, halo: Color, stroke: Float) {
         val dash = PathEffect.dashPathEffect(floatArrayOf(cell * 0.13f, cell * 0.09f))
         // The squares under a line run from white to violet to amber: a dash on its halo parts from every one of them.
@@ -308,16 +320,17 @@ object Cages : PuzzleType {
 
     /** Each cage's total in the top-left corner of its first square, on a chip of [chip] where [filled]: an empty square's pale fill, and its notes, need none. */
     private fun DrawScope.drawTotals(
-        cageOf: List<Int>, sums: List<Int>, n: Int, cell: Float, measurer: TextMeasurer, style: TextStyle, chip: Color, filled: (Int) -> Boolean,
+        cageOf: List<Int>, sums: List<Int>, n: Int, cell: Float, measurer: TextMeasurer, style: TextStyle, chip: (Int) -> Color,
+        ink: ((Int) -> Color)? = null, filled: (Int) -> Boolean,
     ) {
         val seen = BooleanArray(sums.size)
         for (i in cageOf.indices) {
             val k = cageOf[i]
             if (seen[k]) continue
             seen[k] = true
-            val laid = measurer.measure(sums[k].toString(), style, maxLines = 1)
+            val laid = measurer.measure(sums[k].toString(), ink?.let { style.copy(color = it(k)) } ?: style, maxLines = 1)
             val at = Offset(i % n * cell + cell * 0.09f, i / n * cell + cell * 0.04f)
-            if (filled(i)) drawRoundRect(chip, at, Size(laid.size.width.toFloat(), laid.lastBaseline + cell * 0.02f), CornerRadius(cell * 0.06f))
+            if (filled(i)) drawRoundRect(chip(k), at, Size(laid.size.width.toFloat(), laid.lastBaseline + cell * 0.02f), CornerRadius(cell * 0.06f))
             drawText(laid, topLeft = at)
         }
     }
@@ -341,6 +354,8 @@ object Cages : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
+        // Arcade (issue #499): the cages in their colours, as on the board.
+        val tints = if (classic) null else remember { cageColours(PREVIEW_CAGES, 3) }.map { cageTint(it, dark) }
         BoxWithConstraints(modifier) {
             val cell = minOf(maxWidth, maxHeight) / 3
             for (r in 0 until 3) for (c in 0 until 3) {
@@ -351,14 +366,14 @@ object Cages : PuzzleType {
                         .size(cell)
                         .padding(1.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (classic) scheme.surfaceVariant else a.square),
+                        .background(if (classic) scheme.surfaceVariant else tints?.get(PREVIEW_CAGES[i]) ?: a.square),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             text = PREVIEW_DIGITS[i].toString(),
                             style = BoardGlyph.ENTERED.style(cell),
-                            color = if (classic) BoardHues.ink(hueB, dark) else a.squareInk,
+                            color = if (classic) BoardHues.ink(hueB, dark) else tints?.let { BoardHues.onFill(it[PREVIEW_CAGES[i]]) } ?: a.squareInk,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -368,8 +383,13 @@ object Cages : PuzzleType {
             val cageInk = if (classic) BoardHues.ink(hueA, dark) else a.givenInk
             Canvas(Modifier.fillMaxSize()) {
                 val px = size.width.coerceAtMost(size.height) / 3f
-                drawCages(PREVIEW_CAGES, 3, px, cageInk, if (classic) Color.Transparent else a.square, stroke = px * 0.045f)
-                drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, a.square) { false }
+                if (tints != null) {
+                    drawCages(PREVIEW_CAGES, 3, px, { BoardHues.onFill(tints[it]).copy(alpha = 0.5f) }, stroke = px * 0.03f, inset = 0.13f, dash = 0.10f)
+                    drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, { tints[it] }, { BoardHues.onFill(tints[it]) }) { false }
+                } else {
+                    drawCages(PREVIEW_CAGES, 3, px, cageInk, Color.Transparent, stroke = px * 0.045f)
+                    drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, { a.square }) { false }
+                }
             }
         }
     }
@@ -387,6 +407,10 @@ object Cages : PuzzleType {
             s.cageOf.indices.filter { i -> !seen[s.cageOf[i]].also { seen[s.cageOf[i]] = true } }.toSet()
         }
         val units = remember(s.cageOf) { SUDOKU_UNITS + CageLogic.cageCells(s.cageOf) }
+        val classic = classicLook()
+        val dark = BoardHues.isDark(MaterialTheme.colorScheme)
+        val colours = remember(s.cageOf) { cageColours(s.cageOf, 9) }
+        val tints = if (classic) null else colours.map { cageTint(it, dark) }
         SudokuGridBoard(
             s = s.grid,
             conflicts = s.conflicts(),
@@ -399,7 +423,7 @@ object Cages : PuzzleType {
                 if (next !== s) onState(next)
             },
             onKey = { action, notesMode -> s.applyKey(action, notesMode)?.let(onState) },
-            topBand = { if (it in labelled) LABEL_BAND else 0f },
+            topBand = { if (it in labelled) (if (classic) LABEL_BAND else ARCADE_LABEL_BAND) else 0f },
             // The rows, columns and boxes, then the cages: a cage is finished when it is full, repeats nothing and makes its total.
             units = units,
             complete = { u ->
@@ -411,12 +435,15 @@ object Cages : PuzzleType {
                         cage.sumOf { s.cells[it] } == s.sums[u - SUDOKU_UNITS.size]
                 }
             },
-            overlay = { cell -> CageOverlay(s, cell, ArcadeBoard.current, measurer) },
+            overlay = { cell -> CageOverlay(s, cell, ArcadeBoard.current, measurer, tints) },
+            // Arcade (issue #499): each cage in its own colour, the boxes' edges wider to carry the heavy lines drawn over them.
+            tint = tints?.let { t -> { i: Int -> t[s.cageOf[i]] } },
+            wallGap = if (classic) 1.5.dp else 2.dp,
         )
     }
 
     @Composable
-    private fun BoxScope.CageOverlay(s: CageState, cell: Dp, a: ArcadeBoard, measurer: TextMeasurer) {
+    private fun BoxScope.CageOverlay(s: CageState, cell: Dp, a: ArcadeBoard, measurer: TextMeasurer, tints: List<Color>?) {
         // Classic (issue #418): as before Arcade, the lines in hue A's ink with no halo, the totals bare in the surface's ink.
         val classic = classicLook()
         val scheme = MaterialTheme.colorScheme
@@ -425,10 +452,55 @@ object Cages : PuzzleType {
         val label = BoardGlyph.CORNER.style(cell).copy(color = if (classic) scheme.onSurface.copy(alpha = 0.85f) else a.squareInk)
         val ink = if (classic) BoardHues.ink(hueA, dark) else a.squareInk
         // Not a pointer target: taps fall through to the squares underneath.
-        Canvas(Modifier.fillMaxSize()) {
+        if (tints != null) {
+            // Arcade (issue #499): the colours carry the cages, so the dashes are thin and quiet, a backup for a pair of
+            // colours a player cannot tell apart; the boxes' edges are heavy and solid, so the two never read as one.
+            val big = label.copy(fontSize = label.fontSize * ARCADE_LABEL_SCALE)
+            val box = a.squareInk.copy(alpha = 0.85f)
+            Canvas(Modifier.fillMaxSize()) {
+                val px = size.width / 9f
+                drawCages(s.cageOf, 9, px, { BoardHues.onFill(tints[it]).copy(alpha = 0.5f) }, stroke = 1.dp.toPx(), inset = 0.13f, dash = 0.10f)
+                for (k in 1..2) {
+                    val at = size.width * k / 3f
+                    drawLine(box, Offset(at, 0f), Offset(at, size.height), 3.dp.toPx())
+                    drawLine(box, Offset(0f, at), Offset(size.width, at), 3.dp.toPx())
+                }
+                drawTotals(s.cageOf, s.sums, 9, px, measurer, big, { tints[it] }, { BoardHues.onFill(tints[it]) }) {
+                    // On its chip where the square's fill may not be its cage's (the selection, a twin, a clash), as before; not
+                    // on every square, or a hint's dimming would leave the chips of empty squares bright.
+                    s.grid.cells[it] != 0 || s.grid.selected == it
+                }
+            }
+        } else Canvas(Modifier.fillMaxSize()) {
             val px = size.width / 9f
             drawCages(s.cageOf, 9, px, ink, if (classic) Color.Transparent else a.square, stroke = 1.5.dp.toPx())
-            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, a.square) { !classic && (s.grid.cells[it] != 0 || s.grid.selected == it) }
+            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, { a.square }) { !classic && (s.grid.cells[it] != 0 || s.grid.selected == it) }
         }
     }
+
+    /** An index into [cageTint]'s colours per cage of an [n] x [n] grid, no two touching cages alike (issue #499). */
+    internal fun cageColours(cageOf: List<Int>, n: Int): IntArray {
+        val count = cageOf.max() + 1
+        val adj = List(count) { BooleanArray(count) }
+        for (i in cageOf.indices) {
+            for (j in listOf(if (i % n < n - 1) i + 1 else -1, if (i / n < n - 1) i + n else -1)) {
+                if (j >= 0 && cageOf[i] != cageOf[j]) {
+                    adj[cageOf[i]][cageOf[j]] = true
+                    adj[cageOf[j]][cageOf[i]] = true
+                }
+            }
+        }
+        return BoardHues.regionColours(adj, minColours = 4)
+    }
+
+    /**
+     * A cage's colour in Arcade, of five per scheme (issue #499): violet, blue, cyan, plum and, only where a board needs a
+     * fifth, sand. Regions' fills came within 1 (CIEDE2000) of each other for colour-blind vision; these were searched
+     * for the closest pair under normal vision, deuteranopia, protanopia and tritanopia (11.0 light, 12.5 dark), each
+     * with its digit at 5:1 and clear of the selection, a twin and a clash. `CageColoursTest` pins them.
+     */
+    internal fun cageTint(colour: Int, dark: Boolean): Color = Color(if (dark) CAGE_TINTS_DARK[colour] else CAGE_TINTS_LIGHT[colour])
+
+    private val CAGE_TINTS_LIGHT = longArrayOf(0xFFB872F5, 0xFFBBCCFB, 0xFFC4FCFB, 0xFFD388C5, 0xFFF8CFAB)
+    private val CAGE_TINTS_DARK = longArrayOf(0xFF410DD0, 0xFF0F6ECF, 0xFF256462, 0xFF7A1277, 0xFF986037)
 }
