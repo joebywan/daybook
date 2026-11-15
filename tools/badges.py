@@ -5,15 +5,19 @@ shields.io endpoint (https://shields.io/badges/endpoint-badge), so every channel
   web     the release tag of the commit being deployed (`git describe`; "+n" when n commits past it,
           which a deploy straight after the release replaces). Needs the tags fetched.
   fdroid  our own repo's newest APK, from the copy of the `fdroid` branch the deploy adds (--fdroid).
+  fdroid.org  f-droid.org's suggested version, from its public API (it builds from source, days behind).
   play    the production track's newest release, read through an edit that is deleted, never
           committed. Needs PLAY_SERVICE_ACCOUNT_JSON and google-api-python-client; without them, or on
           any error, the badge says "unknown" rather than failing the deploy. Google reviews each
           update, so this is what was sent, which can be a day ahead of what the store shows.
 
+A badge behind the newest release tag is orange, else blue; compared on the last number, the release's
+run number, which is also the version code (so a Play release with no name still compares).
+
 usage: badges.py <site dir> [--fdroid <repo dir>]
        badges.py --web-version   (prints the web's version alone)
 """
-import json, os, subprocess, sys
+import json, os, subprocess, sys, urllib.request
 
 PKG = "com.joebywan.daybook"
 
@@ -29,6 +33,24 @@ def fdroid(repo):
     with open(os.path.join(repo, "index-v1.json"), encoding="utf-8") as f:
         apks = json.load(f)["packages"][PKG]
     return max(apks, key=lambda a: a["versionCode"])["versionName"]
+
+
+def fdroid_org():
+    url = f"https://f-droid.org/api/v1/packages/{PKG}"
+    with urllib.request.urlopen(url, timeout=20) as r:
+        info = json.load(r)
+    return next(p["versionName"] for p in info["packages"] if p["versionCode"] == info["suggestedVersionCode"])
+
+
+def latest():
+    """The newest release's run number, or None without tags (then nothing is called behind)."""
+    tags = subprocess.run(["git", "tag", "--list", "v*"], capture_output=True, text=True).stdout.split()
+    runs = [int(t.rsplit(".", 1)[-1]) for t in tags if t.rsplit(".", 1)[-1].isdigit()]
+    return max(runs, default=None)
+
+
+def run_number(version):
+    return int(str(version).split()[0].rsplit(".", 1)[-1])
 
 
 def play():
@@ -48,9 +70,10 @@ def play():
     return newest.get("name") or newest["versionCodes"][-1]
 
 
-def badge(out, name, label, read):
+def badge(out, name, label, read, newest):
     try:
-        message, color = read(), "blue"
+        message = read()
+        color = "orange" if newest is not None and run_number(message) < newest else "blue"
     except Exception as e:                           # a badge never stops the site deploying
         print(f"{name}: {e!r}", file=sys.stderr)
         message, color = "unknown", "lightgrey"
@@ -66,6 +89,8 @@ site = sys.argv[1]
 repo = sys.argv[sys.argv.index("--fdroid") + 1] if "--fdroid" in sys.argv else None
 out = os.path.join(site, "badges")
 os.makedirs(out, exist_ok=True)
-badge(out, "web", "web", web)
-badge(out, "play", "Google Play", play)
-badge(out, "fdroid", "F-Droid (own repo)", lambda: fdroid(repo))
+newest = latest()
+badge(out, "web", "web", web, newest)
+badge(out, "play", "Google Play", play, newest)
+badge(out, "fdroid", "F-Droid (own repo)", lambda: fdroid(repo), newest)
+badge(out, "fdroid-org", "f-droid.org", fdroid_org, newest)
