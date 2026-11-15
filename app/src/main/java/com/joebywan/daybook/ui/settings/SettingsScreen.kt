@@ -376,9 +376,9 @@ private fun HelpRows() {
             "How every puzzle works, with worked examples of the techniques the hints teach. Opens in your browser.",
         ) { openUrl(GUIDE_URL) }
         LinkRow(
-            "Report a problem or suggest something",
+            "Report a problem, suggest something or give feedback",
             "On Daybook's issues board on GitHub. Please say your version (below), your device or browser, and the " +
-                "puzzle and tier; a screenshot helps.",
+                "puzzle and difficulty; a screenshot helps.",
         ) { openUrl(ISSUES_URL) }
         Column(Modifier.fillMaxWidth().card(scheme.surface).padding(14.dp)) {
             SelectionContainer { Column { CardText("Version", "$version\nPress and hold to copy.") } }
