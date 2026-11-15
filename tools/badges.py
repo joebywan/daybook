@@ -11,6 +11,7 @@ shields.io endpoint (https://shields.io/badges/endpoint-badge), so every channel
           update, so this is what was sent, which can be a day ahead of what the store shows.
 
 usage: badges.py <site dir> [--fdroid <repo dir>]
+       badges.py --web-version   (prints the web's version alone)
 """
 import json, os, subprocess, sys
 
@@ -58,6 +59,9 @@ def badge(out, name, label, read):
     print(f"{label}: {message}")
 
 
+if "--web-version" in sys.argv:                     # pages.yml stamps the web build with the same version
+    print(web())
+    sys.exit()
 site = sys.argv[1]
 repo = sys.argv[sys.argv.index("--fdroid") + 1] if "--fdroid" in sys.argv else None
 out = os.path.join(site, "badges")

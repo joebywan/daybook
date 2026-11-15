@@ -30,8 +30,11 @@ jobs:
 
       - uses: ./.github/actions/setup-build
 
+      # Settings shows the release the build came from, as the badge does; without tags it falls back to version.txt.
       - name: Build web distribution
-        run: ./gradlew :web:wasmJsBrowserDistribution
+        run: |
+          v=$(python3 tools/badges.py --web-version) && echo "web version: $v" || v=""
+          DAYBOOK_WEB_VERSION="$v" ./gradlew :web:wasmJsBrowserDistribution
 
       # Nothing ships that the browser generates differently from the JVM (and so from Android): a
       # failure here stops the deploy. The distribution built above is the one that is compared
