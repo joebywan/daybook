@@ -109,6 +109,13 @@ data class WhosWhoGraphState(
  */
 internal object WhosWhoGraphLogic {
 
+    /**
+     * Whether a board the marks settle is solved with links left implied (the player's choice in Settings, on by default,
+     * issue #500). Off, every person-item link must carry a line of the player's ([undrawn]), and the hints ask for it.
+     * Set by `DaybookApp` from the launch preference, as the look is.
+     */
+    var autoSolve = true
+
     const val OPEN = '.'
     /** A line drawn from both ends. */
     const val LINK = 'o'
@@ -238,18 +245,21 @@ internal object WhosWhoGraphLogic {
      * ruling out everything else) without the player drawing it. Never part of [isSolved]; the finished frame says so
      * ([WhosWho.finishNote]).
      */
-    fun leftImplied(s: WhosWhoGraphState, c: Closure = close(s)): Boolean {
-        for (p in 0 until s.n) for (x in s.n until s.size) if (c.at(p, x) == 1 && !isLine(s.mark(p, x))) return true
-        return false
+    fun leftImplied(s: WhosWhoGraphState, c: Closure = close(s)): Boolean = undrawn(s, c) != null
+
+    /** The first person-item pair the closure links that carries no line of the player's, as (person, item), or null. */
+    fun undrawn(s: WhosWhoGraphState, c: Closure = close(s)): Pair<Int, Int>? {
+        for (p in 0 until s.n) for (x in s.n until s.size) if (c.at(p, x) == 1 && !isLine(s.mark(p, x))) return p to x
+        return null
     }
 
     /**
-     * No marks that contradict each other, and the table they make is a solved Who's Who board. Implied links count:
-     * a board finished by anti-links alone is solved.
+     * No marks that contradict each other, and the table they make is a solved Who's Who board. With [autoSolve] implied
+     * links count (a board finished by anti-links alone is solved); without it every one must be drawn.
      */
     fun isSolved(s: WhosWhoGraphState): Boolean {
         val c = close(s)
-        return !c.clash && WhosWhoLogic.isSolved(table(s, c))
+        return !c.clash && WhosWhoLogic.isSolved(table(s, c)) && (autoSolve || undrawn(s, c) == null)
     }
 
     /** The person who holds item [ref] in the board's one answer. */

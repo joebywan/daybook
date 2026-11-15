@@ -122,7 +122,7 @@ object WhosWho : PuzzleType {
         "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
         "With a pill chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
         "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
-        "Solved when every person is linked to one of everything and every clue is true.",
+        "Solved when every person is linked to one of everything and every clue is true. A link your marks imply counts, unless Settings asks you to draw every line.",
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
@@ -302,9 +302,25 @@ object WhosWho : PuzzleType {
         val s = state as WhosWhoGraphState
         if (s.solved) return null
         mistake(s)?.let { return it }
-        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s)) ?: return null
+        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s)) ?: return draw(s)
         if (step.technique == WhosWhoTeacher.MISTAKE) return null
         return deduction(s, step)
+    }
+
+    /** The hint for a link the marks imply that the player has not drawn yet (only needed with auto-solve off). */
+    const val DRAW = "draw"
+
+    /** A person-item link the marks imply with no line drawn: ask for the line. Applying it draws the pair from both ends. */
+    private fun draw(s: WhosWhoGraphState): Deduction? {
+        val (p, x) = WhosWhoGraphLogic.undrawn(s) ?: return null
+        val b = s.board
+        return Deduction(
+            DRAW, "Some of what you've worked out isn't drawn yet.",
+            "Your marks already say ${WhosWhoLogic.word(b, p)} ${WhosWhoLogic.has(b, x)}: draw the line.",
+            focus = setOf(p, x), cited = emptySet(), targets = setOf(p, x),
+            applyTo = { now -> (now as WhosWhoGraphState).withMark(p, x, WhosWhoGraphLogic.LINK) },
+            reachedBy = { now -> WhosWhoGraphLogic.isLine((now as WhosWhoGraphState).mark(p, x)) },
+        )
     }
 
     /** A teacher's step on [s]'s table as a [Deduction] on the graph (Training builds its practices' steps with it too). */

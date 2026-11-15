@@ -51,6 +51,7 @@ import com.joebywan.daybook.platform.rememberHaptics
 import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.platform.rememberReducedMotion
 import com.joebywan.daybook.platform.rememberTonePlayer
+import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
 import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.LocalTones
 import com.joebywan.daybook.ui.tutorial.LocalChime
@@ -311,6 +312,8 @@ private fun DaybookScreens(
     LaunchedEffect(Unit) { welcome = launchPrefs.needsWelcome { store.hasPlayed() } }
     val (playSound, setPlaySound) = rememberPref(launchPrefs.playSound, true, launchPrefs::setPlaySound)
     val (testPuzzles, setTestPuzzles) = rememberPref(launchPrefs.showTestPuzzles, false, launchPrefs::setShowTestPuzzles)
+    val (whosWhoAuto, setWhosWhoAuto) = rememberPref(launchPrefs.whosWhoAutoSolve, true, launchPrefs::setWhosWhoAutoSolve)
+    WhosWhoGraphLogic.autoSolve = whosWhoAuto
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
     val player = rememberTonePlayer(playSound)
     val tones = remember(player) { Tones.oneDaDing(player) }
@@ -562,6 +565,8 @@ private fun DaybookScreens(
             onTraining = { route = Route.Training() },
             testPuzzles = testPuzzles,
             onTestPuzzles = setTestPuzzles,
+            whosWhoAutoSolve = whosWhoAuto,
+            onWhosWhoAutoSolve = setWhosWhoAuto,
         )
 
         is Route.Levels -> LevelsScreen(

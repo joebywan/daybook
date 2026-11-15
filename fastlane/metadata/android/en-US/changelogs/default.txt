@@ -1,5 +1,6 @@
 - Inequality has pencil marks: tap the pencil to jot digits small in a square.
 - New puzzle: Reckon. Fill a 6x6 grid with 1 to 6, once in every row and column, so each cage's digits make its number with its sign.
 - Its hints explain each cage's combinations, and a Training course drills them.
-- Home tiles wear their own puzzle's colour again; hints glow brighter.
+- Home tiles wear their own colour again; hints glow brighter.
+- Who's Who finishes once all else is ruled out (a setting).
 - Nonogram counts the squares a sweep covers and tints your row and column.

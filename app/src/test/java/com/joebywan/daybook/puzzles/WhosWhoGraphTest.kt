@@ -202,6 +202,28 @@ class WhosWhoGraphTest {
     }
 
     @Test
+    fun `with auto-solve off every implied link must be drawn, and the hints ask for each`() {
+        val n0 = board(2, Difficulty.STANDARD).n
+        var s = board(2, Difficulty.STANDARD)
+        for ((a, b) in pairs(s)) if (a < n0 && !same(s, a, b)) s = s.withMark(a, b, WhosWhoGraphLogic.ANTI)
+        WhosWhoGraphLogic.autoSolve = false
+        try {
+            assertFalse(s.solved)
+            var steps = 0
+            while (!s.solved) {
+                val step = WhosWho.teach(s)!!
+                assertEquals(WhosWho.DRAW, step.technique)
+                s = step.apply(s) as WhosWhoGraphState
+                assertTrue(step.isReached(s))
+                assertTrue(++steps <= s.size * s.size)
+            }
+            assertFalse(WhosWhoGraphLogic.leftImplied(s))
+        } finally {
+            WhosWhoGraphLogic.autoSolve = true
+        }
+    }
+
+    @Test
     fun `a wrong mark is never solved and is the hint's mistake`() {
         val s = board(3, Difficulty.HARD)
         val (a, b) = pairs(s).first { !same(s, it.first, it.second) }

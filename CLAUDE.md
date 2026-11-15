@@ -1187,6 +1187,9 @@ text), `WhosWhoGraphRules.kt` (`WhosWhoGraphState`, `WhosWhoGraphLogic`: the mar
   after a build that demanded every link be drawn "wasn't fun"). When a solve left some person-item link implied
   (`WhosWhoGraphLogic.leftImplied`), the finished frame says so with one of `WhosWho.ELIMINATION_NOTES` (`kotlin.random`,
   `PuzzleType.finishNote`, saved with the praise); a solve turns the board to the people's table (view 0, once per board).
+  This is a setting, on by default (issue #500; `WhosWhoGraphLogic.autoSolve`, a global `DaybookApp` sets from the
+  `whoswho_auto_solve` launch preference, as the look is): off, `solved` also needs a line on every person-item link
+  (`undrawn`), and once the ladder is done the hint asks for each (`WhosWho.DRAW`, not a named technique).
 - **The chosen pill is the screen's, tied to the state it was chosen on**: a board that arrives from elsewhere (undo, "Show me",
   the walkthrough's next frame) starts with nothing chosen. It is `rememberSaveable` (the item and that board's hash), so a
   rotation, which hands back an equal board rather than the same one, keeps it.
