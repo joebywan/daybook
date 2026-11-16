@@ -92,7 +92,8 @@ Each send is a running total, so a report that's lost costs nothing: the next on
 }
 ```
 
-- `puzzles` holds one entry per puzzle and tier the player has touched, 33 at most. These are all-time totals.
+- `puzzles` holds one entry per puzzle and tier the player has touched. These are all-time totals.
+  Levels play (`docs/LEVELS_SPEC.md`) is left out of v1.
 - `days` covers every daily board the player opened in the last 60 days, with its result: `finished`, or
   `abandoned` if it was opened and never finished. Practice games aren't included. The date, puzzle
   and tier identify the exact board, because daily boards are `hash(date, puzzleId, difficulty)`:
@@ -104,13 +105,20 @@ Each send is a running total, so a report that's lost costs nothing: the next on
 
 ### What the app has to start recording
 
-What's stored today (`data/ProgressStore.kt`) is finished games (`puzzleId|tier|epochDay|seconds|hints`)
-and at most 12 unfinished games, which are evicted and deleted when finished. That can't show what
-was opened and left. New on-device records:
+`data/ProgressStore.kt` already holds finished games (`Completion`, with `playedOn`), the
+techniques met, Levels progress, and a capped set of unfinished games that are deleted when
+finished. None of it shows a board that was opened and left. Following `docs/REWARDS.md`, the
+report's figures are **derived from records, not kept as counters**, so old saves keep loading
+and nothing has to be kept in step. New records:
 
-- Per puzzle and tier: `opened`, `abandoned`, `hintFallbacks` and `walkthroughFinished` counters.
-- A daily-board log of `(day, puzzle, tier, result, seconds, hints)`, trimmed to 60 days.
-- The install ID, `firstPlayed` and the `sends` count.
+- **Board opens:** one `(day, puzzle, tier, daily|practice)` entry per board opened, trimmed to
+  the last 60 days. `opened` and `abandoned` (opened with no matching `Completion`) are derived
+  from it. All-time `opened` needs either an untrimmed log or a per-puzzle total folded in at trim
+  time. That's for the implementation to decide.
+- **Hint fallbacks:** whichever is cheaper, a flag on the solve or an entry per fallback.
+- **Walkthrough finished:** an entry per puzzle, like `tutorialsOffered`.
+- **Install ID, and the days the player sent** (a set of dates). `sends` and the send badges are
+  derived from that set.
 
 All of these go in the existing `KeyValueStore`, so the web build's export and import cover them
 without extra work.
@@ -149,7 +157,10 @@ gives per-board results. Starter queries:
 - Abandon rate per puzzle and tier: abandoned ÷ opened.
 - **Board spikes:** daily boards abandoned by players whose finish rate for that puzzle and tier
   is otherwise high. Regenerate the board from its date and investigate.
-- Fallback rate per puzzle and tier, compared with the rates `CLAUDE.md` measures on synthetic walks.
+- Fallback rate per puzzle and tier, compared with the rates `docs/TEACHING.md` measures on synthetic walks.
+- Real solve times per puzzle and tier. These are the population baselines `docs/REWARDS.md` says
+  the app can't claim without real data. It still shouldn't show players a percentile of
+  *players* built from a sample this biased.
 - Each player's history: finish rate and median time over successive sends.
 
 ## Who sends, and who doesn't
@@ -170,8 +181,10 @@ Badges for sending stats on 1, 3, 7, 14, 30 and 60 distinct days. The app counts
 because it can't know whether a send arrived. It never knows, by design.
 
 - This deepens the bias towards keen players, but every extra send gives more history per player.
-- The app has no achievements system yet, so this is a new feature in its own right. Keep it
-  quiet: no nagging, and no prompt to send outside the Stats screen.
+- They fit the existing achievements (`core/Achievements.kt`, `docs/REWARDS.md`): a new category
+  derived from the set of send days, drawn by `AchievementBadge`.
+- Keep it quiet, in line with REWARDS.md: no nagging, no loss-framed prompts, and no prompt to send
+  outside the Stats screen.
 
 ## Download counts for our own F-Droid repo
 
