@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.Notice
 import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.TrainingRecord
 import com.joebywan.daybook.ui.teach.HintStage
@@ -49,6 +50,7 @@ import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberHaptics
 import com.joebywan.daybook.platform.rememberKeyValueStore
+import com.joebywan.daybook.platform.rememberOpenUrl
 import com.joebywan.daybook.platform.rememberReducedMotion
 import com.joebywan.daybook.platform.rememberTonePlayer
 import com.joebywan.daybook.puzzles.WhosWhoGraphLogic
@@ -393,6 +395,23 @@ private fun DaybookScreens(
     //
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = back(route) }
+
+    // The developer's notice, once per id, over whichever screen the app opened on; never over the welcome, so a new
+    // player meets the app first. A dialog is its own window, so where it sits in this tree does not matter.
+    val notice = Notice.current
+    val noticeSeen by launchPrefs.noticeSeen.collectAsState(initial = null)
+    var noticeClosed by remember { mutableStateOf(false) }
+    if (notice != null && welcome == false && noticeSeen != null && noticeSeen != notice.id && !noticeClosed) {
+        val openUrl = rememberOpenUrl()
+        NoticeDialog(
+            notice,
+            onFeedback = { openUrl(Notice.feedbackLink(notice)) },
+            onDismiss = {
+                noticeClosed = true
+                scope.launch { launchPrefs.setNoticeSeen(notice.id) }
+            },
+        )
+    }
 
     val keptLists = rememberSaveableStateHolder()
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics, LocalTones provides tones) {
