@@ -85,6 +85,10 @@ def find(text):
 
 def tap(text):
     for _ in range(20):
+        # The saves make this a returning player, so the developer's notice (core/Notice.kt) opens over Home. Close it
+        # before looking for anything else: a tap aimed at a tile behind it would land on the notice instead.
+        if got_it := find("Got it"):
+            adb("shell", "input", "tap", *map(str, got_it)); time.sleep(1); continue
         xy = find(text)
         if xy:
             adb("shell", "input", "tap", *map(str, xy)); return
