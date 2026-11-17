@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.settings
 
+import com.joebywan.daybook.core.Notice
 import com.joebywan.daybook.core.PuzzleRegistry
 
 import androidx.compose.foundation.layout.height
@@ -8,6 +9,7 @@ import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.CardText
 import com.joebywan.daybook.ui.TitledScreen
 import com.joebywan.daybook.ui.MotionChoice
+import com.joebywan.daybook.ui.NoticeDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -375,6 +377,12 @@ private fun HelpRows() {
             "Player guide",
             "How every puzzle works, with worked examples of the techniques the hints teach. Opens in your browser.",
         ) { openUrl(GUIDE_URL) }
+        // The developer's latest notice (core/Notice.kt), to read again after it was dismissed on launch.
+        Notice.current?.let { notice ->
+            var open by remember { mutableStateOf(false) }
+            LinkRow("Message from the developer", notice.title) { open = true }
+            if (open) NoticeDialog(notice, onFeedback = { openUrl(Notice.feedbackLink(notice)) }, onDismiss = { open = false })
+        }
         LinkRow(
             "Report a problem, suggest something or give feedback",
             "On Daybook's issues board on GitHub. Please say your version (below), your device or browser, and the " +

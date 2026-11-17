@@ -221,6 +221,11 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_WELCOMED, "yes")
     }
 
+    /** The id of the last developer notice dismissed (`core/Notice.kt`), "" when none ever was. */
+    val noticeSeen: Flow<String> = store.string(KEY_NOTICE_SEEN).map { it.orEmpty() }
+
+    suspend fun setNoticeSeen(id: String) = store.putString(KEY_NOTICE_SEEN, id)
+
     /** The daily reminder (`Reminder.kt`, Android only): off unless the player turned it on. */
     val reminder: Flow<Boolean> = store.string(KEY_REMINDER).map { it == "on" }
 
@@ -246,6 +251,7 @@ class LaunchPreferences(private val store: KeyValueStore) {
         const val KEY_REMINDER_HOUR = "reminder_hour"
         const val KEY_REMINDER_OFFERED = "reminder_offered"
         const val KEY_WELCOMED = "welcomed"
+        const val KEY_NOTICE_SEEN = "notice_seen"
         const val KEY_VIBRATE = "vibrate"
         const val KEY_REDUCED_MOTION = "reduced_motion"
         const val KEY_ORDER = "puzzle_order"

@@ -347,8 +347,15 @@ fun rememberOpenUrl(): (String) -> Unit {
 
 /** Opens [uri] in whatever app handles it, else [fallback]; with neither (no store app, no browser) the tap does nothing. */
 private fun openUri(context: Context, uri: String, fallback: String? = null) {
+    // An email opens as compose (SENDTO) on top of Daybook, not in a task of its own: back or sending then returns
+    // to the game. In a new task, back from Gmail left the player on the launcher (seen on the emulator).
+    val intent = if (uri.startsWith("mailto:")) {
+        Intent(Intent.ACTION_SENDTO, Uri.parse(uri))
+    } else {
+        Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
     try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
         if (fallback != null) openUri(context, fallback)
     }

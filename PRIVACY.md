@@ -25,4 +25,8 @@ file you download yourself. The site is hosted on GitHub Pages, whose servers ma
 access logs (such as IP address and browser), as any web host does; that is handled by GitHub under
 their terms, not by this game.
 
+Messages from the developer are built into each release and shown once; nothing is fetched. Their "Send feedback"
+button opens your own mail app addressed to daybookfeedback@knowhowit.com.au. If you send one, I receive your email
+address and what you wrote, and use them only to read and reply to your feedback.
+
 Contact: https://github.com/joebywan/daybook/issues
