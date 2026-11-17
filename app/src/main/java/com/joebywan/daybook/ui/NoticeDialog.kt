@@ -1,6 +1,12 @@
 package com.joebywan.daybook.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,8 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Notice
 
 /**
- * The developer's notice (`core/Notice.kt`), over whatever screen is showing. Either button, back or a tap outside
- * dismisses it for good; feedback also opens the player's mail app. Settings > Help reopens it.
+ * The developer's notice (`core/Notice.kt`), over whatever screen is showing. Got it, back or a tap outside dismisses
+ * it. Send feedback opens the player's mail app and leaves the notice up: they come back to it from the email, and
+ * with no mail app (the tap does nothing) the address is still there to copy. Settings > Help reopens it.
  */
 @Composable
 fun NoticeDialog(message: Notice.Message, onFeedback: () -> Unit, onDismiss: () -> Unit) {
@@ -46,19 +53,25 @@ fun NoticeDialog(message: Notice.Message, onFeedback: () -> Unit, onDismiss: () 
         icon = { DeveloperAvatar(72.dp) },
         title = { Text(message.title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
         text = {
-            Column(
-                Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(message.body, style = MaterialTheme.typography.bodyMedium)
-                // Shown as well as linked: with no mail app the button does nothing, and the address can be copied here.
-                SelectionContainer {
-                    Text(Notice.FEEDBACK_EMAIL, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Scrolls when long or under large text, behind a fade while more is below (as the hint panel does): at 200%
+            // font scale on the emulator it cut through a line with nothing to say there was more.
+            val scroll = rememberScrollState()
+            Box(Modifier.heightIn(max = 320.dp)) {
+                Column(Modifier.verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(message.body, style = MaterialTheme.typography.bodyMedium)
+                    // Shown as well as linked: with no mail app the button does nothing, and the address can be copied here.
+                    SelectionContainer {
+                        Text(Notice.FEEDBACK_EMAIL, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (scroll.canScrollForward) {
+                    val fade = AlertDialogDefaults.containerColor
+                    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(24.dp).background(Brush.verticalGradient(listOf(Color.Transparent, fade))))
                 }
             }
         },
         confirmButton = { Button(onClick = onDismiss) { Text("Got it") } },
-        dismissButton = { TextButton(onClick = { onFeedback(); onDismiss() }) { Text("Send feedback") } },
+        dismissButton = { TextButton(onClick = onFeedback) { Text("Send feedback") } },
     )
 }
 

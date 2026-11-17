@@ -396,20 +396,25 @@ private fun DaybookScreens(
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = back(route) }
 
-    // The developer's notice, once per id, over whichever screen the app opened on; never over the welcome, so a new
-    // player meets the app first. A dialog is its own window, so where it sits in this tree does not matter.
+    // The developer's notice, once per id, over whichever screen the app opened on. Only for a player who opened the app
+    // already welcomed: a new player meets the app first, and gets the notice on their next launch, not the moment they
+    // tap Start (checked on the emulator, where it landed straight after the welcome). Decided once per launch and then
+    // held until closed, so marking it read on Send feedback does not snatch it away while the player is in their mail
+    // app. A dialog is its own window, so where it sits in this tree does not matter.
     val notice = Notice.current
     val noticeSeen by launchPrefs.noticeSeen.collectAsState(initial = null)
-    var noticeClosed by remember { mutableStateOf(false) }
-    if (notice != null && welcome == false && noticeSeen != null && noticeSeen != notice.id && !noticeClosed) {
+    var noticeOpen by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(welcome, noticeSeen) {
+        val seen = noticeSeen
+        if (noticeOpen == null && welcome != null && seen != null) noticeOpen = notice != null && welcome == false && seen != notice.id
+    }
+    if (notice != null && noticeOpen == true) {
         val openUrl = rememberOpenUrl()
+        val markRead = { scope.launch { launchPrefs.setNoticeSeen(notice.id) }; Unit }
         NoticeDialog(
             notice,
-            onFeedback = { openUrl(Notice.feedbackLink(notice)) },
-            onDismiss = {
-                noticeClosed = true
-                scope.launch { launchPrefs.setNoticeSeen(notice.id) }
-            },
+            onFeedback = { openUrl(Notice.feedbackLink(notice)); markRead() },
+            onDismiss = { noticeOpen = false; markRead() },
         )
     }
 
