@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Find or create the database, apply migrations, deploy
+      - name: Find or create the database, apply migrations, deploy, check it live
         working-directory: stats
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -62,3 +62,19 @@ jobs:
           sed -i "s/00000000-0000-0000-0000-000000000000/$db/" wrangler.jsonc
           $W d1 migrations apply daybook-stats --remote
           $W deploy
+
+          # Prove the live path end to end: send a report from a fixed, fake install, check its row, then delete it.
+          # The receiver answers 204 whatever happens, so only the row can say a report was stored.
+          test_id=00000000-0000-4000-8000-000000000000
+          url="https://daybook-stats.daybook-de6.workers.dev/report"
+          today=$(date -u +%F)
+          rows() { $W d1 execute daybook-stats --remote --json --command "SELECT COUNT(*) AS n FROM reports WHERE install = '$test_id'" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["results"][0]["n"])'; }
+          sleep 5 # let the new version settle
+          curl -sf -o /dev/null -X POST -H 'Content-Type: application/json' "$url" --data-binary \
+            "{\"schema\":1,\"install\":\"$test_id\",\"app\":\"deploy-check\",\"platform\":\"web\",\"sentOn\":\"$today\",\"firstPlayed\":null,\"sends\":1,\"puzzles\":[],\"days\":[]}"
+          stored=$(rows)
+          $W d1 execute daybook-stats --remote --command "DELETE FROM reports WHERE install = '$test_id'" >/dev/null
+          left=$(rows)
+          echo "deploy check: stored=$stored, left after delete=$left"
+          [ "$stored" = 1 ] || { echo "::error::The live receiver did not store a valid report"; exit 1; }
+          [ "$left" = 0 ] || { echo "::error::The deploy check's test row was not deleted"; exit 1; }
