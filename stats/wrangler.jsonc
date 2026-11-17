@@ -1,6 +1,6 @@
 // The stats receiver (docs/stats-reporting.md): a Cloudflare Worker on the free plan with one D1 table.
-// Deployed by .github/workflows/stats.yml to https://daybook-stats.daybook-analytics.workers.dev/report (the account's
-// workers.dev subdomain is daybook-analytics). Run locally with `npx wrangler@4.156.2 dev` from this folder.
+// Deployed by .github/workflows/stats.yml to https://daybook-stats.daybook-de6.workers.dev/report (the account's
+// workers.dev subdomain is daybook-de6). Run locally with `npx wrangler@4.156.2 dev` from this folder.
 {
   "name": "daybook-stats",
   "main": "src/worker.js",
