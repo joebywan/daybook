@@ -89,7 +89,11 @@ print("none")' "$1") || { sleep 2; continue; }
 DIR=$OUT
 shot() { adb exec-out screencap -p > "$DIR/$1.png"; }
 # A cold start lands on the home grid whatever the board or hint popover was doing.
-back() { adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4; }
+# A relaunch is a returning player's launch, so the developer's notice (core/Notice.kt) opens over it: close it.
+back() {
+  adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4
+  if adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q 'text="Got it"'; then tap "Got it"; fi
+}
 
 # A clean install, opened past the welcome (ui/home/Welcome.kt) in the look $1: Start waits for a look to be picked.
 fresh() {
