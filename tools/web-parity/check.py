@@ -15,8 +15,9 @@ the `RANGE <fingerprint>` console lines until `DUMP DONE`, and compares them wit
 
 The range is read from the JVM file (lines per puzzle / 3 tiers), so the two cannot disagree about
 it. The JVM file also holds levels 1..N under the pseudo-puzzle `levels` (five boards a level), which is
-one more page, `&puzzle=levels`. One page per puzzle, all at once: a year is twelve independent pages, and the slowest puzzle sets
-the pace. Exits 0 when every line of every puzzle matches in every browser; 1 on any difference,
+one more page, `&puzzle=levels`. One page per puzzle, at most --pages of them open at once: each holds
+its own copy of the wasm app, and forty at once peaked at 20 GB in WebKit, past a CI runner's 16 GB (the
+runner dies with "lost communication" and leaves no log). Exits 0 when every line of every puzzle matches in every browser; 1 on any difference,
 missing line, page error, crash or timeout; 2 on bad inputs.
 
 Needs `pip install playwright` and `python -m playwright install chromium webkit` (add
@@ -75,8 +76,14 @@ def compare(puzzle: str, want: list[str], got: list[str], limit: int) -> list[st
     return problems
 
 
-async def dump_one(browser, base: str, puzzle: str, days: int, timeout: float, errors: list[str]) -> list[str] | None:
+async def dump_one(browser, base: str, puzzle: str, days: int, timeout: float, errors: list[str],
+                   slots: asyncio.Semaphore) -> list[str] | None:
     """One page: load ?dump for one puzzle and return its RANGE lines (None on failure)."""
+    async with slots:
+        return await _dump_one(browser, base, puzzle, days, timeout, errors)
+
+
+async def _dump_one(browser, base: str, puzzle: str, days: int, timeout: float, errors: list[str]) -> list[str] | None:
     context = await browser.new_context()
     page = await context.new_page()
     lines: list[str] = []
@@ -109,12 +116,14 @@ async def dump_one(browser, base: str, puzzle: str, days: int, timeout: float, e
     return lines
 
 
-async def check_browser(pw, name: str, base: str, expected: dict[str, list[str]], days: int, timeout: float, limit: int) -> list[str]:
+async def check_browser(pw, name: str, base: str, expected: dict[str, list[str]], days: int, timeout: float, limit: int,
+                        pages: int) -> list[str]:
     browser = await getattr(pw, name).launch()
     started = time.monotonic()
     errors: list[str] = []
+    slots = asyncio.Semaphore(pages)
     try:
-        results = await asyncio.gather(*(dump_one(browser, base, p, days, timeout, errors) for p in expected))
+        results = await asyncio.gather(*(dump_one(browser, base, p, days, timeout, errors, slots) for p in expected))
     finally:
         await browser.close()
     problems = list(errors)
@@ -133,10 +142,10 @@ async def main_async(args, expected: dict[str, list[str]], days: int) -> int:
     with Server(args.dist) as server:
         base = server.url.rstrip("/")
         async with async_playwright() as pw:
-            # One browser at a time: twelve wasm pages already saturate a CI runner's cores, and
+            # One browser at a time: a few wasm pages already saturate a CI runner's cores, and
             # two browsers at once would only make both slower and the timeout less meaningful.
             for name in args.browsers:
-                problems += await check_browser(pw, name, base, expected, days, args.timeout, args.show)
+                problems += await check_browser(pw, name, base, expected, days, args.timeout, args.show, args.pages)
     if problems:
         print("\nWEB PARITY FAILED\n", file=sys.stderr)
         print("\n".join(problems), file=sys.stderr)
@@ -153,6 +162,8 @@ def main() -> int:
                     help="the built wasm distribution (default: %(default)s)")
     ap.add_argument("--browsers", default="chromium,webkit", help="comma-separated (default: %(default)s)")
     ap.add_argument("--timeout", type=float, default=1800, help="seconds each page may take (default: %(default)s)")
+    ap.add_argument("--pages", type=int, default=8,
+                    help="pages open at once in a browser; each can take ~0.5 GB (default: %(default)s)")
     ap.add_argument("--show", type=int, default=5, help="differing lines to show per puzzle (default: %(default)s)")
     ap.add_argument("--shard", default="1/1", metavar="K/N",
                     help="check only every N-th page starting at the K-th, so N machines share the work (default: all)")
