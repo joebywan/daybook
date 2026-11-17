@@ -104,6 +104,11 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 
 ## Infrastructure
 
+- [ ] **Opt-in stats reporting.** Design: `docs/stats-reporting.md`. It covers a Send button that
+  hands an opt-in report to the browser (no `INTERNET` permission), a Cloudflare Worker + D1
+  receiver on the free plan, a dashboard, and per-day abandoned boards to find difficulty spikes.
+  Owner's calls before building: Cloudflare in front of knowhowit.com.au, and the send badges. *L.*
+
 - [ ] **Can Renovate's token update workflow files?** No Renovate PR among the last 60 touched `.github/`, and GitHub
   normally refuses workflow changes from a token without the `workflows` permission. If a GitHub Actions update fails on
   the Dependency Dashboard, it needs a `RENOVATE_TOKEN` PAT with that scope. Owner only. *S.*
