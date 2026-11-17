@@ -37,7 +37,7 @@ import com.joebywan.daybook.core.Notice
 
 /**
  * The developer's notice (`core/Notice.kt`), over whatever screen is showing. Either button, back or a tap outside
- * dismisses it for good; feedback also opens the player's mail app.
+ * dismisses it for good; feedback also opens the player's mail app. Settings > Help reopens it.
  */
 @Composable
 fun NoticeDialog(message: Notice.Message, onFeedback: () -> Unit, onDismiss: () -> Unit) {
