@@ -107,8 +107,8 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Opt-in stats reporting.** Design: `docs/stats-reporting.md`. It covers a Send button that
   hands an opt-in report to the browser (no `INTERNET` permission), a Cloudflare Worker + D1
   receiver on the free plan, a dashboard, and per-day abandoned boards to find difficulty spikes.
-  The receiver is built (`stats/`, checked by `stats/check.sh`, deployed by `stats.yml` once the Cloudflare secrets and
-  `database_id` are set) on `workers.dev`, so DNS stays where it is. Left: the report page, the app's Send button, the send badges. *L.*
+  The receiver is built (`stats/`, checked by `stats/check.sh`, deployed by `stats.yml`, which creates the database on
+  its first run) on `workers.dev`, so DNS stays where it is. Left: the report page, the app's Send button, the send badges. *L.*
 
 - [ ] **Can Renovate's token update workflow files?** No Renovate PR among the last 60 touched `.github/`, and GitHub
   normally refuses workflow changes from a token without the `workflows` permission. If a GitHub Actions update fails on
