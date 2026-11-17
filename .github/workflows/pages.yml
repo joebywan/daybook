@@ -9,6 +9,8 @@ on:
       - '**.md'
       - 'docs/**'
       - '.github/workflows/renovate.yml'
+      - 'stats/**'
+      - '.github/workflows/stats.yml'
   workflow_dispatch:
 
 concurrency:
