@@ -1,0 +1,18 @@
+// The stats receiver (docs/stats-reporting.md): a Cloudflare Worker on the free plan with one D1 table.
+// Deployed by .github/workflows/stats.yml; run locally with `npx wrangler@4.156.2 dev` from this folder.
+{
+  "name": "daybook-stats",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  // No request logs: they would hold the sender's IP address, which this receiver never keeps.
+  "observability": { "enabled": false },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "daybook-stats",
+      // From `npx wrangler@4.156.2 d1 create daybook-stats`. Local runs accept this placeholder; a deploy does not.
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}
