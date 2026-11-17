@@ -109,6 +109,22 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
   receiver on the free plan, a dashboard, and per-day abandoned boards to find difficulty spikes.
   The receiver is built (`stats/`, checked by `stats/check.sh`, deployed by `stats.yml`, which creates the database on
   its first run) on `workers.dev`, so DNS stays where it is. Left: the report page, the app's Send button, the send badges. *L.*
+  - **The Send button's PR must also change every "collects nothing" claim**, in the same release (each is true until
+    Send exists, and the Play text goes live on merge, so not before):
+    - `PRIVACY.md`: "Daybook collects nothing", "no analytics", "Nothing you do in the app is transmitted", and the web
+      section's "the game sends nothing anywhere". Say what Send transmits, that the IP is not kept, Reset ID, where it
+      is stored (Cloudflare D1), and how to ask for deletion.
+    - `fastlane/metadata/android/en-US/full_description.txt` (Play and F-Droid both read it): "Daybook collects nothing.
+      No analytics, no trackers, no third-party SDKs. Your progress never leaves your device."
+    - Play Console **Data safety** (owner, by hand, before that release reaches Play): optional collection of app
+      activity for analytics, not shared, encrypted in transit, deletion on request. Then `docs/play/LISTING.md`'s
+      Data safety notes and the README's "the data safety answers are all 'no data collected'".
+    - The web "Get the app" card (`WebPlatform.kt`): "no permissions at all, not even the internet, so there is no tracking".
+    - Still true with Send, leave them: no network permission (README, manifest, listing), no account, works offline. No
+      F-Droid `AntiFeatures`: Tracking means reporting without consent, and Send is opt-in and shows what it sends.
+  - **The report page must work over `http://`** (HTTPS is not enforced on the site, settled below): the app links to
+    `https://`, and the page posts as `text/plain` so no CORS preflight is needed. The receiver allows only the
+    `https://knowhowit.com.au` origin, so a preflighted post from an `http://` copy would be dropped silently.
 
 - [ ] **Can Renovate's token update workflow files?** No Renovate PR among the last 60 touched `.github/`, and GitHub
   normally refuses workflow changes from a token without the `workflows` permission. If a GitHub Actions update fails on
