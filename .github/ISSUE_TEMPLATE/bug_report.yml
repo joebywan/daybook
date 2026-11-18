@@ -5,8 +5,30 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time. Your version is in Daybook's Settings, under Help, in the "Version" row:
-        press and hold it to copy, then paste it below.
+        ## Update first, please
+
+        Before you report anything, update Daybook to the
+        [latest release](https://github.com/joebywan/daybook/releases/latest) and check the problem still happens.
+        Most reports turn out to be something an update has already fixed, and a report against an old version
+        can't be acted on.
+
+        **On F-Droid?** The main f-droid.org repository builds every release itself, so it is often several
+        days or more behind. If the version in the app is older than the latest release above, either add
+        Daybook's own F-Droid repo, `https://knowhowit.com.au/daybook/fdroid/repo`, which gets each release as soon
+        as it is made ([how](https://github.com/joebywan/daybook#f-droid)), or install the `.apk` from the
+        latest release. Both use the same signing key, so they update in place and keep your streaks.
+
+        **On the web?** Reload the page so you are on the newest version.
+
+        Your version is in Daybook's Settings, under Help, in the "Version" row: press and hold it to copy,
+        then paste it below.
+  - type: checkboxes
+    id: latest
+    attributes:
+      label: Latest version
+      options:
+        - label: I updated to the latest release and the problem still happens on it.
+          required: true
   - type: textarea
     id: what
     attributes:
