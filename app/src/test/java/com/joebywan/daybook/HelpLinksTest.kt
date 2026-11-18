@@ -33,15 +33,17 @@ class HelpLinksTest {
     }
 
     @Test
-    fun `the issue forms ask for steps, the version, the device, the puzzle and a screenshot`() {
+    fun `the issue forms ask for the latest version, steps, the version, the device, the puzzle and a screenshot`() {
         val dir = generateSequence(File("").absoluteFile) { it.parentFile }
             .map { File(it, ".github/ISSUE_TEMPLATE") }.first { it.isDirectory }
         val bug = File(dir, "bug_report.yml").readText()
-        for (id in listOf("id: steps", "id: version", "id: device", "id: puzzle", "id: tier", "id: screenshot")) {
+        for (id in listOf("id: latest", "id: steps", "id: version", "id: device", "id: puzzle", "id: tier", "id: screenshot")) {
             assertTrue("bug_report.yml lacks $id", id in bug)
         }
         assertTrue("feature form missing", File(dir, "feature_request.yml").isFile)
         // The form tells players where the version is, so the place must exist under that name.
         assertTrue("Settings" in bug && "Version" in bug)
+        // f-droid.org lags each release by days, so the form points F-Droid players at our own repo.
+        assertTrue("bug_report.yml lacks our F-Droid repo", "knowhowit.com.au/daybook/fdroid/repo" in bug)
     }
 }
