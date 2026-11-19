@@ -48,6 +48,8 @@ import com.joebywan.daybook.core.orthogonalReading
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.aimLines
+import com.joebywan.daybook.ui.aimTint
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.feelSquare
@@ -452,6 +454,8 @@ object Lamps : PuzzleType {
         // A sweep crosses every empty square the finger passes, drawn as it goes and emitted once on lift.
         var sweepBase by remember { mutableStateOf<LampsState?>(null) }
         var swept by remember { mutableStateOf(emptySet<Int>()) }
+        // The square under the finger while a sweep is held: its row and column are tinted out past the hand.
+        var aim by remember { mutableStateOf<Int?>(null) }
         val s = sweepBase?.crossed(swept) ?: taps.shown
 
         val scheme = MaterialTheme.colorScheme
@@ -494,6 +498,8 @@ object Lamps : PuzzleType {
             Box(
                 Modifier
                     .size(unit * n)
+                    // The finger's row and column while a sweep is held, out past the hand.
+                    .aimLines(aim.takeIf { interactive }, n, n, aimTint(vivid(accent)))
                     .highlightGrid(n, n)
                     .gridCursor(cursor.takeIf { interactive }, n, n, scheme.primary)
                     .pointerInput(interactive) {
@@ -504,19 +510,22 @@ object Lamps : PuzzleType {
                                 // Any tap still held is handed over first: it is the sweep's base.
                                 sweepBase = taps.settle()
                                 swept = setOf(cellAt(o))
+                                aim = cellAt(o)
                             },
                             onDrag = { change, _ ->
                                 change.consume()
                                 val i = cellAt(change.position)
+                                aim = i
                                 if (i !in swept) swept = swept + i
                             },
                             onDragEnd = {
                                 val next = sweepBase!!.crossed(swept)
                                 sweepBase = null
                                 swept = emptySet()
+                                aim = null
                                 taps.apply { next }
                             },
-                            onDragCancel = { sweepBase = null; swept = emptySet() },
+                            onDragCancel = { sweepBase = null; swept = emptySet(); aim = null },
                         )
                     }
                     .pointerInput(interactive, unitPx) {

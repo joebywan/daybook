@@ -63,6 +63,7 @@ import com.joebywan.daybook.ui.Sweep
 import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.penGrid
+import com.joebywan.daybook.ui.aimTint
 import com.joebywan.daybook.ui.rememberTwinTaps
 import com.joebywan.daybook.ui.PenRow
 import androidx.compose.ui.geometry.Rect
@@ -408,7 +409,7 @@ object Tally : PuzzleType {
                     Box(
                         Modifier
                             .size(unit * n)
-                            .penGrid(taps, interactive, pen, unitPx, sweep, cursor, scheme.primary),
+                            .penGrid(taps, interactive, pen, unitPx, sweep, cursor, scheme.primary, aim = aimTint(vivid(accent))),
                     )
                 }
             }

@@ -54,6 +54,8 @@ import com.joebywan.daybook.ui.standOut
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.aimLines
+import com.joebywan.daybook.ui.aimTint
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.theme.ArcadeBoard
@@ -1342,6 +1344,8 @@ object Lits : PuzzleType {
         // entry for every state it is handed; the drag emits one state, when the finger lifts.
         var painting by remember(s) { mutableStateOf<Boolean?>(null) }
         var swept by remember(s) { mutableStateOf(emptySet<Int>()) }
+        // The square under the finger while a drag is held: its row and column are tinted out past the hand.
+        var aim by remember(s) { mutableStateOf<Int?>(null) }
         val shown = painting?.let { s.paint(swept, it) } ?: s
 
         // Both are a function of the shading and nothing else, so they are recomputed when — and
@@ -1394,6 +1398,8 @@ object Lits : PuzzleType {
                 Modifier
                     .width(step * s.width)
                     .height(step * s.height)
+                    // The finger's row and column while a drag is held, out past the hand.
+                    .aimLines(aim.takeIf { interactive }, s.width, s.height, aimTint(vivid(accent)))
                     .highlightGrid(s.width, s.height)
                     .gridCursor(cursor.takeIf { interactive }, s.width, s.height, scheme.primary)
                     .pointerInput(s, interactive) {
@@ -1410,12 +1416,17 @@ object Lits : PuzzleType {
                                 val start = cellAt(offset)
                                 painting = !s.shaded[start]
                                 swept = setOf(start)
+                                aim = start
                             },
-                            onDrag = { change, _ -> swept = swept + cellAt(change.position) },
+                            onDrag = { change, _ ->
+                                swept = swept + cellAt(change.position)
+                                aim = cellAt(change.position)
+                            },
                             onDragEnd = {
                                 val next = painting?.let { s.paint(swept, it) } ?: s
                                 painting = null
                                 swept = emptySet()
+                                aim = null
                                 // A drag that changed nothing is not a move, and the screen would
                                 // push an undo entry for it all the same.
                                 if (next !== s) onState(next)
@@ -1423,6 +1434,7 @@ object Lits : PuzzleType {
                             onDragCancel = {
                                 painting = null
                                 swept = emptySet()
+                                aim = null
                             },
                         )
                     }

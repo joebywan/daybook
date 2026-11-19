@@ -51,6 +51,8 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintOutline
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.aimLines
+import com.joebywan.daybook.ui.aimTint
 import androidx.compose.foundation.layout.BoxScope
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.orthogonal
@@ -790,6 +792,8 @@ object Kings : PuzzleType {
         // when the finger lifts.
         var sweeping by remember(s.solution) { mutableStateOf<Mark?>(null) }
         var swept by remember(s.solution) { mutableStateOf(emptySet<Int>()) }
+        // The square under the finger while a sweep is held: its row and column are tinted out past the hand.
+        var aim by remember(s.solution) { mutableStateOf<Int?>(null) }
         val sweepMark = sweeping
 
         // The board as the finger has left it, which may be one tap ahead of the screen.
@@ -832,6 +836,7 @@ object Kings : PuzzleType {
             Box(
                 Modifier
                     .size(cell * s.size)
+                    .aimLines(aim.takeIf { interactive }, s.size, s.size, aimTint(vivid(accent)))
                     .highlightGrid(s.size, s.size)
                     .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                     .pointerInput(interactive, cellPx) {
@@ -859,9 +864,13 @@ object Kings : PuzzleType {
                                 val start = cellAt(offset)
                                 sweeping = taps.settle().sweepMark(start)
                                 swept = if (sweeping == null) emptySet() else setOf(start)
+                                aim = start.takeIf { sweeping != null }
                             },
                             onDrag = { change, _ ->
-                                if (sweeping != null) swept = swept + cellAt(change.position)
+                                if (sweeping != null) {
+                                    swept = swept + cellAt(change.position)
+                                    aim = cellAt(change.position)
+                                }
                             },
                             onDragEnd = {
                                 val mark = sweeping
@@ -869,10 +878,12 @@ object Kings : PuzzleType {
                                 if (mark != null && swept.isNotEmpty()) taps.apply { it.paint(swept, mark) }
                                 sweeping = null
                                 swept = emptySet()
+                                aim = null
                             },
                             onDragCancel = {
                                 sweeping = null
                                 swept = emptySet()
+                                aim = null
                             },
                         )
                     }

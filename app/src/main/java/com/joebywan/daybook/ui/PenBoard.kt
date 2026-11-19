@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.pointer.pointerInput
@@ -73,7 +74,8 @@ fun <S : PenMarks<S>> Modifier.penKeys(
  * Taps and sweeps over the grid alone, in its own coordinates ([unitPx] a square). A tap uses [pen], a
  * double tap or long press the other one ([TwinTaps]). A sweep is one state, emitted on lift, and
  * locks to the row or column of the larger move ([sweptCells]).
- * Without [sweeps] (a zoomed Nonogram, where a drag pans) only taps are read.
+ * Without [sweeps] (a zoomed Nonogram, where a drag pans) only taps are read. With [aim], the node tints the
+ * finger's row and column while a sweep is held ([aimLines]); Nonogram draws its own, under the marks and over its clues.
  */
 fun <S : PenMarks<S>> Modifier.penGrid(
     taps: TwinTaps<S>,
@@ -84,6 +86,7 @@ fun <S : PenMarks<S>> Modifier.penGrid(
     cursor: MutableState<Int?>,
     cursorColour: Color,
     sweeps: Boolean = true,
+    aim: Color = Color.Unspecified,
 ): Modifier {
     val s = taps.board
     val w = s.penWidth
@@ -96,6 +99,7 @@ fun <S : PenMarks<S>> Modifier.penGrid(
     }
     // Not keyed on the board: [taps] holds the latest, and emitting must not restart a gesture.
     return this
+        .aimLines(sweep.value?.at?.takeIf { interactive && aim.isSpecified }, w, h, aim)
         .highlightGrid(w, h)
         .gridCursor(cursor.value.takeIf { interactive }, w, h, cursorColour)
         .pointerInput(interactive, pen, unitPx) {
