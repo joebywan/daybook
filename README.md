@@ -15,7 +15,7 @@ Each puzzle has a page in the **[player guide](https://knowhowit.com.au/daybook/
 
 [![Latest release](https://img.shields.io/github/v/release/joebywan/daybook?label=release)](https://github.com/joebywan/daybook/releases/latest)
 [![Google Play](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Fplay.json)](https://play.google.com/store/apps/details?id=com.joebywan.daybook)
-[![f-droid.org](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Ffdroid-org.json)](https://f-droid.org/packages/com.joebywan.daybook/)
+[![f-droid.org](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fjoebywan%2Fdaybook%2Fmain%2Fdocs%2Fbadges%2Ffdroid-org.json)](https://f-droid.org/packages/com.joebywan.daybook/)
 [![F-Droid (own repo)](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Ffdroid.json)](docs/fdroid/README.md)
 [![Web](https://img.shields.io/endpoint?url=https%3A%2F%2Fknowhowit.com.au%2Fdaybook%2Fbadges%2Fweb.json)](https://knowhowit.com.au/daybook/)
 

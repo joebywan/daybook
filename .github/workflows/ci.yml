@@ -9,9 +9,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A pull request that touches nothing the app or its tests read (a README, a badge's JSON, another workflow) skips the
+  # unit tests and the release build, and `build` passes in about a minute. A deny-list on purpose: the tests read docs/,
+  # tools/, fastlane/ and .github/ISSUE_TEMPLATE/, so anything not named here runs everything, and so does an empty diff.
+  changes:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      app: ${{ steps.paths.outputs.app }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Could this change the app or what its tests read?
+        id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          base="${BASE:-$(git merge-base origin/main HEAD)}"
+          changed="$(git diff --name-only "$base" HEAD)"
+          if [ -z "$changed" ] \
+            || printf '%s\n' "$changed" | grep -vE '^(README\.md|PRIVACY\.md|CLAUDE\.md|LICENSE|stats/|docs/badges/|\.github/workflows/)' | grep -q . \
+            || printf '%s\n' "$changed" | grep -qx '.github/workflows/ci.yml'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Nothing here can change the app or its tests; unit tests and the release build not needed."
+          fi
+
   # `build`, the check the ruleset requires, is a short gate at the end. The work runs side by side before it: the unit
   # tests in four shards (they took 29-40 minutes on one machine) and the release build with the other checks.
   unit-tests:
+    needs: changes
+    if: needs.changes.outputs.app
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     permissions:
@@ -33,6 +66,7 @@ jobs:
         run: ./gradlew testDebugUnitTest -PtestShard=${{ matrix.shard }}
 
   release-build:
+    needs: changes
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     permissions:
@@ -100,6 +134,7 @@ jobs:
           exit $FAIL
 
       - uses: ./.github/actions/setup-build
+        if: needs.changes.outputs.app
 
       # GuideTest checks the facts; this catches a page the builder refuses, which would otherwise first
       # fail in pages.yml after the merge and hold up the web deploy.
@@ -118,10 +153,11 @@ jobs:
       # the one that ships is how a broken release goes out repeatedly behind a green check.
       # Unsigned is fine: secrets are not exposed to pull requests from forks.
       - name: Build release variant
+        if: needs.changes.outputs.app
         run: ./gradlew assembleRelease
 
   build:
-    needs: [unit-tests, release-build]
+    needs: [changes, unit-tests, release-build]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 10
@@ -132,28 +168,32 @@ jobs:
       - name: Did every part pass?
         id: verdict
         env:
+          CHANGES: ${{ needs.changes.result }}
+          APP: ${{ needs.changes.outputs.app }}
           TESTS: ${{ needs.unit-tests.result }}
           RELEASE: ${{ needs.release-build.result }}
         run: |
-          echo "unit tests: $TESTS, release build: $RELEASE"
-          if [ "$TESTS" = success ] && [ "$RELEASE" = success ]; then r=success
-          elif [ "$TESTS" = cancelled ] || [ "$RELEASE" = cancelled ]; then r=cancelled
+          echo "changes: $CHANGES, app touched: ${APP:-no}, unit tests: $TESTS, release build: $RELEASE"
+          if [ "$CHANGES" = success ] && [ "$RELEASE" = success ] \
+            && { [ "$TESTS" = success ] || { [ -z "$APP" ] && [ "$TESTS" = skipped ]; }; }; then r=success
+          elif [ "$CHANGES" = cancelled ] || [ "$TESTS" = cancelled ] || [ "$RELEASE" = cancelled ]; then r=cancelled
           else r=failure; fi
           echo "result=$r" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: steps.verdict.outputs.result == 'success'
+        if: steps.verdict.outputs.result == 'success' && needs.changes.outputs.app
         with:
           persist-credentials: false
 
       # release.yml skips its own run of the tests when this exact source tree already passed here (the
       # usual case: a pull request merged onto the main it was tested against). Any other tree, such as
-      # two pull requests merged side by side, is tested again before it ships.
+      # two pull requests merged side by side, is tested again before it ships. A run that skipped the
+      # tests (see `changes`) records nothing, so release.yml tests that tree itself.
       - name: Record the tree that passed
-        if: steps.verdict.outputs.result == 'success'
+        if: steps.verdict.outputs.result == 'success' && needs.changes.outputs.app
         run: git rev-parse 'HEAD^{tree}' > tested-tree.txt && echo "TREE=$(cat tested-tree.txt)" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: steps.verdict.outputs.result == 'success'
+        if: steps.verdict.outputs.result == 'success' && needs.changes.outputs.app
         with:
           name: tested-tree-${{ env.TREE }}
           path: tested-tree.txt

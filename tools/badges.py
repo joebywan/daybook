@@ -5,7 +5,9 @@ shields.io endpoint (https://shields.io/badges/endpoint-badge), so every channel
   web     the release tag of the commit being deployed (`git describe`; "+n" when n commits past it,
           which a deploy straight after the release replaces). Needs the tags fetched.
   fdroid  our own repo's newest APK, from the copy of the `fdroid` branch the deploy adds (--fdroid).
-  fdroid.org  f-droid.org's suggested version, from its public API (it builds from source, days behind).
+  fdroid.org  f-droid.org's suggested version, from its public API. It builds from source days after a
+          release, so it is not written into the site: --fdroid-org-badge writes it to docs/badges/ on main,
+          which fdroid-badge.yml runs every 30 minutes, and the README reads it from there.
   play    the production track's newest release, read through an edit that is deleted, never
           committed. Needs PLAY_SERVICE_ACCOUNT_JSON and google-api-python-client; without them, or on
           any error, the badge says "unknown" rather than failing the deploy. Google reviews each
@@ -16,6 +18,7 @@ run number, which is also the version code (so a Play release with no name still
 
 usage: badges.py <site dir> [--fdroid <repo dir>]
        badges.py --web-version   (prints the web's version alone)
+       badges.py --fdroid-org-badge <dir>   (writes <dir>/fdroid-org.json alone)
 """
 import json, os, subprocess, sys, urllib.request
 
@@ -85,6 +88,11 @@ def badge(out, name, label, read, newest):
 if "--web-version" in sys.argv:                     # pages.yml stamps the web build with the same version
     print(web())
     sys.exit()
+if "--fdroid-org-badge" in sys.argv:                # fdroid-badge.yml; needs the tags for the colour
+    out = sys.argv[sys.argv.index("--fdroid-org-badge") + 1]
+    os.makedirs(out, exist_ok=True)
+    badge(out, "fdroid-org", "f-droid.org", fdroid_org, latest())
+    sys.exit()
 site = sys.argv[1]
 repo = sys.argv[sys.argv.index("--fdroid") + 1] if "--fdroid" in sys.argv else None
 out = os.path.join(site, "badges")
@@ -93,4 +101,3 @@ newest = latest()
 badge(out, "web", "web", web, newest)
 badge(out, "play", "Google Play", play, newest)
 badge(out, "fdroid", "F-Droid (own repo)", lambda: fdroid(repo), newest)
-badge(out, "fdroid-org", "f-droid.org", fdroid_org, newest)
