@@ -2,15 +2,24 @@ name: Web
 
 # Publishes the web build (web/) to GitHub Pages. Separate from Release so a web change never
 # needs the signing secrets, and an Android release never waits on the wasm toolchain.
+# Only what the site is built from deploys it (what web/build.gradle.kts compiles, the guide, the badge script, this
+# workflow and its actions); a change anywhere else leaves the site as it is. A release redeploys through
+# publish-fdroid.yml, so the F-Droid repo copy and the badges are refreshed then.
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/workflows/renovate.yml'
-      - 'stats/**'
-      - '.github/workflows/stats.yml'
+    paths:
+      - 'app/src/main/**'
+      - 'web/**'
+      - 'gradle/**'
+      - '**.gradle.kts'
+      - 'gradle.properties'
+      - 'kotlin-js-store/**'
+      - 'version.txt'
+      - 'tools/guide/**'
+      - 'tools/badges.py'
+      - '.github/actions/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 concurrency:
@@ -65,6 +74,7 @@ jobs:
           fi
 
       # The README's version badges (shields.io endpoints at badges/*.json): web, Play and our F-Droid repo.
+      # f-droid.org's is not here: it lags a release by days, so fdroid-badge.yml keeps it in docs/badges/ on main.
       # A badge it cannot read says "unknown"; it never stops the deploy.
       - name: Add the version badges to the site
         env:

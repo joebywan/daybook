@@ -1,0 +1,80 @@
+name: F-Droid badge
+
+# f-droid.org builds from source days after a release, so its badge would sit stale until the next deploy. Every 30
+# minutes this rewrites docs/badges/fdroid-org.json (tools/badges.py: the version, orange while it is behind the newest
+# release tag) and, when it changed, puts it on main through a pull request that merges itself. The README's badge
+# reads the file from main. CI skips the app's tests for it and Pages does not redeploy (ci.yml `changes`, pages.yml
+# `paths`). Pull requests made with GITHUB_TOKEN start no workflows, so CI is dispatched on the branch, as for
+# Renovate (tools/dispatch-ci-for-renovate.sh), and its commit statuses satisfy the ruleset.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: fdroid-badge
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BRANCH: chore/fdroid-badge
+  FILE: docs/badges/fdroid-org.json
+
+jobs:
+  update:
+    timeout-minutes: 10
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write        # push the branch
+      pull-requests: write   # open it and turn on auto-merge
+      actions: write         # dispatch ci.yml
+      checks: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0   # the release tags decide the colour; the badge branch, if open, is compared below
+
+      # An f-droid.org outage writes "unknown"; that is never committed, the next run tries again.
+      - name: Write the badge
+        id: badge
+        run: |
+          python3 tools/badges.py --fdroid-org-badge "$(dirname "$FILE")"
+          if [ "$(jq -r .message "$FILE")" = unknown ]; then
+            echo "::warning::f-droid.org unreadable; nothing changed"; git checkout -- "$FILE"
+          elif git diff --quiet -- "$FILE" && [ -z "$(git status --porcelain -- "$FILE")" ]; then
+            echo "Badge on main is current"
+          elif git rev-parse -q --verify "origin/$BRANCH" >/dev/null && git diff --quiet "origin/$BRANCH" -- "$FILE"; then
+            echo "Already waiting on $BRANCH"; echo "pending=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push it and open a pull request that merges itself
+        if: steps.badge.outputs.changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .message "$FILE")
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -C "$BRANCH"
+          git add "$FILE"
+          git commit -q -m "f-droid.org badge: $version"
+          git push -f origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number -q '.[].number')" ]; then
+            gh pr create --base main --head "$BRANCH" --title "f-droid.org badge: $version" \
+              --body "f-droid.org now offers $version. Written by fdroid-badge.yml; merges itself once CI passes."
+          fi
+          gh pr merge "$BRANCH" --auto --squash
+
+      # Dispatches only when the branch's head has no build status yet, so a waiting pull request is not rebuilt.
+      - name: Run CI on the branch
+        if: steps.badge.outputs.changed || steps.badge.outputs.pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_PREFIX: ${{ env.BRANCH }}
+        run: tools/dispatch-ci-for-renovate.sh
