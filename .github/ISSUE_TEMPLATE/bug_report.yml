@@ -1,6 +1,7 @@
 name: Report a problem
 description: Something in Daybook went wrong, looked wrong, or didn't work as you expected.
 labels: ["bug"]
+type: Bug
 body:
   - type: markdown
     attributes:

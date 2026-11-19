@@ -1,6 +1,7 @@
 name: Suggest something or give feedback
 description: "An idea for Daybook (a puzzle, a setting, a change to how something works), or what you think of it."
 labels: ["enhancement"]
+type: Feature
 body:
   - type: textarea
     id: idea
