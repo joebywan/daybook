@@ -1545,8 +1545,12 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
   (`*.md`, everything under `docs/`, including the images and the `docs/` helper scripts that nothing
   in the build runs) is opened and merged straight away with `gh pr merge <n> --merge --admin`,
-  without waiting for `build`. That is the owner's standing authorisation to use the bypass for this
-  case and this case only. The `build` check is still required by the ruleset, so it cannot be skipped
+  without waiting for `build`. The issue forms (`.github/ISSUE_TEMPLATE/`) count as docs too (the owner, 2026-11-19:
+  they never reach the app), provided `uvx check-jsonschema==0.39.0 --builtin-schema vendor.github-issue-forms` (and
+  `vendor.github-issue-config` for `config.yml`) passes locally first, as `ci.yml` checks them; keep test changes out of
+  such a PR. `HelpLinksTest` reads the forms, so one that removes or renames what it checks (the field ids, `type:`,
+  Settings and Version, the F-Droid repo address) still waits for CI. That is the owner's
+  standing authorisation to use the bypass for these cases and these only. The `build` check is still required by the ruleset, so it cannot be skipped
   by path-filtering the workflow (a skipped required check blocks the merge). A change that touches code,
   Gradle files, `web/`, `tools/` or a workflow, even alongside docs, waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
   with `gh release create`), so the rule does not get in their way.
