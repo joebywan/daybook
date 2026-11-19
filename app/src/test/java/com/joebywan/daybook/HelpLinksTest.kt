@@ -41,6 +41,9 @@ class HelpLinksTest {
             assertTrue("bug_report.yml lacks $id", id in bug)
         }
         assertTrue("feature form missing", File(dir, "feature_request.yml").isFile)
+        // The repo's issue types (Bug, Feature), so a report is typed as well as labelled.
+        assertTrue("bug_report.yml is not typed Bug", Regex("(?m)^type: Bug$") in bug)
+        assertTrue("feature_request.yml is not typed Feature", Regex("(?m)^type: Feature$") in File(dir, "feature_request.yml").readText())
         // The form tells players where the version is, so the place must exist under that name.
         assertTrue("Settings" in bug && "Version" in bug)
         // f-droid.org lags each release by days, so the form points F-Droid players at our own repo.
