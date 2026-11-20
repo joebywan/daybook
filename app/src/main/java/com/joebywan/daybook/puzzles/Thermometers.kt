@@ -52,6 +52,7 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.penGrid
+import com.joebywan.daybook.ui.aimTint
 import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -425,7 +426,7 @@ object Thermometers : PuzzleType {
                     Box(
                         Modifier
                             .size(unit * n)
-                            .penGrid(taps, interactive, pen, unitPx, sweep, cursor, scheme.primary),
+                            .penGrid(taps, interactive, pen, unitPx, sweep, cursor, scheme.primary, aim = aimTint(vivid(accent))),
                     )
                 }
             }

@@ -243,9 +243,16 @@ into every seed: never rename it.
   of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
   `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
 - **The square in hand tints its row and column** (the finger's in a sweep, else the last touched or the keyboard's; a sweep
-  leaves the cursor where it ended, in Tally and Thermometers too), squares and clue bands alike. **A sweep shows how many
-  squares it covers** in a pill kept `FINGER_CLEAR` (40dp) from the finger: above it, or beside it near the top and for a
-  column sweep (above would hide the squares ahead), never below, where the hand is (`sweepCountAt`, `NonogramSweepCountTest`).
+  leaves the cursor where it ended, in Tally and Thermometers too), squares and clue bands alike, under the marks, at
+  `AIM_ALPHA`. **A sweep shows how many squares it covers** (`DragCount`, below).
+- **Aiming a drag is shared** (`ui/DragAim.kt`; the owner, 2026-11-19: one helper, never a copy per board). While a drag is
+  held, the finger's row and column are tinted out past the hand (`Modifier.aimLines`, over the node's drawing, on a node
+  that is exactly the grid) on Shikaku, Thermometers and Tally (`penGrid(aim = ...)`), Tents, Kings, Lamps and LITS. Only a
+  drag whose size *is* a clue shows it: Nonogram's run and Shikaku's area, in a pill (`DragCount`, more than one square) kept
+  `FINGER_CLEAR` (40dp) from the finger: above it, or beside it near the top and when the drag heads down or up
+  (`headingDown`; above would hide the squares ahead), never below, where the hand is (`dragCountAt`, `DragCountTest`).
+  The others show no count on purpose: their clues are not the drag's size, and Thermometers fills from the bulb, so the
+  squares swept are not the squares that change.
 - **Hard and Expert zoom** (`NonogramZoom.kt`, the owner's design): pinch zooms (to 2.5x); zoomed in, one finger pans and a
   tap still marks, so sweeping is for the whole board; a corner button (in the empty corner above the row clues) fits the
   board again. Clues stay pinned to the edges and keep their size. The view (`GridView`) is `remember`, never state: a

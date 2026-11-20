@@ -44,6 +44,10 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.DragCount
+import com.joebywan.daybook.ui.aimLines
+import com.joebywan.daybook.ui.aimTint
+import com.joebywan.daybook.ui.headingDown
 import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -585,6 +589,8 @@ object Shikaku : PuzzleType {
                 Modifier
                     .width(cell * s.width)
                     .height(cell * s.height)
+                    // The finger's row and column, out past the hand.
+                    .aimLines(dragTo?.let { (r, c) -> r * s.width + c }, s.width, s.height, aimTint(vivid(accent)))
                     .highlightGrid(s.width, s.height)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
@@ -704,6 +710,14 @@ object Shikaku : PuzzleType {
                                 .border(3.dp, a.selectedEdge, shape)
                         )
                     }
+                }
+
+                // The rectangle's area beside the finger, clear of the hand (ui/DragAim.kt).
+                preview?.let { block ->
+                    val (fr, fc) = dragFrom!!
+                    val (tr, tc) = dragTo!!
+                    val finger = Offset((tc + 0.5f) * cellPx, (tr + 0.5f) * cellPx)
+                    DragCount(block.area, finger, headingDown(fr * s.width + fc, tr * s.width + tc, s.width))
                 }
             }
         }

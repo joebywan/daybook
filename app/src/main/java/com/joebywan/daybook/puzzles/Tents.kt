@@ -48,6 +48,8 @@ import com.joebywan.daybook.core.union
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.aimLines
+import com.joebywan.daybook.ui.aimTint
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
@@ -522,6 +524,8 @@ object Tents : PuzzleType {
         // once on lift (one move, one undo). Transient, so not in the state.
         var sweepBase by remember { mutableStateOf<TentsState?>(null) }
         var swept by remember { mutableStateOf(emptySet<Int>()) }
+        // The square under the finger while a sweep is held: its row and column are tinted out past the hand.
+        var aim by remember { mutableStateOf<Int?>(null) }
         val s = sweepBase?.grassed(swept) ?: taps.shown
 
         val scheme = MaterialTheme.colorScheme
@@ -584,6 +588,8 @@ object Tents : PuzzleType {
                     Modifier
                         .padding(start = unit, top = unit)
                         .size(unit * n)
+                        // The finger's row and column while a sweep is held, out past the hand.
+                        .aimLines(aim.takeIf { interactive }, n, n, aimTint(vivid(accent)))
                         // Classic's keyboard cursor, as before Arcade (Arcade draws its own with the board).
                         .gridCursor(cursor.takeIf { interactive && classicLook() }, n, n, scheme.primary)
                         .pointerInput(interactive) {
@@ -594,19 +600,22 @@ object Tents : PuzzleType {
                                     // Any tap still held is handed over first: it is the sweep's base.
                                     sweepBase = taps.settle()
                                     swept = setOf(cellAt(o))
+                                    aim = cellAt(o)
                                 },
                                 onDrag = { change, _ ->
                                     change.consume()
                                     val i = cellAt(change.position)
+                                    aim = i
                                     if (i !in swept) swept = swept + i
                                 },
                                 onDragEnd = {
                                     val next = sweepBase!!.grassed(swept)
                                     sweepBase = null
                                     swept = emptySet()
+                                    aim = null
                                     taps.apply { next }
                                 },
-                                onDragCancel = { sweepBase = null; swept = emptySet() },
+                                onDragCancel = { sweepBase = null; swept = emptySet(); aim = null },
                             )
                         }
                         .pointerInput(interactive, unitPx) {
