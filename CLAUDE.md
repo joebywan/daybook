@@ -1237,7 +1237,10 @@ three, Levels, Training, the archive, achievements, the counts, parity); `byId` 
 are never recorded (`DaybookApp`'s `onSolved`, the kept card), so no streak, statistic or best time moves. Its display name
 starts `test:`. Graduating one means a new id in `all` with the full standards (`docs/PUZZLE_STANDARDS.md`).
 
-None now: test:Who's who replaced the table Who's Who (2026-11-13), so `lab` is empty and Settings hides the switch until one is added.
+`test:Who's Who table` (`puzzles/WhosWhoTable.kt`, `WhosWhoTableKeys.kt`, id `test-whoswho-table`): the table board as it was before
+the graph (`0a316f33^`), brought back so the owner can compare the two (issue #525). It deals Who's Who's boards (`WhosWhoState`) and
+hints through `WhosWhoTeacher.teach(s, table = true)`, which keeps the table's words (rows, ticks, crosses). Delete it with its two
+tests (`WhosWhoTable*Test`) once the issue is decided.
 
 ## Motion and haptics
 

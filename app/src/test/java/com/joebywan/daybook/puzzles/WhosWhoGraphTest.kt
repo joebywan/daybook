@@ -28,7 +28,7 @@ class WhosWhoGraphTest {
     fun `the graph is Who's Who, and the lab build's id is gone`() {
         assertSame(WhosWho, PuzzleRegistry.byId("whoswho"))
         assertTrue(WhosWho in PuzzleRegistry.all)
-        assertTrue(PuzzleRegistry.lab.isEmpty())
+        assertTrue(WhosWho !in PuzzleRegistry.lab)
         // A saved route or game under the lab's id finds no puzzle and is left alone.
         assertNull(PuzzleRegistry.byId("test-whoswho"))
     }
