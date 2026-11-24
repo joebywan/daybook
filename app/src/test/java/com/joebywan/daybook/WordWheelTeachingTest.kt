@@ -172,8 +172,8 @@ class WordWheelTeachingTest {
     }
 
     /**
-     * Tap 1 is the clue; tap 2 adds the second clue where the word has one and one letter of the word that is not showing
-     * yet (the owner, 2026-11-24: something between the clue and the whole word). Reports how often a second clue exists.
+     * Tap 1 is the clue; tap 2 the second clue in its place where the word has one (the owner, 2026-11-24: one after the
+     * other, never on one pane) and one letter of the word that is not showing yet. Reports how often a second clue exists.
      */
     @Test
     fun `the second tap adds a second clue and a letter not yet showing`() {
@@ -186,12 +186,14 @@ class WordWheelTeachingTest {
                     val step = WordWheelTeacher.teach(s)!!
                     val clue = "“${WheelWords.clue(step.word)}” (${step.word.length})"
                     assertTrue(step.nudge, clue in step.nudge)
-                    assertTrue(step.explanation, clue in step.explanation)
+                    // One clue a tap: the second replaces the first, which comes back only when there is no second.
                     val second = MiniLogic.secondClueOf(step.word)
                     if (second.isNotBlank()) {
                         seconds++
-                        assertTrue(step.explanation, "Another way in: “$second”." in step.explanation)
+                        assertTrue(step.explanation, "Another way in: “$second” (${step.word.length})." in step.explanation)
+                        assertFalse(step.explanation, clue in step.explanation)
                     } else {
+                        assertTrue(step.explanation, clue in step.explanation)
                         assertFalse(step.explanation, "Another way in" in step.explanation)
                     }
                     val shown = s.shown()

@@ -22,8 +22,9 @@ import com.joebywan.daybook.core.TeachStep
  *   the stored word, so it is the fallback, and it says so ("the one here is clued").
  *
  * Every step speaks the same way (the owner, 2026-11-24): tap 1 lights the slot and gives its word's clue; tap 2 says why
- * (pinned, crossing, or that it reads the word), then the clue again, the word's second clue ("Another way in", the
- * crossword's, where it has one) and one letter not yet showing. Only "Show me" types the word.
+ * (pinned, crossing, or that it reads the word), the word's second clue ("Another way in", the crossword's) in place of the
+ * first (one clue a tap; the first again only when there is no second), and one letter not yet showing. Only "Show me" types
+ * the word.
  *
  * No mistake is possible: a word that is not the slot's is simply not accepted (or is a bonus word), so nothing is ever
  * flagged. What is measured is the share of steps that are pinned against those that need the clue (`docs/TEACHING.md`).
@@ -199,9 +200,10 @@ internal object WordWheelTeacher {
     private val ORDINALS = listOf("first", "second", "third", "fourth", "fifth", "sixth", "seventh")
 
     /**
-     * Tap 2 (the owner, 2026-11-24: a second clue and a letter before the whole word): [why], the clue again (the explanation
-     * replaces the nudge), the word's second clue where `tools/words/second-clues.txt` has one, and the first letter of
-     * [word] not already showing in [pattern]. Only "Show me" types the word.
+     * Tap 2 (the owner, 2026-11-24: a second clue and a letter before the whole word, the clues one after the other, never
+     * together): [why], the word's second clue where `tools/words/second-clues.txt` has one, else the first clue again (the
+     * explanation replaces the nudge, so it would be lost), and the first letter of [word] not already showing in [pattern].
+     * Only "Show me" types the word.
      */
     private fun explain(why: String, word: String, pattern: List<Char?>): String {
         val second = MiniLogic.secondClueOf(word).takeIf { it.isNotBlank() }
@@ -211,7 +213,8 @@ internal object WordWheelTeacher {
             i == 0 -> " It starts with ${word[0].uppercaseChar()}."
             else -> " Its ${ORDINALS[i]} letter is ${word[i].uppercaseChar()}."
         }
-        return "$why Clue: ${clueFor(word)}." + (if (second != null) " Another way in: \u201C$second\u201D." else "") + letter
+        val clue = if (second != null) "Another way in: \u201C$second\u201D (${word.length})." else "Clue: ${clueFor(word)}."
+        return "$why $clue$letter"
     }
 
     /** The wheel letters that spell [word], first unused copy of each letter, as highlight indices. */
