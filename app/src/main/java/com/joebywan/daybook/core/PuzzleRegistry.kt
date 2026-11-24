@@ -23,6 +23,7 @@ import com.joebywan.daybook.puzzles.Reckon
 import com.joebywan.daybook.puzzles.Links
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.Quartets
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Tally
@@ -96,7 +97,7 @@ object PuzzleRegistry {
      * achievement or best time), and in nothing built from [all] (Today's three, Levels, Training, the archive, the
      * counts). Saves and routes still find them through [byId].
      */
-    val lab: List<PuzzleType> = listOf(WhosWhoTable)
+    val lab: List<PuzzleType> = listOf(WhosWhoTable, Quartets)
 
     fun isLab(id: String): Boolean = lab.any { it.id == id }
 
