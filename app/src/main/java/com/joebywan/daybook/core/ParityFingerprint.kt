@@ -21,6 +21,7 @@ import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.puzzles.QuartetsState
 import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.ThermometersState
@@ -123,5 +124,6 @@ object ParityFingerprint {
             "clues=${s.clues.joinToString(",") { "${it.kind}:${it.a}.${it.b}.${it.c}" }} " +
             "answer=${s.answer.joinToString("/") { it.joinToString("") }}"
         is WhosWhoGraphState -> body(s.board)
+        is QuartetsState -> "words=${s.words.joinToString(",")} titles=${s.titles.joinToString("|")} masks=${s.masks.joinToString(",")}"
     }
 }

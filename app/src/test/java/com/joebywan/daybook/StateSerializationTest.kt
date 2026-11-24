@@ -204,6 +204,12 @@ class StateSerializationTest {
             val guess = WordList.answers(state.length).first { it != state.answer }
             guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('a')
         }
+        // A four refused and a group found, so the misses and the found groups must survive.
+        is com.joebywan.daybook.puzzles.QuartetsState -> {
+            val groups = com.joebywan.daybook.puzzles.QuartetsLogic.reveal(state)
+            val wrong = (groups[0] and (groups[0] - 1)) or (groups[1] and -groups[1])
+            state.guess(wrong)!!.guess(groups[3])!!
+        }
         is com.joebywan.daybook.puzzles.EquationState -> {
             val guess = com.joebywan.daybook.puzzles.EquationLogic.answers(state.length).first { it != state.answer }
             guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('1')

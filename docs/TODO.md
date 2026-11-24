@@ -296,7 +296,10 @@ Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality)
 **Not recommended** (noted so nobody re-investigates): plain word-search and sliding-tile puzzles are generator-easy
 but do not demand thought, against the owner's stated taste. (A crossword was here for want of a clue database; the
 hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
-were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
+were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year. (Four groups of four came back
+as a test puzzle whose boards are dealt from a category bank, not listed: `test:Quartets`, `docs/QUARTETS_SPEC.md`; the owner
+to play it and decide. Open there: the name, lives against free guessing, whether hints should name the theme outright,
+and the bank's membership gaps, which no test can find.)
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it; the

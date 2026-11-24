@@ -1,0 +1,185 @@
+# Quartets bank: cross-tagging (docs/QUARTETS_SPEC.md, "The bank"). Each line adds members to a category of the same
+# title and level in plain.txt or wordplay.txt (the tool merges equal titles), so the authors' files stay as they wrote
+# them and every membership found by reading the whole bank's vocabulary against each category is in one place.
+# A fit a player could reasonably argue for is added: an extra listed fit can only make the generator turn a board
+# down, while a missing one would refuse a right answer.
+#
+# Fits nobody should be dealt as the answer are listed QUIET, as ~word: the proof and every board count them, so a
+# player who argues for one is never refused, but the generator never deals one as its category's four, and the tier
+# gate does not count a quiet fit as a spare or a phantom. Two kinds: grim or crude (Head + stone, Black + eye, see
+# "Quiet memberships"), and real but obscure, technical or regional (moonfish, wardship, firebrick: "Second sweep").
+
+# Categories from plain.txt
+Fruit | 1 | coconut berry olive
+Vegetables | 1 | pepper
+Insects | 1 | tick drone
+Birds | 1 | jay
+Farm animals | 1 | kid duckling gosling
+Shades of green | 1 | forest bottle pea
+Shades of yellow | 1 | straw
+Shades of purple | 1 | orchid
+Shades of white | 1 | bone milk lily vanilla
+Shades of brown | 1 | sand cinnamon
+Trees | 1 | larch lime plane
+Parts of a tree | 1 | ring
+Musical instruments | 1 | viola ukulele whistle
+Kitchen utensils | 1 | pan bowl
+Woodwork tools | 1 | level chainsaw
+Furniture | 1 | lounge trunk
+Toys | 1 | block balloon
+Currencies | 1 | mark
+Rodents | 1 | mole
+Body organs | 1 | eye tongue
+Boats | 1 | galley
+Weather | 1 | sun
+Gems | 1 | coral
+Metals | 1 | cobalt
+Flat shapes | 1 | kite
+Things with strings | 2 | viola ukulele balloon
+Fasteners | 2 | lace tie strap
+Units of length | 2 | hand pace
+Marks on the skin | 2 | spot burn
+Parts of a shoe | 2 | arch
+Parts of a ship | 2 | port wheel boom
+Ways to throw | 2 | bowl
+Ways to walk | 2 | pad skip
+Dances | 2 | tap shuffle ball
+Garden tools | 1 | saw chainsaw
+Rocks | 2 | stone
+In a beehive | 2 | egg colony
+Plugged into a computer | 2 | phone
+
+# Categories from wordplay.txt
+___ fish | 3 | cod tuna parrot king lung stone white blue fly spear
+Fire ___ | 3 | ant house screen
+___ board | 3 | chalk peg school spring clap back shuffle pin
+Sun ___ | 3 | cream tan bed room ray bonnet lounge
+___ fly | 3 | black green white sand saw
+___ light | 3 | sky red fog back foot tea pen black white
+___ ship | 3 | troop pirate
+___ ball | 3 | foot net cue
+Head ___ | 3 | wind office torch
+___ man | 3 | dust ferry foot bar coach oil space
+___ house | 3 | bath bird coffee doll fire work school wheel coach white
+Black ___ | 3 | sheep hole pepper coffee tie sea fly light spot top swan cat
+Water ___ | 3 | borne rat chestnut tap vole bird lily balloon
+Air ___ | 3 | bed head horn plane bridge liner
+Book ___ | 3 | bag
+Rain ___ | 3 | cloud proof boot
+Snow ___ | 3 | bound cap white pea boot field
+Back ___ | 3 | bench board hoe lash light office room stop date pocket
+Key ___ | 3 | worker
+Horse ___ | 3 | chestnut whip meat
+Hide a number | 3 | drone
+Hide an animal | 3 | bath bathroom beech beetle boat bowler caramel clasp crayon cuba cupboard duckling foxtrot gram grater heel insole keel keyboard kidney kitchen mahogany pantry peeler pigeon piglet stage stern tram wasp termite pupil puppet puppy bugle
+Hide a body part | 3 | airship chestnut colony earth eyelet flash glider heart insole shears slipper swarm tiptoe year
+Sound like animals | 3 | heart place
+Backwards, another word | 3 | bud bus cod eel gnat iron keel leek rat tin ton top tram tuba tug way denim strap
+Add S at the front | 3 | ash car cat corn hall hard harp hoe hook hop horn ink kid lash leek lid light liver lob lung masher oak pace pawn pike play printer tack teal tent top upper waddle watch
+Also the name of a sound | 3 | thunder drone trumpet
+Things with a shell | 2 | prawn shrimp scallop cockle almond pecan cashew acorn chestnut nut pea
+Things with a bridge | 2 | lute piano
+
+# Quiet memberships: true fits, never dealt for the category (headstone, black eye, blackhead, blackmail, waterboard,
+# shat). They still count in every proof.
+Head ___ | 3 | ~stone
+Black ___ | 3 | ~eye ~head ~mail
+Water ___ | 3 | ~board
+Add S at the front | 3 | ~hat
+
+# Second sweep (2026-11-24): every bank word tried as a partner of every "___" category against web2, web2a and the
+# macOS spelling dictionary, the mechanical categories re-run over the whole vocabulary, and the plain categories read
+# again. A fit a player would insist on is plain; a real but obscure, technical, regional or crude one is QUIET: it
+# keeps a player who knows moonfish or wardship from being refused, and nobody is dealt MOON as a fish.
+# Plain: fits an ordinary player would insist on
+Rocks | 2 | onyx
+Parts of the foot | 1 | ball
+Black ___ | 3 | mark
+Head ___ | 3 | liner
+___ board | 3 | leader
+___ ball | 3 | hard
+Hide an animal | 3 | buckle clamp
+Add S at the front | 3 | cuba
+# Quiet
+Air ___ | 3 | ~side ~stone ~mile ~ball ~boat ~brick ~plant ~power ~date ~burst ~screw ~spring ~hammer ~drum
+Back ___ | 3 | ~field ~court ~comb ~scatter ~saw ~sword ~foot ~heel ~line ~cast ~house ~strap ~way ~marker ~list ~block ~set ~wood
+Black ___ | 3 | ~olive ~cap ~fish ~heart ~water ~wood ~lead ~snake ~hawk ~hat ~gold ~flag ~frost ~diamond ~rat ~lung ~bass ~cod ~strap ~work ~sand
+Book ___ | 3 | ~list ~rest ~marker ~work ~lung ~post
+Fire ___ | 3 | ~bird ~brick ~boat ~water ~back ~lock ~stone ~line ~opal ~iron ~tongs ~shovel ~curtain ~ship ~stop ~helmet ~hall ~coral
+Head ___ | 3 | ~man ~ship ~water ~word ~sail ~lettuce ~pin ~cheese ~case ~coach ~shop
+Horse ___ | 3 | ~car ~mint ~mackerel ~brass
+Key ___ | 3 | ~way ~cap ~money ~bugle ~lime ~stage ~light
+Rain ___ | 3 | ~fly ~out ~hat ~gear
+Snow ___ | 3 | ~bird ~berry ~cat ~pack ~shed ~goose ~chain ~shovel ~crab
+Star ___ | 3 | ~flower ~shine ~apple ~jasmine ~sapphire ~ruby ~coral
+Sun ___ | 3 | ~bird ~stone ~bath ~helmet ~star
+Water ___ | 3 | ~log ~man ~work ~skin ~snake ~jet ~power ~dragon ~flea ~beetle ~mint ~hen
+___ ball | 3 | ~butter ~high ~fly ~stool ~dust ~fish ~knuckle ~cheese ~tee
+___ board | 3 | ~duck ~ship ~foot ~paper ~barge ~sand ~wall ~finger ~sail ~kite ~marker ~straw ~mill
+___ fish | 3 | ~moon ~black ~bone ~jack ~red ~butter ~goat ~cow ~pig ~rat ~wolf ~dragon ~lizard ~viper ~guitar ~trumpet ~drum ~file ~pin ~pan ~milk ~oil ~ink ~candle ~coal ~pearl ~queen ~rose ~sand ~shrimp ~snail ~spade ~squirrel ~trunk ~balloon ~bill ~goose ~cave ~sea
+___ fly | 3 | ~bar ~stone ~drone ~bee ~snake ~rain ~carrot ~march ~pop
+___ house | 3 | ~block ~deck ~tap ~mill ~pack ~rest ~watch ~field ~palm ~cat ~nut
+___ light | 3 | ~ring ~earth ~port ~work ~track ~key ~lead
+___ man | 3 | ~iron ~bag ~bow ~line ~pen ~spear ~minute ~wood ~head ~barge ~bird ~bus ~cow ~flag ~house ~pike ~pitch ~store ~switch ~tin ~water ~wheel ~coal ~money ~side ~muscle
+___ ship | 3 | ~light ~ward ~head ~emperor ~sultan ~queen ~ruler ~speaker ~fire ~drill ~store ~block
+# Quiet, plain categories read again
+Aircraft | 1 | ~jumbo ~kite ~liner ~craft
+Animal groups | 2 | ~band ~bed ~cloud ~drift ~charm ~raft
+Another word for fast | 2 | ~sharp ~snap
+Baby animals | 2 | ~larva
+Boats | 1 | ~craft ~shell
+Body organs | 1 | ~nose
+Dances | 2 | ~hop ~fling ~stomp ~robot
+Drawn without a pencil | 2 | ~knife ~fire ~bridge
+Fasteners | 2 | ~lock ~clamp ~snap
+Fish | 1 | ~jack ~drum
+Flat shapes | 1 | ~spade ~club
+Flowers | 1 | ~flag
+Footwear | 1 | ~flat ~heel
+Fruit | 1 | ~pumpkin ~pepper
+Gems | 1 | ~stone
+Herbs | 1 | ~garlic
+In a beehive | 2 | ~jelly ~brood
+In a pencil case | 1 | ~lead
+Kitchen utensils | 1 | ~cup ~mallet ~tin ~board
+Marks on the skin | 2 | ~corn ~ink
+Musical instruments | 1 | ~rattle ~chime ~spoon ~saw ~pan ~block
+Nuts | 1 | ~hazel
+On a throne | 2 | ~bishop
+On sheet music | 2 | ~beam ~line ~space ~flag ~piano ~bass ~time
+Parts of a ship | 2 | ~screw ~head ~yard ~beam
+Parts of a shoe | 2 | ~cap
+Parts of the eye | 2 | ~white
+Parts of the foot | 1 | ~pad
+Parts of the hand | 1 | ~heel ~pad ~back
+Plugged into a computer | 2 | ~key ~card ~lead
+Reptiles | 1 | ~dragon
+Road vehicles | 1 | ~mini ~compact ~beetle
+Rocks | 2 | ~jade ~jet
+Shades of black | 2 | ~tar ~slate
+Shades of brown | 1 | ~bronze ~copper ~earth ~nut ~oak
+Shades of green | 1 | ~apple ~sea ~spring ~leaf
+Shades of pink | 1 | ~flamingo ~shell ~shrimp ~ballet
+Shades of red | 1 | ~fire ~coral ~lobster ~poppy
+Shades of white | 1 | ~paper ~oyster
+Shades of yellow | 1 | ~butter ~banana ~daffodil ~chick
+Teeth but no mouth | 2 | ~fork ~leaf ~file
+Things with a bridge | 2 | ~liner ~ferry
+Things with a shell | 2 | ~beetle ~hazel
+Things with needles | 2 | ~dial
+Toys | 1 | ~scooter ~jack ~drum ~trumpet ~whistle
+Trees | 1 | ~apple ~pear ~plum ~fig ~peach ~apricot ~lemon ~orange ~mango ~bay ~pecan ~almond
+Units of length | 2 | ~chain ~perch ~palm ~nail ~stride
+Units of time | 1 | ~tick ~watch
+Units of weight | 1 | ~mark
+Ways to jump | 2 | ~start
+Ways to throw | 2 | ~dash
+Ways to walk | 2 | ~troop ~pound ~waltz ~foot ~bound
+Weather | 1 | ~front ~flood
+Woodwork tools | 1 | ~square ~ruler ~knife
+Also the name of a sound | 3 | ~alarm ~note
+# Quiet, mechanical
+Hide an animal | 3 | ~fling ~sling ~gosling ~bass ~brass ~compass ~glasses ~massive ~petite ~titanium ~cockle
+Hide a body part | 3 | ~clap ~larch ~march ~monarch
+Add S at the front | 3 | ~carp ~cow ~cup ~eel ~herd ~kite ~ward ~haddock ~hammer ~heave ~trumpet ~toss ~litter
+Backwards, another word | 3 | ~bed ~bird ~door ~lion ~nut ~pad ~yard ~fig

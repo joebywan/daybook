@@ -1,0 +1,81 @@
+# Quartets bank: plain knowledge (levels 1 and 2). Format: Title | level | words.
+# Membership is complete within this file: a word is listed under every category here it fits.
+
+# Level 1: anyone knows it
+
+Planets | 1 | mercury venus earth mars jupiter saturn uranus neptune
+Fruit | 1 | apple orange banana pear plum peach grape lemon lime cherry mango melon kiwi date fig apricot
+Vegetables | 1 | carrot potato onion pea leek cabbage turnip lettuce celery radish spinach pumpkin garlic corn
+Herbs | 1 | mint sage basil thyme parsley rosemary dill chive oregano bay tarragon lavender
+Spices | 1 | pepper ginger cinnamon nutmeg clove cumin paprika saffron turmeric vanilla mustard
+Nuts | 1 | almond walnut peanut cashew pecan acorn chestnut coconut
+Fish | 1 | cod salmon trout tuna bass sole carp pike perch eel herring sardine haddock mackerel shark ray
+Shellfish | 1 | crab lobster oyster clam mussel prawn shrimp scallop cockle
+Insects | 1 | ant bee wasp fly moth beetle flea gnat termite mosquito locust hornet
+Reptiles | 1 | snake lizard turtle tortoise gecko iguana python cobra viper adder
+Rodents | 1 | mouse rat squirrel hamster beaver gerbil vole
+Birds | 1 | robin eagle owl crow raven swan duck goose hawk parrot pigeon sparrow penguin kiwi crane swallow falcon heron stork swift teal canary wren finch rook kite turkey hen chicken ostrich emu magpie dove gull puffin flamingo chick duckling gosling
+Farm animals | 1 | cow pig sheep goat horse hen chicken duck goose donkey bull calf lamb turkey foal piglet chick
+Shades of blue | 1 | navy azure cobalt teal indigo sky cyan sapphire aqua denim
+Shades of green | 1 | lime olive jade emerald mint sage moss pine fern teal khaki
+Shades of red | 1 | scarlet crimson ruby cherry maroon brick garnet rose
+Shades of yellow | 1 | lemon gold mustard canary amber saffron
+Shades of purple | 1 | violet lilac lavender plum mauve grape amethyst indigo magenta fuchsia
+Shades of pink | 1 | rose salmon coral peach blush magenta fuchsia
+Shades of white | 1 | pearl ivory cream snow chalk linen
+Shades of brown | 1 | tan beige chestnut hazel mocha cocoa coffee caramel walnut mahogany taupe sepia khaki
+In a rainbow | 1 | red orange yellow green blue indigo violet
+Trees | 1 | oak ash elm pine palm birch maple willow cedar beech yew fir spruce poplar chestnut walnut hazel ebony mahogany cherry olive
+Flowers | 1 | rose lily tulip daisy violet iris orchid poppy daffodil lotus lilac jasmine lavender fuchsia
+Parts of a tree | 1 | trunk branch root bark leaf twig bud bough
+Musical instruments | 1 | piano guitar violin drum flute trumpet harp cello organ bass tuba oboe banjo clarinet triangle recorder horn bugle lute keyboard conga
+Playing cards | 1 | ace king queen jack joker heart club spade diamond
+Kitchen utensils | 1 | spoon fork knife ladle whisk spatula grater peeler tongs sieve masher
+Woodwork tools | 1 | hammer saw drill chisel file plane mallet clamp
+Garden tools | 1 | rake spade hoe shovel trowel fork shears
+In a pencil case | 1 | ruler pen eraser compass crayon marker
+Furniture | 1 | table chair sofa couch bed desk stool bench shelf wardrobe dresser cabinet chest cupboard bookcase
+Rooms in a house | 1 | kitchen bedroom bathroom hall attic cellar study office pantry lounge
+Toys | 1 | kite doll ball teddy rattle marble puppet robot top
+Units of time | 1 | second minute hour day week month year decade century
+Units of weight | 1 | ounce pound ton gram kilo stone
+Currencies | 1 | pound dollar euro yen rupee peso franc
+Parts of the hand | 1 | palm thumb finger nail knuckle wrist
+Parts of the foot | 1 | heel toe sole arch instep ankle nail
+Body organs | 1 | heart lung liver kidney brain skin stomach spleen pancreas
+Hats | 1 | cap beret bonnet helmet fedora beanie bowler sombrero
+Footwear | 1 | boot shoe sandal slipper clog loafer
+Road vehicles | 1 | car bus van bike taxi tram coach tractor scooter
+Boats | 1 | ship canoe kayak yacht ferry raft barge dinghy liner tug punt gondola
+Aircraft | 1 | plane jet glider balloon blimp drone airship
+Months | 1 | january february march april may june july august october november december
+Countries | 1 | chad china turkey cuba peru chile japan france spain italy egypt india kenya nepal greece
+Weather | 1 | rain snow hail sleet fog mist wind storm frost thunder cloud drizzle gale breeze
+Gems | 1 | diamond ruby emerald sapphire pearl opal jade amber topaz garnet onyx amethyst jet
+Metals | 1 | iron gold silver copper tin lead zinc nickel mercury platinum steel brass bronze titanium
+Flat shapes | 1 | circle square triangle oval star heart diamond crescent hexagon pentagon octagon
+
+# Level 2: needs a second look
+
+Chess pieces | 2 | king queen rook bishop knight pawn
+Things with strings | 2 | violin guitar harp cello banjo bass lute piano bow kite puppet
+On sheet music | 2 | note rest clef sharp flat bar key tie
+Fasteners | 2 | nail screw bolt nut rivet staple pin tack clip peg button buckle clasp hook
+Units of length | 2 | inch foot yard mile league furlong fathom
+Parts of the eye | 2 | iris pupil lens retina cornea lash lid
+Marks on the skin | 2 | mole freckle scar wrinkle dimple bruise tattoo blister
+Parts of a shoe | 2 | heel sole lace tongue toe eyelet insole instep upper buckle strap
+Parts of a ship | 2 | bow stern hull deck mast keel rudder sail bridge galley cabin helm porthole
+Ways to throw | 2 | pitch toss hurl lob fling cast heave sling
+Ways to jump | 2 | leap hop bound vault skip spring bounce pounce
+Ways to walk | 2 | march stroll stride wander plod amble hike trudge strut tiptoe shuffle pace waddle stomp
+Dances | 2 | waltz tango salsa samba polka jive rumba twist foxtrot conga ballet
+Drawn without a pencil | 2 | curtain bath sword breath straw card bow water
+In a beehive | 2 | bee queen drone worker honey comb wax larva
+On a throne | 2 | king queen emperor empress sultan pharaoh monarch ruler
+Plugged into a computer | 2 | mouse keyboard screen printer speaker scanner webcam
+Rocks | 2 | granite marble slate chalk flint basalt pumice shale coal
+Sea mammals | 2 | seal whale dolphin walrus porpoise manatee orca
+Baby animals | 2 | calf lamb kid foal cub chick puppy kitten piglet duckling gosling
+Animal groups | 2 | pride pack herd flock swarm school pod gaggle colony troop litter shoal brood
+Shades of black | 2 | jet ebony coal onyx raven pitch ink soot

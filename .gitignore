@@ -23,3 +23,6 @@ keystore.properties
 # graphify output
 graphify-out/
 __pycache__/
+
+# Worktrees the Claude app makes for parallel sessions: each is its own checkout, never part of this one.
+.claude/worktrees/
