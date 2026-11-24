@@ -302,10 +302,13 @@ class DominoRulesTest {
             val kinds = IntArray(RuleKind.entries.size)
             val levels = IntArray(DominoTeacher.LEVEL_WHAT_IF + 1)
             val ms = ArrayList<Double>()
+            // This thread's CPU time, not the clock: CI runs test classes in parallel forks on shared cores, and time spent
+            // waiting for a core twice failed the budget below on a board that had not got slower (PR #532's first run).
+            val cpu = java.lang.management.ManagementFactory.getThreadMXBean()
             for (seed in seeds(365, d, "dominoes")) {
-                val t0 = System.nanoTime()
+                val t0 = cpu.currentThreadCpuTime
                 val s = DominoLogic.generateVerified(seed, d)!!
-                ms += (System.nanoTime() - t0) / 1e6
+                ms += (cpu.currentThreadCpuTime - t0) / 1e6
                 squares += s.open.count { it }
                 ruled += s.regionOf.count { it >= 0 }
                 for (r in s.rules.indices) {
@@ -330,8 +333,7 @@ class DominoRulesTest {
             val statedBudget = 20
             assertTrue("$d rules cover $ruledShare% of squares", ruledShare < 85)
             assertTrue("$d states $statedShare% of squares outright", statedShare < statedBudget)
-            // Measured 0.4 / 3.3 / 14 ms on a desktop. CI runs test classes in parallel forks, where Expert's median went past an
-            // earlier 30 ms limit; 60 still fails a board that costs four times what it does now.
+            // Measured 0.4 / 3.3 / 14 ms on a desktop; 60 still fails a board that costs four times what it does now.
             assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 60)
         }
         println(report)
