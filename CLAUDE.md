@@ -650,7 +650,10 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   only one leaves every empty slot crossing it a different word that fits and agrees at the crossing; same list, same clue), then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
   the stored word, so it is the fallback: 22 / 32 / 30% of steps over a year a tier, and an exhaustive search of every consistent filling
   pins only 0.1-0.2 points more, so the rest is honestly open). The generator's `walk` keeps the old ladder (`crossings = false`) so a
-  stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
+  stronger teacher never moves a board. **Every step is worded the same way** (the owner, 2026-11-24: something between the clue and
+  the whole word): tap 1 lights the slot with its word's clue; tap 2 gives the reason, the clue again, the word's second clue
+  ("Another way in", Mini's `secondClueOf`, where `second-clues.txt` has one; long words often have none) and the first letter not
+  yet showing; only "Show me" types the word. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
 ## Hexwords (spend a block of letters)

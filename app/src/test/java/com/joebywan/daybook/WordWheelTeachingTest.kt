@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.puzzles.MiniLogic
 import com.joebywan.daybook.puzzles.WheelWords
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.WordWheelState
@@ -167,6 +168,45 @@ class WordWheelTeachingTest {
                     s = s.enter(step.word)
                 }
             }
+        }
+    }
+
+    /**
+     * Tap 1 is the clue; tap 2 adds the second clue where the word has one and one letter of the word that is not showing
+     * yet (the owner, 2026-11-24: something between the clue and the whole word). Reports how often a second clue exists.
+     */
+    @Test
+    fun `the second tap adds a second clue and a letter not yet showing`() {
+        for (d in Difficulty.entries) {
+            var steps = 0
+            var seconds = 0
+            for (day in 0 until 365) {
+                var s = board(day, d)
+                while (!s.solved) {
+                    val step = WordWheelTeacher.teach(s)!!
+                    val clue = "“${WheelWords.clue(step.word)}” (${step.word.length})"
+                    assertTrue(step.nudge, clue in step.nudge)
+                    assertTrue(step.explanation, clue in step.explanation)
+                    val second = MiniLogic.secondClueOf(step.word)
+                    if (second.isNotBlank()) {
+                        seconds++
+                        assertTrue(step.explanation, "Another way in: “$second”." in step.explanation)
+                    } else {
+                        assertFalse(step.explanation, "Another way in" in step.explanation)
+                    }
+                    val shown = s.shown()
+                    val cells = s.slots[step.slot].cells(s.width)
+                    val i = cells.indexOfFirst { shown[it] == null }
+                    if (i >= 0) {
+                        val letter = step.word[i].uppercaseChar()
+                        val said = if (i == 0) "It starts with $letter." else "letter is $letter."
+                        assertTrue(step.explanation, step.explanation.endsWith(said))
+                    }
+                    steps++
+                    s = s.enter(step.word)
+                }
+            }
+            println("Word Wheel $d: a second clue on ${"%.1f".format(100.0 * seconds / steps)}% of $steps steps")
         }
     }
 
