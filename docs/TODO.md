@@ -27,6 +27,11 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Second clues for Word Wheel's long words.** Word Wheel's second hint tap gives a word's second clue
+  (`tools/words/second-clues.txt`, written for the crossword) where one exists. By grid list, 6 / 7-letter words have one
+  69 / 37% of the time (3-5 letters 81-99%), and a 7-letter word is every Expert wheel's root. Write the rest (about 470
+  sevens and 220 sixes; `build.py --second-clues` lints them). Without one the hint gives only the letter. *M.*
+
 - [ ] **Boards not yet on the digit scale** (`BoardGlyph`, `ui/BoardText.kt`). Most moved with their Arcade conversion
   (2026-11-13). Check what is left with a grep for `* 0.` font sizes and `.sp` in board files; pick each a role and render
   before and after. *S each.*

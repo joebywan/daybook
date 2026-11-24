@@ -21,6 +21,10 @@ import com.joebywan.daybook.core.TeachStep
  * - [CLUE]: nothing is pinned. The slot with the fewest words that fit is named with its word's crossword clue. That reads
  *   the stored word, so it is the fallback, and it says so ("the one here is clued").
  *
+ * Every step speaks the same way (the owner, 2026-11-24): tap 1 lights the slot and gives its word's clue; tap 2 says why
+ * (pinned, crossing, or that it reads the word), then the clue again, the word's second clue ("Another way in", the
+ * crossword's, where it has one) and one letter not yet showing. Only "Show me" types the word.
+ *
  * No mistake is possible: a word that is not the slot's is simply not accepted (or is a bonus word), so nothing is ever
  * flagged. What is measured is the share of steps that are pinned against those that need the clue (`docs/TEACHING.md`).
  *
@@ -43,7 +47,8 @@ internal object WordWheelTeacher {
 
     const val WHEEL = 1000
     const val MAX_NUDGE = 70
-    const val MAX_EXPLANATION = 200
+    /** Above most teachers' 200: the explanation carries the reasoning, both clues and a letter. The panel scrolls past five lines. */
+    const val MAX_EXPLANATION = 260
 
     /** A slot as the player sees it: where it runs and how long it is, not its word. */
     class Shape(val row: Int, val col: Int, val across: Boolean, val length: Int) {
@@ -103,16 +108,16 @@ internal object WordWheelTeacher {
             val cells = shape.cells(width)
             val known = cells.filter { shown[it] != null }.toSet()
             val shapeText = pattern.joinToString(" ") { it?.uppercaseChar()?.toString() ?: "_" }
-            val explanation = if (known.isEmpty()) {
-                "Of the well-known words the wheel spells, only one has ${shape.length} letters" +
-                    (if (shape.length == wheel.length) ", using every letter" else "") + ". Its clue: ${clueFor(word)}."
+            val why = if (known.isEmpty()) {
+                "Only one well-known word the wheel spells has ${shape.length} letters" +
+                    (if (shape.length == wheel.length) ", using every letter" else "") + "."
             } else {
-                "${shape.length} letters, $shapeText. Of the well-known words the wheel spells, only one fits. Its clue: ${clueFor(word)}."
+                "${shape.length} letters, $shapeText: only one well-known word the wheel spells fits."
             }
             return Step(
                 PINNED, k, word, 1,
-                nudge = if (known.isEmpty()) "One slot's length leaves only one word." else "The letters already in this slot leave one word.",
-                explanation = explanation,
+                nudge = nudgeFor(word),
+                explanation = explain(why, word, pattern),
                 focus = cells.toSet(),
                 cited = known,
                 targets = cells.toSet(),
@@ -147,9 +152,8 @@ internal object WordWheelTeacher {
             val them = if (blocking.size == 1) "the slot crossing it" else "the slots crossing it"
             return Step(
                 CROSSING, a, word, 1,
-                nudge = "A slot crossing this one leaves it only one word.",
-                explanation = "${fits.size} words from the wheel fit these ${shape.length} squares, but only one leaves a word for $them. " +
-                    "Its clue: ${clueFor(word)}.",
+                nudge = nudgeFor(word),
+                explanation = explain("${fits.size} words from the wheel fit, but only one leaves a word for $them.", word, cells.map { shown[it] }),
                 focus = cells.toSet(),
                 cited = cells.filter { shown[it] != null }.toSet() + crossCells,
                 targets = cells.toSet(),
@@ -178,9 +182,8 @@ internal object WordWheelTeacher {
         val cells = slot.cells(s.width)
         return Step(
             CLUE, best, slot.word, bestCount,
-            nudge = "Try the slot with the fewest words that fit.",
-            explanation = "$bestCount words from the wheel fit this ${slot.length}-letter slot. " +
-                "The one here is clued ${clueFor(slot.word)}.",
+            nudge = nudgeFor(slot.word),
+            explanation = explain("$bestCount words from the wheel fit this slot, the fewest; this hint reads its word.", slot.word, cells.map { shown[it] }),
             focus = cells.toSet(),
             cited = cells.filter { shown[it] != null }.toSet(),
             targets = cells.toSet(),
@@ -189,6 +192,27 @@ internal object WordWheelTeacher {
 
     /** "“Lift” (5)": a crossword clue to [word] without the word, as Lexicon gives it. Only "Show me" types the word. */
     private fun clueFor(word: String) = "\u201C${WheelWords.clue(word)}\u201D (${word.length})"
+
+    /** Tap 1: the slot (lit) and its clue. */
+    private fun nudgeFor(word: String) = "Clue: ${clueFor(word)}."
+
+    private val ORDINALS = listOf("first", "second", "third", "fourth", "fifth", "sixth", "seventh")
+
+    /**
+     * Tap 2 (the owner, 2026-11-24: a second clue and a letter before the whole word): [why], the clue again (the explanation
+     * replaces the nudge), the word's second clue where `tools/words/second-clues.txt` has one, and the first letter of
+     * [word] not already showing in [pattern]. Only "Show me" types the word.
+     */
+    private fun explain(why: String, word: String, pattern: List<Char?>): String {
+        val second = MiniLogic.secondClueOf(word).takeIf { it.isNotBlank() }
+        val i = pattern.indexOfFirst { it == null }
+        val letter = when {
+            i < 0 -> ""
+            i == 0 -> " It starts with ${word[0].uppercaseChar()}."
+            else -> " Its ${ORDINALS[i]} letter is ${word[i].uppercaseChar()}."
+        }
+        return "$why Clue: ${clueFor(word)}." + (if (second != null) " Another way in: \u201C$second\u201D." else "") + letter
+    }
 
     /** The wheel letters that spell [word], first unused copy of each letter, as highlight indices. */
     fun letters(wheel: String, word: String): Set<Int> =
