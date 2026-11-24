@@ -54,12 +54,20 @@ data class QuartetsState(
     fun retry(): QuartetsState = copy(found = emptyList(), misses = emptyList(), moves = moves + 1)
 }
 
-/** One category of the bank: what the player is shown, its level (1 plain, 2 a second look, 3 wordplay) and members. */
-class QuartetsCategory(val title: String, val level: Int, val words: List<String>) {
+/**
+ * One category of the bank: what the player is shown, its level (1 plain, 2 a second look, 3 wordplay), the [words] the
+ * generator may deal for it, and its [quiet] members: true fits nobody should be dealt as the answer (Head + stone), which
+ * [fits] still counts, so every board's masks and every proof see them.
+ */
+class QuartetsCategory(val title: String, val level: Int, val words: List<String>, val quiet: List<String> = emptyList()) {
     /** Membership only; never iterated, so no hash order reaches anything. */
-    private val members: Set<String> = words.toHashSet()
+    private val members: Set<String> = (words + quiet).toHashSet()
+    private val plain: Set<String> = words.toHashSet()
 
     fun fits(word: String): Boolean = word in members
+
+    /** Fits as one of the words the category may be dealt for, not only quietly: what the tier gate counts. */
+    fun fitsPlainly(word: String): Boolean = word in plain
 }
 
 /** The parsed bank of categories (`QuartetsWords.CATEGORIES` when shipped; tests pass their own lines). */
@@ -68,13 +76,27 @@ class QuartetsBank(categories: List<QuartetsCategory>) {
     /** Sorted by title, so a board's [QuartetsState.titles] come out sorted. */
     val categories: List<QuartetsCategory> = categories.sortedBy { it.title }
 
+    /**
+     * For each category (parallel to [categories]), how many others have a dealable word that fits it plainly (a quiet
+     * fit makes no spare, so it is no link): how often it turns up among the categories linked to a draw. A linked draw
+     * is weighted by its inverse, or the most shared categories (`___ board`, `Add S at the front`) are dealt several
+     * times as often as the rest.
+     */
+    internal val links: IntArray by lazy {
+        IntArray(this.categories.size) { i ->
+            val c = this.categories[i]
+            this.categories.count { d -> d !== c && d.words.any { c.fitsPlainly(it) } }
+        }
+    }
+
     companion object {
-        /** Lines in the generated format: `Title|level|word,word,...`. */
+        /** Lines in the generated format, `Title|level|word,word,...|quiet,...`; the quiet field may be left out. */
         fun parse(lines: List<String>): QuartetsBank = QuartetsBank(
             lines.map { line ->
                 val parts = line.split('|')
-                require(parts.size == 3) { "not Title|level|words: $line" }
-                QuartetsCategory(parts[0], parts[1].trim().toInt(), parts[2].split(',').map { it.trim() }.filter { it.isNotEmpty() })
+                require(parts.size == 3 || parts.size == 4) { "not Title|level|words|quiet: $line" }
+                fun list(field: String) = field.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                QuartetsCategory(parts[0], parts[1].trim().toInt(), list(parts[2]), if (parts.size == 4) list(parts[3]) else emptyList())
             },
         )
 
@@ -101,22 +123,31 @@ object QuartetsLogic {
     }
 
     /**
-     * What a tier deals: categories of [levels], at least one of level [needsLevel], and spares plus phantoms
-     * ([Overlap.total]) from [minOverlap] to [maxOverlap]. The first [linked] categories drawn after the first are
-     * drawn among those sharing a word with one already drawn (when any does), which is where spares come from. The
-     * one place to tune a tier.
+     * What a tier deals: categories of [levels], the first drawn of level [needsLevel] and at least [deep] of level 2 or
+     * more; [spares] words that fit a second answer group, and spares plus phantoms ([Overlap.total]) in [overlap]. The
+     * first [linked] categories drawn after the first are drawn among those sharing a word with one already drawn (when
+     * any does), which is where spares come from. The one place to tune a tier (measured: `docs/QUARTETS_SPEC.md`).
      */
-    class Spec(val levels: IntRange, val needsLevel: Int, val minOverlap: Int, val maxOverlap: Int, val linked: Int)
+    class Spec(
+        val levels: IntRange,
+        val needsLevel: Int,
+        val deep: Int,
+        val spares: IntRange,
+        val overlap: IntRange,
+        val linked: Int,
+    )
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(levels = 1..1, needsLevel = 1, minOverlap = 0, maxOverlap = 0, linked = 0)
-        Difficulty.HARD -> Spec(levels = 1..2, needsLevel = 2, minOverlap = 1, maxOverlap = 2, linked = 1)
-        Difficulty.EXPERT -> Spec(levels = 1..3, needsLevel = 3, minOverlap = 3, maxOverlap = Int.MAX_VALUE, linked = 3)
+        Difficulty.STANDARD -> Spec(levels = 1..1, needsLevel = 1, deep = 0, spares = 0..0, overlap = 0..0, linked = 0)
+        Difficulty.HARD -> Spec(levels = 1..2, needsLevel = 2, deep = 1, spares = 1..2, overlap = 1..2, linked = 1)
+        Difficulty.EXPERT -> Spec(levels = 1..3, needsLevel = 3, deep = 2, spares = 3..6, overlap = 3..7, linked = 3)
     }
 
     /**
      * How much a board's words overlap: a spare is a word that fits an answer group's category but belongs to another
-     * group; a phantom is a category that is no answer group's yet fits three or more of the words.
+     * group; a phantom is a category that is no answer group's yet fits three or more of the words. The tier gate counts
+     * plain fits only ([plainMasks]): a quiet fit (moonfish) keeps a player from being refused, but it is not what makes
+     * a board Hard.
      */
     data class Overlap(val spares: Int, val phantoms: Int) {
         val total: Int get() = spares + phantoms
@@ -173,12 +204,22 @@ object QuartetsLogic {
     /** The split of what remains, for a lost board: the one split, else the first of several, else nothing. */
     fun reveal(s: QuartetsState): List<Int> = splits(s.masks, s.remaining, limit = 1).firstOrNull() ?: emptyList()
 
-    /** Spares and phantoms of a board whose words split exactly one way; null when they do not. */
-    fun overlap(s: QuartetsState): Overlap? {
+    /**
+     * Spares and phantoms of a board whose words split exactly one way; null when they do not. This counts every fit,
+     * quiet ones included, since a state's [QuartetsState.masks] do not tell them apart; the tier gate counts plain fits
+     * only, through the overload given [plainMasks].
+     */
+    fun overlap(s: QuartetsState): Overlap? = overlap(s, s.masks)
+
+    /**
+     * Spares and phantoms of [s] counted over [counted] (parallel to its titles, each a subset of its mask); the split
+     * that decides the answer groups is always taken over every fit ([QuartetsState.masks]). Null when it is not one.
+     */
+    fun overlap(s: QuartetsState, counted: List<Int>): Overlap? {
         val groups = (split(s.masks, s.all) as? Split.ExactlyOne)?.groups ?: return null
         var spares = 0
         var phantoms = 0
-        for (m in s.masks) {
+        for (m in counted) {
             val inside = groups.filter { m and it == it }
             if (inside.isEmpty()) {
                 if (m.countOneBits() >= GROUP - 1) phantoms++
@@ -195,34 +236,100 @@ object QuartetsLogic {
     fun generate(seed: Long, difficulty: Difficulty): QuartetsState =
         generateVerified(seed, difficulty) ?: lastResort(difficulty)
 
-    /** A proved board and the draws it took (1 is the first). */
-    class Dealt(val state: QuartetsState, val attempts: Int)
+    /** A proved board, the categories dealt as its groups (in drawn order) and the draws it took (1 is the first). */
+    class Dealt(val state: QuartetsState, val categories: List<QuartetsCategory>, val attempts: Int)
+
+    /** Why a draw was turned down, for the measuring tests; [Kept] is a draw that ships. */
+    enum class Verdict { Kept, TooShallow, RepeatedWord, NotOneSplit, QuietInGroup, TooLittleOverlap, TooMuchOverlap }
+
+    /** One draw: its categories, its board (null when two drew the same word) and the verdict on it. */
+    class Draw(val categories: List<QuartetsCategory>, val state: QuartetsState?, val verdict: Verdict)
 
     /**
      * Draws until a board splits exactly one way and its overlap fits the tier. Lists and sorted orders only reach the
      * [Rng]: the bank is in title order, members in the bank's order.
      */
     fun deal(seed: Long, difficulty: Difficulty, bank: QuartetsBank): Dealt? {
+        for (attempt in 0 until ATTEMPTS) {
+            val d = draw(seed, attempt, difficulty, bank) ?: return null
+            if (d.verdict == Verdict.Kept) return Dealt(d.state!!, d.categories, attempt + 1)
+        }
+        return null
+    }
+
+    /** Draw [attempt] of [seed] and its verdict; null when the bank cannot deal the tier at all. */
+    fun draw(seed: Long, attempt: Int, difficulty: Difficulty, bank: QuartetsBank): Draw? {
         val spec = specFor(difficulty)
         val allowed = bank.categories.filter { it.level in spec.levels && it.words.size >= GROUP }
         val needed = allowed.filter { it.level == spec.needsLevel }
         if (needed.isEmpty() || allowed.size < GROUP) return null
-        for (attempt in 0 until ATTEMPTS) {
-            val rng = Rng(seed + attempt)
-            val drawn = mutableListOf(rng.pick(needed))
-            while (drawn.size < GROUP) {
-                val open = allowed.filter { c -> drawn.none { it === c } }
-                val linked = open.filter { c -> drawn.any { d -> d.words.any { c.fits(it) } } }
-                drawn += rng.pick(if (drawn.size <= spec.linked && linked.isNotEmpty()) linked else open)
-            }
-            val chosen = drawn.flatMap { rng.shuffled(it.words).take(GROUP) }
-            if (chosen.distinct().size != WORDS) continue
-            val state = board(rng.shuffled(chosen), bank.categories)
-            val overlap = overlap(state) ?: continue
-            if (overlap.total in spec.minOverlap..spec.maxOverlap) return Dealt(state, attempt + 1)
+        // The first category is kept for [PER_FIRST] draws in a row, so every category of the needed level leads about as
+        // many boards however often its draws fail the gate (drawn afresh each time, Standard's most dealt category in a
+        // year was dealt 3.5 times as often as its least; now 2.5).
+        val drawn = mutableListOf(Rng(seed - 1 - attempt / PER_FIRST).pick(needed))
+        val rng = Rng(seed + attempt)
+        while (drawn.size < GROUP) {
+            val open = allowed.filter { c -> drawn.none { it === c } }
+            val linked = open.filter { c -> drawn.any { d -> d.words.any { c.fitsPlainly(it) } } }
+            drawn += if (drawn.size <= spec.linked && linked.isNotEmpty()) pickLinked(rng, linked, bank) else rng.pick(open)
         }
-        return null
+        if (drawn.count { it.level >= 2 } < spec.deep) return Draw(drawn, null, Verdict.TooShallow)
+        // Only a category's own words are dealt for it, never its quiet ones.
+        val chosen = drawn.flatMap { rng.shuffled(it.words).take(GROUP) }
+        if (chosen.distinct().size != WORDS) return Draw(drawn, null, Verdict.RepeatedWord)
+        val state = board(rng.shuffled(chosen), bank.categories)
+        val overlap = overlap(state, plainMasks(state, bank)) ?: return Draw(drawn, state, Verdict.NotOneSplit)
+        // A quiet word is never dealt for its own category, and the dealt groups are a split, so the one split is the
+        // dealt one: no answer group is that category's four with the quiet word in it. A group dealt for another
+        // category could still fit the quiet word's category whole (and be shown under its title), so that is refused.
+        if (quietInGroup(state, bank)) return Draw(drawn, state, Verdict.QuietInGroup)
+        val verdict = when {
+            overlap.spares < spec.spares.first || overlap.total < spec.overlap.first -> Verdict.TooLittleOverlap
+            overlap.spares > spec.spares.last || overlap.total > spec.overlap.last -> Verdict.TooMuchOverlap
+            else -> Verdict.Kept
+        }
+        return Draw(drawn, state, verdict)
     }
+
+    /**
+     * For each of [s]'s titles, the words that fit its category plainly: its mask less the quiet fits. What the tier
+     * gate counts, so a category met only through quiet words is no phantom and a quiet fit is no spare.
+     */
+    fun plainMasks(s: QuartetsState, bank: QuartetsBank): List<Int> = s.titles.map { t ->
+        val c = bank.categories.first { it.title == t }
+        var m = 0
+        for (i in s.words.indices) if (c.fitsPlainly(s.words[i])) m = m or (1 shl i)
+        m
+    }
+
+    /** Some answer group of [s] fits a category whole with one of that category's quiet words among its four. */
+    private fun quietInGroup(s: QuartetsState, bank: QuartetsBank): Boolean {
+        val groups = (split(s.masks, s.all) as? Split.ExactlyOne)?.groups ?: return false
+        for (c in bank.categories) {
+            if (c.quiet.isEmpty()) continue
+            for (g in groups) {
+                val words = s.words.indices.filter { g and (1 shl it) != 0 }.map { s.words[it] }
+                if (words.all { c.fits(it) } && words.any { it in c.quiet }) return true
+            }
+        }
+        return false
+    }
+
+    /** One of [linked], weighted by the inverse of how many categories link to it ([QuartetsBank.links]). */
+    private fun pickLinked(rng: Rng, linked: List<QuartetsCategory>, bank: QuartetsBank): QuartetsCategory {
+        val weights = linked.map { c -> LINK_WEIGHT / maxOf(1, bank.links[bank.categories.indexOf(c)]) }
+        var r = rng.nextInt(weights.sum())
+        for (i in linked.indices) {
+            r -= weights[i]
+            if (r < 0) return linked[i]
+        }
+        return linked.last()
+    }
+
+    private const val LINK_WEIGHT = 720_720
+
+    /** Draws made with one first category before another is picked. */
+    const val PER_FIRST = 20
 
     /** The board for [words]: every category fitting three or more of them, in the order given (title order). */
     fun board(words: List<String>, categories: List<QuartetsCategory>): QuartetsState {
@@ -241,7 +348,8 @@ object QuartetsLogic {
 
     /**
      * A fixed board per tier, written out so it never depends on the shipped bank: Standard no overlap; Hard MERCURY
-     * also a planet (one spare); Expert MERCURY a planet, GOLD a metal and a night-sky phantom (three).
+     * also a planet (one spare); Expert MERCURY a planet, GOLD a metal, PARROT a ___fish (three spares) and a night-sky
+     * phantom.
      */
     fun lastResort(difficulty: Difficulty): QuartetsState {
         val planets = QuartetsCategory("Planets", 1, listOf("earth", "mars", "mercury", "saturn", "venus"))
@@ -260,13 +368,13 @@ object QuartetsLogic {
             )
             Difficulty.EXPERT -> board(
                 listOf("gold", "mars", "owl", "star", "mercury", "robin", "sword", "earth",
-                    "iron", "cat", "crow", "venus", "tin", "saturn", "eagle", "copper"),
+                    "iron", "cat", "crow", "venus", "tin", "saturn", "parrot", "copper"),
                 listOf(
-                    birds,
+                    QuartetsCategory("Birds", 1, listOf("crow", "eagle", "owl", "parrot", "robin")),
                     QuartetsCategory("In the night sky", 1, listOf("mars", "star", "venus")),
                     QuartetsCategory("Metals", 1, listOf("copper", "gold", "iron", "mercury", "tin")),
                     planets,
-                    QuartetsCategory("___fish", 3, listOf("cat", "gold", "star", "sword")),
+                    QuartetsCategory("___fish", 3, listOf("cat", "gold", "parrot", "star", "sword")),
                 ),
             )
         }

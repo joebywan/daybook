@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -95,7 +96,8 @@ object Quartets : PuzzleType {
 
     // Undo could only hand back a life (Pointers' reasoning). Hints come with the teacher.
     override val offersUndo: Boolean get() = false
-    override val offersHints: Boolean get() = false
+    override val offersHints: Boolean get() = true
+    override fun teach(state: PuzzleState): Deduction? = QuartetsTeacher.deduction(state as QuartetsState)
 
     // ---- pure helpers ------------------------------------------------------------------------
 

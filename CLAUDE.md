@@ -1242,6 +1242,21 @@ the graph (`0a316f33^`), brought back so the owner can compare the two (issue #5
 hints through `WhosWhoTeacher.teach(s, table = true)`, which keeps the table's words (rows, ticks, crosses). Delete it with its two
 tests (`WhosWhoTable*Test`) once the issue is decided.
 
+`test:Quartets` (id `test-quartets`): sixteen words, find the four groups of four that share something; four wrong fours lose
+the board. Spec, decisions and measurements: `docs/QUARTETS_SPEC.md`. Never "Connections" where a player sees it.
+`puzzles/QuartetsRules.kt` (state, `QuartetsBank`, `QuartetsLogic`: rules, the exhaustive `split`, the deal and tier gate),
+`QuartetsTeacher.kt`, `Quartets.kt` (board, motif), `QuartetsWords.kt` (generated).
+
+- **Boards are dealt, not curated** (curated boards were declined, 2026-10-25: a list runs out): the bank is categories with
+  more members than a board uses (`tools/words/quartets/*.txt`, linted and written out by `tools/words/quartets.py`); the device
+  draws four categories and four members of each and keeps the draw only if `split` proves one way to cut the sixteen.
+- **The proof is only as good as the bank's memberships**: a word must be listed under every category it fits, or a right
+  group is refused (the PR #15 bug). `~word` is a quiet member: it fits in every proof and is never dealt for that category
+  (grim pairings, obscure compounds). A new word or category means reading it against the whole bank (`cross.txt`).
+- **No stored answer**: the state holds the words and every category three or more of them fit; a four is right when what
+  is left still splits (`accepts`), and `solved` is a rule check. Tiers are how many words fit a second group, never size.
+- Not built for the lab: walkthrough, keys, training, guide page, parity pin. Graduating it takes a new id and a name.
+
 ## Motion and haptics
 
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s

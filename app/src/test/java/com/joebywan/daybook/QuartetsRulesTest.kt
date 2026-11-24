@@ -84,7 +84,7 @@ class QuartetsRulesTest {
     private fun maskOf(set: Set<Int>): Int = set.fold(0) { acc, i -> acc or (1 shl i) }
 
     /** Spares and phantoms counted here from the bank's strings and the oracle's one partition. */
-    private fun overlapOf(words: List<String>, from: List<Set<String>>, cut: Set<Set<Int>>): Int {
+    private fun overlapOf(words: List<String>, from: List<Set<String>>, cut: Set<Set<Int>>): Pair<Int, Int> {
         val board = words.toSet()
         val spares = HashSet<String>()
         var phantoms = 0
@@ -96,13 +96,16 @@ class QuartetsRulesTest {
                 for (g in inside) spares += board.filter { it in c && words.indexOf(it) !in g }
             }
         }
-        return spares.size + phantoms
+        return spares.size to phantoms
     }
 
-    private fun checkGate(difficulty: Difficulty, overlap: Int) {
+    private fun checkGate(difficulty: Difficulty, overlap: Pair<Int, Int>) {
         val spec = QuartetsLogic.specFor(difficulty)
-        assertTrue("$difficulty overlap $overlap", overlap in spec.minOverlap..spec.maxOverlap)
+        assertTrue("$difficulty spares ${overlap.first}", overlap.first in spec.spares)
+        assertTrue("$difficulty overlap $overlap", overlap.first + overlap.second in spec.overlap)
     }
+
+    private fun pairOf(o: QuartetsLogic.Overlap): Pair<Int, Int> = o.spares to o.phantoms
 
     @Test
     fun `parse reads the generated format`() {
@@ -112,6 +115,92 @@ class QuartetsRulesTest {
         assertEquals(1, planets.level)
         assertTrue(planets.fits("mercury"))
         assertFalse(planets.fits("gold"))
+    }
+
+    @Test
+    fun `quiet members fit every mask and proof but are never dealt for their category`() {
+        // LIME moved from Fruit's own words to its quiet ones: it still fits Fruit, but Fruit never deals it.
+        val quietLines = lines.map { if (it.startsWith("Fruit|")) it.replace(",lime,", ",") + "|lime" else it }
+        val quietBank = QuartetsBank.parse(quietLines)
+        val fruit = quietBank.categories.first { it.title == "Fruit" }
+        assertEquals(listOf("lime"), fruit.quiet)
+        assertFalse("lime" in fruit.words)
+        assertTrue(fruit.fits("lime"))
+        var limeOnBoard = 0
+        var fruitDealt = 0
+        var both = 0
+        for (d in Difficulty.entries) for (seed in 1L..150L) {
+            val dealt = QuartetsLogic.deal(seed * 104_729, d, quietBank) ?: continue
+            val s = dealt.state
+            val lime = s.words.indexOf("lime")
+            if (lime >= 0) {
+                limeOnBoard++
+                // Counted wherever it fits, Fruit included.
+                val fruitMask = s.masks.getOrNull(s.titles.indexOf("Fruit"))
+                if (fruitMask != null) assertTrue(fruitMask and (1 shl lime) != 0)
+            }
+            if (dealt.categories.any { it.title == "Fruit" }) {
+                fruitDealt++
+                // The one split is the dealt one, so Fruit's group is four of its own words, never LIME.
+                val groups = (QuartetsLogic.split(s.masks, s.all) as Split.ExactlyOne).groups
+                val fruitGroups = groups.filter { g -> s.words.indices.filter { g and (1 shl it) != 0 }.all { fruit.fits(s.words[it]) } }
+                assertTrue("$d seed $seed", fruitGroups.isNotEmpty())
+                if (lime >= 0) both++
+                if (lime >= 0) assertTrue("$d seed $seed", fruitGroups.none { g -> g and (1 shl lime) != 0 })
+            }
+        }
+        assertTrue("lime was dealt $limeOnBoard times", limeOnBoard > 0)
+        assertTrue("fruit was dealt $fruitDealt times", fruitDealt > 0)
+        assertTrue("lime beside a Fruit group $both times", both > 0)
+    }
+
+    @Test
+    fun `a quiet fit counts in the masks and the proof but is no spare to the tier gate`() {
+        val seed = 7919L
+        val dealt = QuartetsLogic.deal(seed, Difficulty.STANDARD, bank)!!
+        // A word of the first group made a quiet member of the second group's category: as a plain member it would be
+        // a spare, which Standard never deals.
+        val first = cats.first { it.title == dealt.categories[0].title }
+        val second = cats.first { it.title == dealt.categories[1].title }
+        val w = dealt.state.words.first { it in first.words && it !in second.words }
+        val quietBank = QuartetsBank.parse(lines.map { if (it.startsWith(second.title + "|")) "$it|$w" else it })
+        val draw = QuartetsLogic.draw(seed, dealt.attempts - 1, Difficulty.STANDARD, quietBank)!!
+        val s = draw.state!!
+        assertEquals(dealt.state.words, s.words)
+        // In the mask, so a player who argues for it is never refused, and the board still splits one way.
+        val sets = indexSets(s.words, cats.map { c -> if (c === second) c.words + w else c.words })
+        assertEquals(sets.map { maskOf(it) }, s.masks)
+        val oracle = QuartetsOracle.partitions(16, sets)
+        assertEquals(1, oracle.size)
+        // Every fit counted, it is a spare; plain fits counted (the gate), there is none, so the draw is kept.
+        assertEquals(1 to 0, overlapOf(s.words, cats.map { c -> if (c === second) c.words + w else c.words }, oracle[0]))
+        assertEquals(1 to 0, pairOf(QuartetsLogic.overlap(s)!!))
+        assertEquals(0 to 0, overlapOf(s.words, cats.map { it.words }, oracle[0]))
+        assertEquals(0 to 0, pairOf(QuartetsLogic.overlap(s, QuartetsLogic.plainMasks(s, quietBank))!!))
+        assertEquals(QuartetsLogic.Verdict.Kept, draw.verdict)
+    }
+
+    @Test
+    fun `a category met three times only through quiet fits is no phantom`() {
+        // Hide a number gains three quiet words from three different groups of a Standard board, so every fit counted it
+        // is a phantom; it fits none of them plainly, so the gate sees nothing.
+        val seed = 7919L
+        val dealt = QuartetsLogic.deal(seed, Difficulty.STANDARD, bank)!!
+        val number = cats.first { it.title == "Hide a number" }
+        val picks = dealt.categories.take(3).map { c ->
+            dealt.state.words.first { it in cats.first { k -> k.title == c.title }.words && it !in number.words }
+        }
+        val quietBank = QuartetsBank.parse(lines.map { if (it.startsWith("Hide a number|")) it + "|" + picks.joinToString(",") else it })
+        val draw = QuartetsLogic.draw(seed, dealt.attempts - 1, Difficulty.STANDARD, quietBank)!!
+        val s = draw.state!!
+        assertEquals(dealt.state.words, s.words)
+        val title = s.titles.indexOf("Hide a number")
+        assertTrue(title >= 0)
+        assertTrue(picks.all { s.masks[title] and (1 shl s.words.indexOf(it)) != 0 })
+        assertEquals(0, QuartetsLogic.overlap(s)!!.spares)
+        assertEquals(1, QuartetsLogic.overlap(s)!!.phantoms)
+        assertEquals(QuartetsLogic.Overlap(0, 0), QuartetsLogic.overlap(s, QuartetsLogic.plainMasks(s, quietBank)))
+        assertEquals(QuartetsLogic.Verdict.Kept, draw.verdict)
     }
 
     @Test
@@ -128,7 +217,7 @@ class QuartetsRulesTest {
             assertEquals(oracle[0].map { maskOf(it) }.toSet(), (split as Split.ExactlyOne).groups.toSet())
             val from = sets.map { set -> set.map { s.words[it] }.toSet() }
             checkGate(d, overlapOf(s.words, from, oracle[0]))
-            assertEquals(overlapOf(s.words, from, oracle[0]), QuartetsLogic.overlap(s)!!.total)
+            assertEquals(overlapOf(s.words, from, oracle[0]), pairOf(QuartetsLogic.overlap(s)!!))
         }
     }
 
@@ -151,11 +240,12 @@ class QuartetsRulesTest {
                 assertEquals(oracle[0].map { maskOf(it) }.toSet(), split.groups.toSet())
                 val overlap = overlapOf(s.words, cats.map { it.words }, oracle[0])
                 checkGate(d, overlap)
-                assertEquals(overlap, QuartetsLogic.overlap(s)!!.total)
+                assertEquals(overlap, pairOf(QuartetsLogic.overlap(s)!!))
                 // Every group fits a category of the tier's levels, and one fits a category of the level it needs.
                 val levelsOf = oracle[0].map { g -> cats.filter { c -> g.all { s.words[it] in c.words } }.map { it.level } }
                 assertTrue(levelsOf.all { ls -> ls.any { it in spec.levels } })
                 assertTrue(levelsOf.any { ls -> spec.needsLevel in ls })
+                assertTrue("$d seed $seed deep", levelsOf.count { ls -> ls.any { it >= 2 } } >= spec.deep)
             }
         }
     }
@@ -170,7 +260,7 @@ class QuartetsRulesTest {
             assertEquals("$d fell back", 365, dealt.size)
             for (day in 0L until 365L) {
                 val s = QuartetsLogic.generateVerified(20_000L + day * 31, d, bank)!!
-                checkGate(d, QuartetsLogic.overlap(s)!!.total)
+                checkGate(d, pairOf(QuartetsLogic.overlap(s)!!))
             }
         }
     }

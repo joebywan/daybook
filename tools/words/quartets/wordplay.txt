@@ -1,0 +1,54 @@
+# Quartets: wordplay (level 3) and second-look (level 2) categories. docs/QUARTETS_SPEC.md, "The bank".
+#
+# Title shown to the player | level | word word word ...
+#
+# Partner-word categories ("___ fish", "Fire ___") take a closed compound (catfish, fireplace) or a fixed phrase
+# common in every dialect (fire engine, fruit fly, water bottle), never a phrase made up on the spot. "Hide a ..."
+# means the smaller word sits inside the shown word as a run of letters and is not the whole word; crude readings
+# (ass in bass, tit in petite, bum in bumper) are deliberately not counted. Membership is complete over this file's
+# vocabulary: a word that fits a category here is listed under it, even when it was written for another.
+
+# Shared partner words
+___ fish | 3 | cat sword star jelly gold silver shell sun lion flat blow saw clown sail
+Fire ___ | 3 | fly work place wood man side ball proof wall cracker light engine drill power alarm door storm
+___ board | 3 | key card cup black white dash clip score bill floor side switch star head bread cheese out sea snow
+Sun ___ | 3 | flower light rise set burn dial shine screen beam block spot hat deck burst day fish glasses dress
+___ fly | 3 | butter fire dragon horse house fruit may crane blow
+___ light | 3 | moon sun star fire candle flash head spot high lime torch day flood side stop green
+Star ___ | 3 | fish light board dust fruit burst gaze ship let
+___ ship | 3 | friend hard space air flag member owner court partner leader scholar star king
+___ ball | 3 | snow eye meat fire pin hair odd moth black screw hand
+Head ___ | 3 | light line band phone board rest land room set way start dress gear lock space
+___ man | 3 | snow post fire chair sales gentle milk cave door middle show sand horse fore watch air boat mail sea wing work straw front
+___ house | 3 | green light hen club farm boat court guest store play tree out power tea
+Black ___ | 3 | board bird berry smith out jack list ball tea
+Water ___ | 3 | fall melon proof front mark mill shed side way bed line tight table wheel bottle level hole
+Air ___ | 3 | port line craft ship bag lift mail field way borne lock space time tight drop man pocket guitar show hole play
+Book ___ | 3 | case mark shop shelf worm keeper end let store club
+Rain ___ | 3 | bow coat drop fall forest storm water
+Snow ___ | 3 | ball flake man drift storm fall drop shoe board line day
+Back ___ | 3 | pack bone fire yard ground log hand stage drop space track ward side water door rest end
+Key ___ | 3 | board hole ring note stone pad word chain card
+Horse ___ | 3 | shoe power fly radish play back hair man show
+
+# Hidden words
+Hide a number | 3 | stone often weight height money honey phone bone kitten mitten canine network listen tent tenet
+Hide an animal | 3 | plant giant grape paper bowl steel wheel pirate crate scatter pigment beard drama board kayak kneel mammoth rattle cube
+Hide a body part | 3 | alarm charm pearl spear tulip ship whip shine china legend kneel handle beard chair clip dear farm gear pear snail wheel
+
+# Sound and spelling
+Sound like letters | 3 | bee sea see tea tee pea why eye are you yew queue cue jay
+Sound like animals | 3 | dear hoarse bare hair mousse wail flee dough towed bore muscle links you yew
+Read the same backwards | 3 | level radar civic kayak refer madam noon rotor tenet deed peep solos toot gig eye pop
+Backwards, another word | 3 | star drawer wolf straw lever keep regal snap room time part spool reward stop are bag dial may net now pan pin saw tap tar ward spot stool
+Add S at the front | 3 | nail pear late wing tick hip mile lip pin cream core word now tar end hoot lime log mitten often oil pan pine port table way
+Also the name of a sound | 3 | bark ring snap crack pop buzz toot tick clap hoot crow boom peep chime rattle whistle drum tap wail
+
+# A second look (level 2)
+Things with a shell | 2 | egg snail crab turtle tortoise oyster clam mussel lobster coconut walnut peanut
+Another word for small | 2 | tiny mini little minute petite slight compact pocket micro teeny
+Another word for big | 2 | huge vast massive giant jumbo mammoth bumper colossal monster immense
+Another word for fast | 2 | quick rapid swift fleet brisk speedy hasty express
+Teeth but no mouth | 2 | comb saw gear rake cog key chainsaw
+Things with needles | 2 | pine fir spruce yew cedar larch cactus compass
+Things with a bridge | 2 | nose guitar violin viola cello bass banjo ukulele glasses ship

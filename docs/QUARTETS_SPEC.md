@@ -46,13 +46,35 @@ Title shown to the player | level | word word word ...
 - **Membership is complete over the bank's vocabulary**: a word is listed under *every* category in the bank it fits.
   This is the one thing no solver can check, and the uniqueness proof is only as good as it. Words with two lives
   (MERCURY, PITCH, BASS, JACK) are wanted: they are what Hard and Expert are made of.
-- `tools/words/quartets.py` lints every file and writes `puzzles/QuartetsWords.kt` (generated, never edited):
+- **Quiet members**, written `~word`: a true fit nobody should be dealt as the answer. Two kinds, both in `cross.txt`:
+  grim or crude (Head + stone, Black + eye, head and mail, Water + board, Add S + hat), and real but obscure, technical or
+  regional (moonfish, wardship, firebrick, sward, MINI as a road vehicle). A quiet word fits the category in every mask
+  and proof, so a player who argues for it is never refused, but the generator never deals it as one of its category's
+  four, a draw whose answer group fits a category whole with one of its quiet words in it is turned down, and the tier
+  gate does not count it (a quiet fit is no spare, a category met three times only through quiet fits is no phantom).
+  The lint holds a quiet word to every word rule (grim.txt and exclude.txt included), refuses one that is also a plain
+  member of its category, and wants 6 plain members besides. When unsure between quiet and leaving a real word out,
+  quiet: it costs a few redraws and never a refused right answer.
+- **The second sweep** (2026-11-24, `cross.txt`, "Second sweep"): every bank word tried as the partner of every `___`
+  category, closed and open, against `/usr/share/dict/web2` and `web2a` and (for the partners where it does not compound
+  freely) the macOS spelling dictionary; the mechanical categories (hide a number, animal or body part; Add S; backwards;
+  palindromes) re-run over the whole vocabulary against web2 and the app's word lists; every plain category read again
+  against the vocabulary. It added 9 plain memberships (ONYX a rock, BALL of the foot, Black + mark, headliner,
+  leaderboard, hardball, BUCKle, CLAMp, sCUBA) and 450 quiet ones. What it left out was checked: with every candidate
+  it skipped made a member, 11 daily boards of a year's 1,095 gain a second answer on plain categories (KEY a fastener,
+  EYELET a fastener, DRILL with teeth, MARCH and LINE dances, OIL a shade of black, DUST weather, PEARL with a string,
+  PARROT a fish: none true), and 145 if every archaic compound web2 and web2a list is counted as well (galleyman,
+  firecoat, snowproof, teaman: nobody's answer).
+- `tools/words/quartets.py` lints every file and writes `puzzles/QuartetsWords.kt` (generated, never edited;
+  `QuartetsBank.parse` also takes three-field lines, which the tests' fixture uses):
 
 ```kotlin
 internal object QuartetsWords {
-    /** "Title|level|word,word,...": words lowercase and sorted, lines sorted by title. */
+    /** "Title|level|word,word,...|quiet,...": words lowercase and sorted, quiet words (fit, never dealt) after the
+     *  last bar, empty when none; lines sorted by title. */
     val CATEGORIES: List<String> = listOf(
-        "Planets|1|earth,jupiter,mars,mercury,neptune,saturn,uranus,venus",
+        "Black ___|3|ball,berry,...,top|eye,head,mail",
+        "Planets|1|earth,jupiter,mars,mercury,neptune,saturn,uranus,venus|",
     )
 }
 ```
@@ -100,20 +122,37 @@ object QuartetsLogic {
 
 ## Generation
 
-`Rng(seed + attempt)`, up to `ATTEMPTS`: draw four different categories the tier allows, four members of each (sixteen
-different words), shuffle the sixteen, build `titles`/`masks` from the whole bank, and keep the draw only if
-`split(masks, all sixteen)` is `ExactlyOne` and the tier's overlap gate holds. No hash container's order reaches the
-`Rng`. `lastResort` is a fixed board per tier, proved by a test; measure how often a year of daily seeds reaches it.
+`QuartetsLogic.draw(seed, attempt, ...)`, for attempt 0 up to `ATTEMPTS` (400): the first category, of the tier's
+`needsLevel`, comes from `Rng(seed - 1 - attempt / PER_FIRST)`, so it is kept for `PER_FIRST` (20) draws in a row and
+every category of that level leads about as many boards however often its draws fail the gate; the rest of the draw is
+`Rng(seed + attempt)`. The next `linked` categories are drawn among those that one of the drawn categories' words fits
+plainly (where spares come from; a quiet fit makes no spare), weighted by the inverse of how many categories link to each (`QuartetsBank.links`: without it
+the most shared, `Add S at the front`, was on 16% of Expert boards); the rest from all the tier allows.
+A draw with fewer than `deep` categories of level 2 or 3 is turned down; then four of each category's own words (never its
+quiet ones), sixteen different words, shuffled; `titles`/`masks` from the whole bank. The draw ships only if
+`split(masks, all sixteen)` is `ExactlyOne`, no answer group fits a category whole through one of its quiet words, and
+the overlap gate holds. No hash container's order reaches the `Rng`. `lastResort` is a fixed board per tier, proved by a
+test; a year of daily seeds reaches it on no tier (`QuartetsBankTest`).
 
-Overlap, measured on the dealt board:
-- a **spare** is a word that fits an answer group's category but belongs to another group (the category fits 5+);
-- a **phantom** is a category that is no answer group yet fits three or more of the sixteen.
+Overlap, measured on the dealt board over plain fits only (`QuartetsLogic.plainMasks`; the split that names the answer
+groups counts every fit):
+- a **spare** is a word that fits an answer group's category plainly but belongs to another group (the category fits 5+);
+- a **phantom** is a category that is no answer group yet fits three or more of the sixteen plainly.
 
-| Tier | Category levels | Gate (first cut; tune against the real bank, then write the measured numbers here) |
-|---|---|---|
-| Standard | 1 only | no spare, no phantom |
-| Hard | 1 and 2 | one or two spares or phantoms |
-| Expert | at least one level 3 | three or more spares or phantoms |
+`QuartetsLogic.overlap(state)` counts every fit, quiet ones included (a state's masks do not tell them apart); the gate
+uses `overlap(state, plainMasks(state, bank))`. With quiet fits counted, 144 of the year's Standard boards, 97 of Hard's and
+37 of Expert's would fail their gate: moonfish and the like would have made a Standard board Hard while showing the player
+nothing they could see as a second group.
+
+| Tier | Category levels (`levels`, first `needsLevel`, `deep`) | `linked` | Gate (`spares`, spares + phantoms `overlap`) |
+|---|---|---|---|
+| Standard | 1 only | 0 | no spare, no phantom |
+| Hard | 1 and 2, the first level 2, at least one of level 2 | 1 | 1 or 2 spares, 1 or 2 spares and phantoms together |
+| Expert | 1 to 3, the first level 3, at least two of level 2 or 3 | 3 | 3 to 6 spares, 3 to 7 together |
+
+Hard and Expert gate on spares, not only on spares and phantoms together, so the tier notes are true: a Hard board always
+has a word that fits a second group, an Expert board always three. A phantom alone (three words that look like a group
+that is not there) no longer makes a board Hard.
 
 Tier notes (what the player sees change): "No word fits two groups" / "One or two words fit a second group" /
 "Wordplay groups, and three or more words that fit a second group".
@@ -125,11 +164,20 @@ Wheel's grid list is. It never reads which categories are the answer (the state 
 
 1. `last-four`: four words are left.
 2. `exactly-four`: some category fits exactly four of the words left, and a word of those fits no other live category.
-3. `spare`: a category fits five or more, and another category needs one of them to reach four.
+3. `spare`: a category fits five to seven of the words left, and exactly four of them fit no other live category. Each
+   of those four can only be grouped inside this category, and seven words cannot hold two groups, so the four are one
+   group; the hint names the spare word and where else it fits. (The first cut, "another category needs one of them to
+   reach four", was not sound: the teacher's tests enumerate every split and refused it.)
 4. `every-split` (the fallback, said openly): the one way to split what is left, worked through.
 
 A hint names the theme and how many words fit it, and glows **at most one tile** (the four would be the answer);
-only "Show me" submits the group. No mistake exists: a refused four is spent, not on the board. Measure the fallback.
+only "Show me" submits the group. No mistake exists: a refused four is spent, not on the board. Categories with identical fits are read as one.
+
+Measured (`QuartetsTeachingTest`, a year of daily boards a tier, walked by "Show me"): every board finishes in four steps
+and the fallback is never needed (0 of 1,460 steps on every tier); all but one step of the year are `exactly-four` or
+`last-four`, because every answer group of a shipped board still has a word that fits only its own category. On 3,000
+random positions with several splits all four rungs fire, and every step that is not the fallback holds in every split.
+Open for the owner: a hint names the theme outright, which in this game is most of the answer.
 
 ## Board (`puzzles/Quartets.kt`)
 
@@ -146,5 +194,33 @@ only "Show me" submits the group. No mistake exists: a refused four is spent, no
 
 ## Measured
 
-(Filled in by the tuning task: bank size, attempts per board and `lastResort` rate over a year per tier, spares and
-phantoms per board per tier, the hints' fallback share.)
+Bank (2026-11-24, after the second sweep): 110 categories (level 1 / 2 / 3: 51 / 29 / 30), 915 words, 438 of them in two
+or more categories, 1,607 plain and 456 quiet memberships (were 436 and 6). A year of daily seeds from 2026-01-01 per tier
+(`QuartetsBankTest`, `build/reports/quartets-generation.txt`; times from a desktop JVM). Before is the bank and gate of the
+first build (times then from the Linux test container, a JVM under emulation):
+
+| | Standard (before) | Standard | Hard (before) | Hard | Expert (before) | Expert |
+|---|---|---|---|---|---|---|
+| Proved / `lastResort` | 365 / 0 | 365 / 0 | 365 / 0 | 365 / 0 | 365 / 0 | 365 / 0 |
+| Draws a board, mean / most (of 400) | 1.8 / 12 | 1.8 / 12 | 3.5 / 25 | 4.0 / 26 | 8.8 / 48 | 12.6 / 89 |
+| Generation ms, median / p95 / max | 0.1 / 1.2 / 7.0 | 0.1 / 0.5 / 6.9 | 0.2 / 1.6 / 19.7 | 0.2 / 1.4 / 5.8 | 0.8 / 3.7 / 18.4 | 1.0 / 4.0 / 9.1 |
+| Spares a board | 0 always | 0 always | 1 on 344, 2 on 21 (1.06) | 1 on 347, 2 on 18 (1.05) | 3-6: 318 / 38 / 8 / 1 (3.16) | 3-5: 314 / 45 / 6 (3.16) |
+| Phantoms a board | 0 always | 0 always | 0 on 282, 1 on 83 (0.23) | 0 on 268, 1 on 97 (0.27) | 0-4: 185 / 110 / 53 / 16 / 1 (0.73) | 0-4: 201 / 113 / 44 / 6 / 1 (0.61) |
+| Groups of level 2 or 3, mean | 0 | 0 | 2.0 | 2.1 | 3.0 (wordplay 2.1) | 2.9 (wordplay 1.9) |
+| Categories dealt / allowed | 51 / 51 | 51 / 51 | 80 / 80 | 80 / 80 | 106 / 110 | 106 / 110 |
+| Most / least dealt (boards of 365) | Parts of a tree 43 / Fruit 17 | Parts of a tree 43 / Fruit 17 | In a beehive 48 / Herbs 5 | In a beehive 50 / Road vehicles 5 | `___ house` 38 / Herbs 1 | `Rain ___` 34 / Herbs 1 |
+| Different words shown | 515 | 514 | 698 | 707 | 820 | 844 |
+
+- The sweep's quiet fits cost Expert most: draws turned down for a second split rose (599 of 4,599 draws in a year), so
+  Expert takes 12.6 draws a board on average and 89 at most, still under a quarter of `ATTEMPTS` (the test's bound). `Spec`
+  did not change. Draws turned down for a quiet word in an answer group: 7 / 6 / 19 a year.
+- With four groups a board, a category's fair share is 4 / (categories allowed): 7.8% of boards on Standard, 5% on Hard,
+  3.6% on Expert (about 7% for each of the 30 wordplay categories, which Expert leans on). The most dealt is 11.8 / 13.7 /
+  9.3%. Hard's leaders are where its spares come from: the linked second category (Rodents is the linked draw for Marks
+  on the skin's MOLE, Birds for SWIFT and KITE); weighting the linked draw by 1 / links, by its square root or not at all
+  all left In a beehive at 48-56 boards. Expert never deals Sea mammals, Shades of pink, Shades of purple or Shellfish:
+  plain categories that share no word with a wordplay one only come in through the open draw, which `deep` and the spares
+  gate rarely keep.
+- The big mechanical categories (Add S at the front, 61 plain words; Hide an animal, 56; Backwards, another word, 46) are
+  not over-dealt: on Expert 29 / 31 / 24 boards. As phantoms they cost Standard 67 of its 642 draws in a year and Hard 34
+  of 1,443; the gate holds them out of Standard entirely.

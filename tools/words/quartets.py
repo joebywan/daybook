@@ -3,20 +3,26 @@
 
 Source: tools/words/quartets/*.txt, read in filename order, one category a line:
 
-    Title shown to the player | level | word word word ...
+    Title shown to the player | level | word word ~quiet word ...
+
+A word written ~word is a QUIET member: it fits the category (the proof and every board's masks count it, so a player's
+group with it is never refused for want of it), but it is never one of the four the generator deals for that category.
+It is for a true fit nobody should be shown as the answer (Head + stone, Black + eye). The generated line then carries a
+fourth field of quiet words; it is empty for a category with none.
 
 Blank lines and '#' comments (whole-line or trailing) are ignored. A title may appear more than once, in one file or
 several: its members are merged (union), and every line must give it the same level. So a later cross-tagging file can
 add members to a category an earlier file made. See docs/QUARTETS_SPEC.md ("The bank").
 
 Errors (all collected, printed with file:line, exit status 1): a level not 1, 2 or 3; a word not a-z or not 3 to 8
-letters; a word twice on one line; a level clash between lines of one title; a merged category under 6 members; a title
+letters; a word twice on one line (quiet or not); a quiet word that is also a plain member of its category; a merged category under 6 plain (non-quiet) members; a level clash between lines of one title; a title
 over 28 characters, empty, holding '|' or '"', or holding one of its own members as a whole word (any case); two titles
 equal but for case; a word in tools/words/grim.txt or tools/words/exclude.txt (read as build.py reads them); two
-categories with the same members.
+categories with the same members. Quiet words obey every word rule, grim.txt and exclude.txt included.
 
 Warnings (printed, not fatal): a category whose every member is in one other category (a subset); a word that is
-another bank word plus "s" (maybe a singular and its plural).
+another bank word plus "s" (maybe a singular and its plural); a quiet word that is no category's plain member (no board
+can show it, so listing it does nothing).
 
     python3 tools/words/quartets.py            lint, then write the Kotlin file (--out to put it elsewhere)
     python3 tools/words/quartets.py --lint     lint only
@@ -48,6 +54,7 @@ class Category:
     def __init__(self, title, level, where):
         self.title, self.level, self.where = title, level, where
         self.words = set()
+        self.quiet = set()
 
 
 def parse(directory, screened):
@@ -73,9 +80,12 @@ def parse(directory, screened):
                     errors.append(f"{where}: level must be 1, 2 or 3, not {level_text!r}")
                     continue
                 level = int(level_text)
-                words = word_text.split()
+                tokens = word_text.split()
+                words, quiet = [], []
                 seen = set()
-                for w in words:
+                for token in tokens:
+                    w = token[1:] if token.startswith("~") else token
+                    (quiet if token.startswith("~") else words).append(w)
                     if not WORD.fullmatch(w):
                         errors.append(f"{where}: {w!r} is not 3 to 8 letters a-z")
                     if w in seen:
@@ -90,6 +100,7 @@ def parse(directory, screened):
                     errors.append(f"{where}: {title!r} is level {level} here but level {cat.level} at {cat.where}")
                     continue
                 cat.words |= {w for w in words if WORD.fullmatch(w)}
+                cat.quiet |= {w for w in quiet if WORD.fullmatch(w)}
     if not files:
         errors.append(f"{os.path.relpath(directory)}: no *.txt files")
     return cats, errors, warnings
@@ -108,8 +119,12 @@ def lint(cats, errors, warnings):
         title_words = set(re.findall(r"[a-z]+", t.lower()))
         for w in sorted(cat.words & title_words):
             errors.append(f"{cat.where}: title {t!r} gives away its member {w!r}")
+        for w in sorted(cat.words & cat.quiet):
+            errors.append(f"{cat.where}: {w!r} is both a plain and a quiet member of {t!r}")
+        for w in sorted(cat.quiet & title_words):
+            errors.append(f"{cat.where}: title {t!r} gives away its quiet member {w!r}")
         if len(cat.words) < MIN_MEMBERS:
-            errors.append(f"{cat.where}: {t!r} has {len(cat.words)} member(s), under {MIN_MEMBERS}")
+            errors.append(f"{cat.where}: {t!r} has {len(cat.words)} plain member(s), under {MIN_MEMBERS}")
         other = by_fold.get(t.lower())
         if other is not None:
             errors.append(f"{cat.where}: title {t!r} differs only in case from {other.title!r} at {other.where}")
@@ -129,6 +144,9 @@ def lint(cats, errors, warnings):
             if a is not b and a.words and a.words < b.words:
                 warnings.append(f"{a.where}: every member of {a.title!r} is in {b.title!r} ({b.where})")
     bank = set().union(*(c.words for c in cats.values())) if cats else set()
+    for cat in ordered:
+        for w in sorted(cat.quiet - bank):
+            warnings.append(f"{cat.where}: quiet {w!r} in {cat.title!r} is no category's plain member, so no board shows it")
     for w in sorted(bank):
         if w + "s" in bank:
             warnings.append(f"{w!r} and {w + 's'!r} are both in the bank (a singular and its plural?)")
@@ -153,11 +171,12 @@ def kotlin(cats):
         "// Generated by tools/words/quartets.py from tools/words/quartets/*.txt. Do not edit: change the bank and re-run it.",
         "",
         "internal object QuartetsWords {",
-        '    /** "Title|level|word,word,...": words lowercase and sorted, lines sorted by title. */',
+        '    /** "Title|level|word,word,...|quiet,...": words lowercase and sorted, quiet words (fit, never dealt) after the',
+        "     *  last bar, empty when none; lines sorted by title. */",
         "    val CATEGORIES: List<String> = listOf(",
     ]
     for cat in sorted(cats.values(), key=lambda c: c.title):
-        entry = f"{cat.title}|{cat.level}|{','.join(sorted(cat.words))}"
+        entry = f"{cat.title}|{cat.level}|{','.join(sorted(cat.words))}|{','.join(sorted(cat.quiet))}"
         lines.append(f'        "{kotlin_string(entry)}",')
     lines += ["    )", "}"]
     return "\n".join(lines) + "\n"
@@ -175,6 +194,7 @@ def stats(cats):
                + ", ".join(f"level {lv}: {levels[lv]}" for lv in (1, 2, 3)) + ")")
     out.append(f"distinct words: {len(where)}")
     out.append(f"words in 2+ categories: {sum(1 for t in where.values() if len(t) > 1)}")
+    out.append(f"quiet memberships: {sum(len(c.quiet) for c in cats.values())}")
     shared = sorted(where.items(), key=lambda kv: (-len(kv[1]), kv[0]))[:30]
     out.append("most shared:")
     for w, titles in shared:
