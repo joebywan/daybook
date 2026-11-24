@@ -78,6 +78,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -520,7 +521,7 @@ private fun StreakBadge(streak: Streak, onStats: () -> Unit) {
 }
 
 /** The part of the list the grid shows through, in root pixels: under the pinned rows, above the list's foot. */
-private class GridWindow(var top: Float = 0f, var bottom: Float = Float.MAX_VALUE)
+internal class GridWindow(var top: Float = 0f, var bottom: Float = Float.MAX_VALUE)
 
 /** A tile being dragged: the puzzle, where on it the finger took hold, and the finger, in the grid's pixels. */
 private class Drag(val id: String, val grab: Offset, finger: Offset) {
@@ -548,7 +549,7 @@ private const val MOVE_MS = 150
  * per puzzle, so a tile keeps its animation as it changes rows. The drag is `remember` state; nothing is stored until it drops.
  */
 @Composable
-private fun PuzzleGrid(
+internal fun PuzzleGrid(
     puzzles: List<PuzzleType>,
     inProgress: () -> Set<String>,
     difficulty: Difficulty,
@@ -566,8 +567,9 @@ private fun PuzzleGrid(
     val byId = puzzles.associateBy { it.id }
     val justSolved = LocalJustSolved.current
     var drag by remember { mutableStateOf<Drag?>(null) }
-    // Each row's height, from the last layout: a row is as tall as its tallest tile.
-    var rowHeights by remember { mutableStateOf(IntArray(0)) }
+    // Every tile's height, from the last layout: the tallest of them all, so it is the same whatever the order and
+    // nothing changes size while a tile is dragged (issue #531: a height changing mid-drag restarted the gesture).
+    var tileHeight by remember { mutableIntStateOf(0) }
     val grid = remember { arrayOfNulls<LayoutCoordinates>(1) }
     BoxWithConstraints {
         val density = LocalDensity.current
@@ -578,23 +580,22 @@ private fun PuzzleGrid(
         val gridW = with(density) { maxWidth.roundToPx() }
         val ids = puzzles.map { it.id }
         val rows = (ids.size + columns - 1) / columns
-        fun top(row: Int) = (0 until row).sumOf { rowHeights.getOrElse(it) { 0 } + gap }
-        fun rowAt(y: Float) = (0 until rows).lastOrNull { top(it) <= y } ?: 0
+        fun top(row: Int) = row * (tileHeight + gap)
+        fun rowAt(y: Float) = (y / (tileHeight + gap)).toInt().coerceIn(0, maxOf(0, rows - 1))
 
         // The lifted tile's corner: under the finger, kept inside the grid and out from under the pinned rows.
         fun corner(d: Drag): Offset {
             val top = grid[0]?.localToRoot(Offset.Zero)?.y ?: 0f
             val p = d.finger - d.grab
-            val tileHeight = rowHeights.getOrElse(ids.indexOf(d.id) / columns) { 0 }
-            val lowest = (top(rows - 1) + rowHeights.getOrElse(rows - 1) { 0 } - tileHeight).toFloat()
+            val lowest = top(rows - 1).toFloat()
             val y = p.y.coerceIn(window.top - top, maxOf(window.top - top, window.bottom - top - tileHeight))
             return Offset(p.x.coerceIn(0f, (gridW - tileW).toFloat()), y.coerceIn(0f, maxOf(0f, lowest)))
         }
         // Where the lifted tile would land: the cell under its centre.
-        val landing by remember(columns, tileW, rowHeights, ids) {
+        val landing by remember(columns, tileW, tileHeight, ids) {
             derivedStateOf {
                 drag?.let { d ->
-                    val c = corner(d) + Offset(tileW / 2f, rowHeights.getOrElse(ids.indexOf(d.id) / columns) { 0 } / 2f)
+                    val c = corner(d) + Offset(tileW / 2f, tileHeight / 2f)
                     val col = (c.x / (tileW + gap)).toInt().coerceIn(0, columns - 1)
                     val row = rowAt(c.y)
                     (row * columns + col).coerceAtMost(ids.lastIndex)
@@ -670,14 +671,14 @@ private fun PuzzleGrid(
             },
             modifier = Modifier
                 .onGloballyPositioned { grid[0] = it }
-                .pointerInput(ids, columns, tileW, rowHeights) {
+                .pointerInput(ids, columns, tileW, tileHeight) {
                     detectDragGesturesAfterLongPress(
                         onDragStart = { p ->
                             val col = (p.x / (tileW + gap)).toInt()
                             val row = rowAt(p.y)
                             val slot = row * columns + col
                             val origin = Offset((col * (tileW + gap)).toFloat(), top(row).toFloat())
-                            if (col < columns && slot in ids.indices && p.x - origin.x < tileW && p.y - origin.y < rowHeights.getOrElse(row) { 0 }) {
+                            if (col < columns && slot in ids.indices && p.x - origin.x < tileW && p.y - origin.y < tileHeight) {
                                 drag = Drag(ids[slot], p - origin, p)
                                 haptics.tick()
                             }
@@ -700,14 +701,11 @@ private fun PuzzleGrid(
                     )
                 },
         ) { measurables, constraints ->
-            // Every tile in a row as tall as the tallest, which only matters once a name wraps. Child i is in slot i.
-            val heights = IntArray(rows) { r ->
-                (r * columns until minOf((r + 1) * columns, measurables.size)).maxOfOrNull { measurables[it].maxIntrinsicHeight(tileW) } ?: 0
-            }
-            if (!heights.contentEquals(rowHeights)) rowHeights = heights
-            val tops = IntArray(rows).also { for (r in 1 until rows) it[r] = it[r - 1] + heights[r - 1] + gap }
-            val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixed(tileW, heights[i / columns])) }
-            layout(constraints.maxWidth, if (rows == 0) 0 else tops.last() + heights.last()) {
+            // Every tile as tall as the tallest, which only matters once a name wraps.
+            val h = measurables.maxOfOrNull { it.maxIntrinsicHeight(tileW) } ?: 0
+            if (h != tileHeight) tileHeight = h
+            val placeables = measurables.map { it.measure(Constraints.fixed(tileW, h)) }
+            layout(constraints.maxWidth, if (rows == 0) 0 else rows * (h + gap) - gap) {
                 placeables.forEachIndexed { i, p ->
                     val cell = measurables[i].layoutId as Cell
                     val held = drag
@@ -715,11 +713,8 @@ private fun PuzzleGrid(
                         val c = corner(held)
                         p.place(c.x.roundToInt(), c.y.roundToInt(), zIndex = 1f)
                     } else {
-                        // Between rows while it slides: part of the way from one row's top to the next.
                         val at = cell.at()
-                        val r = at.y.toInt().coerceIn(0, rows - 1)
-                        val y = tops[r] + (at.y - r) * (tops[minOf(r + 1, rows - 1)] - tops[r])
-                        p.place((at.x * (tileW + gap)).roundToInt(), y.roundToInt())
+                        p.place((at.x * (tileW + gap)).roundToInt(), (at.y * (h + gap)).roundToInt())
                     }
                 }
             }

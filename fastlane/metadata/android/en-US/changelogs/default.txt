@@ -1,4 +1,5 @@
+- Home: a tile drags to another row again when a name wraps, and every tile is one height.
 - Word Wheel's hints give the clue first, then a second clue and a letter, before the whole word.
 - Shikaku shows the size of the rectangle you are drawing, beside your finger.
-- Dragging on Shikaku, Thermometers, Tally, Tents, Kings, Lamps and LITS tints the row and column under your finger, so you can see where you are aiming past your hand.
+- Dragging on Shikaku, Thermometers, Tally, Tents, Kings, Lamps and LITS tints the row and column under your finger.
 - Cage Sudoku colours its cages, with bigger totals and bolder 3x3 lines, so the board is easier on the eyes.
